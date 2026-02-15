@@ -1,11 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { EventData, Priority, RepresentativeRole, Contact } from '../types';
 import { PriorityBadge } from './PriorityBadge';
-import { 
-  Calendar, MapPin, Building2, AlertCircle, FileText,
-  CheckCircle, Save, Loader2, Sparkles, ExternalLink,
-  Briefcase, Trash2, Users, User, FileJson, FileSpreadsheet
-} from 'lucide-react';
+import { Calendar, MapPin, Building2, AlertCircle, FileText, CheckCircle, Save, Loader2, Sparkles, ExternalLink, Briefcase, Trash2, Users, User, FileJson, FileSpreadsheet } from 'lucide-react';
 import { generateBriefing } from '../services/geminiService';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { NewContactModal } from './NewContactModal';
@@ -82,13 +78,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     setShowContactPicker(false);
   };
 
-  const handleCreateContact = (newContact: Contact) => {
-    if (onAddContact) {
-      onAddContact(newContact);
-    }
-    handlePickContact(newContact);
-    setShowNewContactModal(false);
-  };
+
 
   const handleExportJSON = () => {
     const dataStr = JSON.stringify(localEvent, null, 2);
@@ -432,11 +422,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
             message="Are you sure you want to remove this event and all associated data? This action cannot be undone."
         />
 
-        <NewContactModal
-            isOpen={showNewContactModal}
-            onClose={() => setShowNewContactModal(false)}
-            onSave={handleCreateContact}
-        />
+
     </div>
   );
 };

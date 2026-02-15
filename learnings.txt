@@ -1,0 +1,83 @@
+Learnings:
+- The project uses a mix of test runners:  (native) and . The
+> obessu-event-analyzer@0.0.0 test
+> node --experimental-transform-types --test services/*.test.ts
+
+TAP version 13
+# node:internal/modules/esm/resolve:274
+#     throw new ERR_MODULE_NOT_FOUND(
+#           ^
+# Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/app/services/geminiService' imported from /app/services/geminiService.test.ts
+#     at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+#     at moduleResolve (node:internal/modules/esm/resolve:859:10)
+#     at defaultResolve (node:internal/modules/esm/resolve:983:11)
+#     at \#cachedDefaultResolve (node:internal/modules/esm/loader:731:20)
+#     at ModuleLoader.resolve (node:internal/modules/esm/loader:708:38)
+#     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:310:38)
+#     at ModuleJob._link (node:internal/modules/esm/module_job:182:49) {
+#   code: 'ERR_MODULE_NOT_FOUND',
+#   url: 'file:///app/services/geminiService'
+# }
+# Node.js v22.22.0
+# Subtest: services/geminiService.test.ts
+not ok 1 - services/geminiService.test.ts
+  ---
+  duration_ms: 182.503473
+  type: 'test'
+  location: '/app/services/geminiService.test.ts:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# (node:4129) ExperimentalWarning: Transform Types is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: aggregateStakeholders - institution name normalization
+ok 2 - aggregateStakeholders - institution name normalization
+  ---
+  duration_ms: 1.706051
+  type: 'test'
+  ...
+# Subtest: aggregateStakeholders - grouping events by stakeholder
+ok 3 - aggregateStakeholders - grouping events by stakeholder
+  ---
+  duration_ms: 0.340661
+  type: 'test'
+  ...
+# Subtest: aggregateStakeholders - identifying completed events
+ok 4 - aggregateStakeholders - identifying completed events
+  ---
+  duration_ms: 0.2435
+  type: 'test'
+  ...
+# Subtest: aggregateStakeholders - aggregating unique themes and papers
+ok 5 - aggregateStakeholders - aggregating unique themes and papers
+  ---
+  duration_ms: 1.09119
+  type: 'test'
+  ...
+# Subtest: aggregateStakeholders - sorting by total events
+ok 6 - aggregateStakeholders - sorting by total events
+  ---
+  duration_ms: 0.394347
+  type: 'test'
+  ...
+# Subtest: aggregateStakeholders - handling empty input
+ok 7 - aggregateStakeholders - handling empty input
+  ---
+  duration_ms: 0.1695
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 6
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 194.14974 script only runs  and fails on files using  syntax.  must be run separately for those files.
+-  strips types, so  is crucial for type checking.
+- Duplicate function definitions and component renderings can slip into the codebase (possibly from merge conflicts) and cause build errors or runtime issues.
+-  imports should be carefully managed to avoid unused code.
