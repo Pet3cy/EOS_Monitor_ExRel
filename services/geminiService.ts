@@ -1,6 +1,6 @@
-
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { AnalysisResult, Priority } from "../types";
+import { OBESSU_DATA_CONTEXT, SYSTEM_INSTRUCTION } from "./prompts";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -183,7 +183,7 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
   return result;
 };
 
-export const generateBriefing = async (event: any) => {
+export const generateBriefing = async (event: EventData) => {
   const prompt = `Create a 1-page executive briefing for a representative attending the following event:
   Event: ${event.analysis.eventName}
   Institution: ${event.analysis.institution}
@@ -201,7 +201,7 @@ export const generateBriefing = async (event: any) => {
   4. Suggested opening statement points.`;
 
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: GEMINI_MODEL,
     contents: [{ parts: [{ text: prompt }] }],
   });
 
@@ -210,7 +210,7 @@ export const generateBriefing = async (event: any) => {
 
 export const summarizeFollowUp = async (file: { mimeType: string, data: string }) => {
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: GEMINI_MODEL,
     contents: {
       parts: [
         { inlineData: file },
