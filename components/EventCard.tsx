@@ -7,12 +7,12 @@ import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
 interface EventCardProps {
   event: EventData;
-  onClick: () => void;
-  onDelete: () => void;
+  onSelect: (id: string) => void;
+  onDelete: (id: string) => void;
   isSelected: boolean;
 }
 
-export const EventCard: React.FC<EventCardProps> = ({ event, onClick, onDelete, isSelected }) => {
+export const EventCard: React.FC<EventCardProps> = React.memo(({ event, onSelect, onDelete, isSelected }) => {
   const { analysis } = event;
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -28,11 +28,20 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onClick, onDelete, 
     setShowConfirm(true);
   };
 
+  const handleCardClick = () => {
+    onSelect(event.id);
+  };
+
+  const handleConfirmDelete = () => {
+    onDelete(event.id);
+    setShowConfirm(false);
+  };
+
   return (
     <>
       <div 
-        onClick={onClick}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
+        onClick={handleCardClick}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCardClick(); } }}
         tabIndex={0}
         aria-label={`View details for ${analysis.eventName}`}
         className={`p-4 mb-3 rounded-lg border cursor-pointer transition-all hover:shadow-md group/card relative focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
@@ -85,10 +94,10 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onClick, onDelete, 
       <ConfirmDeleteModal 
         isOpen={showConfirm}
         onClose={() => setShowConfirm(false)}
-        onConfirm={onDelete}
+        onConfirm={handleConfirmDelete}
         title="Delete Invitation?"
         message={`Are you sure you want to delete "${analysis.eventName}"? All extracted analysis and assigned tasks will be lost.`}
       />
     </>
   );
-};
+});
