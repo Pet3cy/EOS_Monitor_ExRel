@@ -30,11 +30,14 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
   const [isAdding, setIsAdding] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const filteredContacts = contacts.filter(c => 
-    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.organization.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredContacts = useMemo(() => {
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    return contacts.filter(c =>
+      c.name.toLowerCase().includes(lowerSearchTerm) ||
+      c.email.toLowerCase().includes(lowerSearchTerm) ||
+      c.organization.toLowerCase().includes(lowerSearchTerm)
+    );
+  }, [contacts, searchTerm]);
 
   const selectedContact = contacts.find(c => c.id === selectedContactId);
   const contactEvents = useMemo(() => {
