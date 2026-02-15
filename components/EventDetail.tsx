@@ -2,8 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { EventData, Priority, RepresentativeRole, Contact } from '../types';
 import { PriorityBadge } from './PriorityBadge';
-import { AlertCircle, Briefcase, Building2, Calendar, CheckCircle, ExternalLink, FileJson, FileSpreadsheet, FileText, Loader2, MapPin, Save, Sparkles, Trash2, User, Users } from 'lucide-react';
-import { summarizeFollowUp, generateBriefing } from '../services/geminiService';
+import { 
+  Calendar, MapPin, Building2, AlertCircle, Clock, FileText, 
+  UserPlus, Mail, MessageSquare, CheckCircle, Save, Mic, FileAudio, Loader2, Sparkles, Megaphone, Image as ImageIcon, X, Link as LinkIcon, ExternalLink, Briefcase, Trash2, Copy, FileCheck, Users, User, FileJson, FileSpreadsheet, Download
+} from 'lucide-react';
+import { generateBriefing } from '../services/geminiService';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
 interface EventDetailProps {
