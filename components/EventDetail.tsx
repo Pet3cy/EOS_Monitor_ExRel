@@ -6,7 +6,7 @@ import {
   Calendar, MapPin, Building2, AlertCircle, Clock, FileText, 
   UserPlus, Mail, MessageSquare, CheckCircle, Save, Mic, FileAudio, Loader2, Sparkles, Megaphone, Image as ImageIcon, X, Link as LinkIcon, ExternalLink, Briefcase, Trash2, Copy, FileCheck, Users, User, FileJson, FileSpreadsheet, Download
 } from 'lucide-react';
-import { generateBriefing } from '../services/geminiService';
+import { summarizeFollowUp, generateBriefing } from '../services/geminiService';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
 interface EventDetailProps {
