@@ -19,6 +19,19 @@ export const NewContactModal: React.FC<NewContactModalProps> = ({ isOpen, onClos
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  React.useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        name: '',
+        email: '',
+        role: '',
+        organization: '',
+        notes: ''
+      });
+      setErrors({});
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
