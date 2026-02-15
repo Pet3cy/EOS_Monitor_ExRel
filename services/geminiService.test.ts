@@ -38,7 +38,9 @@ describe('geminiService', () => {
     };
 
     generateContentMock.mockResolvedValue({
-      text: JSON.stringify(mockData),
+      response: {
+        text: () => JSON.stringify(mockData),
+      },
     });
 
     const input = { text: 'Test invitation text' };
