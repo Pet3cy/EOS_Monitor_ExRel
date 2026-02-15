@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
-import { AnalysisResult, Priority } from "../types";
+import { AnalysisResult, Priority, EventData } from "../types";
 import { OBESSU_DATA_CONTEXT, SYSTEM_INSTRUCTION } from "./prompts";
 
 const GEMINI_MODEL = "gemini-1.5-flash";
@@ -169,15 +169,3 @@ export const generateBriefing = async (event: EventData) => {
   return response.text;
 };
 
-export const summarizeFollowUp = async (file: { mimeType: string, data: string }) => {
-  const response = await getAiClient().models.generateContent({
-    model: GEMINI_MODEL,
-    contents: {
-      parts: [
-        { inlineData: file },
-        { text: "Summarize this document focusing on key outcomes, decisions, and follow-up actions. Keep it professional." }
-      ]
-    },
-  });
-  return response.text;
-};

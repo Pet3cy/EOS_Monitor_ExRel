@@ -21,18 +21,15 @@ export function generateCalendarWeeks(
     // Find first Monday of the year (ISO week standard often uses Monday)
     const day = yearStart.getDay();
     const diff = yearStart.getDate() - day + (day === 0 ? -6 : 1);
-    const firstMonday = new Date(year, 0, diff);
+    const firstMonday = new Date(yearStart.setDate(diff));
 
-    const rangeStart = new Date(`${startDateFilter}T00:00:00`);
-    const rangeEnd = new Date(`${endDateFilter}T00:00:00`);
+    const rangeStart = new Date(startDateFilter);
+    const rangeEnd = new Date(endDateFilter);
 
     // Ensure range dates are valid
     if (isNaN(rangeStart.getTime()) || isNaN(rangeEnd.getTime())) {
         return [];
     }
-
-    // Pre-parse dates to avoid repeated parsing in the loop
-const eventDates = events.map(event => new Date(event.analysis.date + 'T00:00:00'));
 
     for (let i = 0; i < 53; i++) { // Some years have 53 weeks
       const weekStart = new Date(firstMonday);
@@ -48,8 +45,8 @@ const eventDates = events.map(event => new Date(event.analysis.date + 'T00:00:00
       if (weekEnd < rangeStart || weekStart > rangeEnd) continue;
 
       // Find events in this week that match all filters
-      const weekEvents = events.filter((event, index) => {
-        const eventDate = eventDates[index];
+      const weekEvents = events.filter(event => {
+        const eventDate = new Date(event.analysis.date);
         const matchesDate = eventDate >= weekStart && eventDate <= weekEnd;
         const matchesPriority = priorityFilter === 'All' || event.analysis.priority === priorityFilter;
         const matchesTheme = themeFilter === 'All' || event.analysis.theme === themeFilter;
