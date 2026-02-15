@@ -64,7 +64,9 @@ describe('geminiService', () => {
 
   it('should handle invalid JSON response gracefully', async () => {
     generateContentMock.mockResolvedValue({
-      text: 'Invalid JSON',
+      response: {
+        text: () => 'Invalid JSON',
+      },
     });
 
     const input = { text: 'Test invitation text' };
