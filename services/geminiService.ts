@@ -139,15 +139,3 @@ export const generateBriefing = async (event: any) => {
   return response.text;
 };
 
-export const summarizeFollowUp = async (file: { mimeType: string, data: string }) => {
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: {
-      parts: [
-        { inlineData: file },
-        { text: "Summarize this document focusing on key outcomes, decisions, and follow-up actions. Keep it professional." }
-      ]
-    },
-  });
-  return response.text;
-};

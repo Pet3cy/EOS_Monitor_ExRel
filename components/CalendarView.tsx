@@ -7,10 +7,7 @@ import {
   X, 
   AlertCircle, 
   Building2, 
-  MapPin, 
-  Tag,
-  ChevronRight,
-  Search
+  MapPin
 } from 'lucide-react';
 
 interface CalendarViewProps {
