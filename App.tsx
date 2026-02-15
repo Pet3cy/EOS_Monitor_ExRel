@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Plus, Search, Layout, Filter, CalendarClock, History, PieChart, Users, Calendar as CalendarIcon } from 'lucide-react';
 import { EventData, Contact } from './types';
 import { EventCard } from './components/EventCard';
@@ -12,7 +12,7 @@ import { MOCK_CONTACTS, MOCK_EVENTS } from './data/mockData';
 type ViewMode = 'calendar' | 'upcoming' | 'past' | 'overview' | 'contacts';
 
 const isCompletedOrArchived = (status: string) => {
-  return status.startsWith('Completed') || status === 'Not Relevant';
+    return status.startsWith('Completed') || status === 'Not Relevant';
 };
 
 export default function App() {
@@ -24,7 +24,7 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('calendar');
 
-  const handleAnalysisComplete = (newEvent: EventData) => {
+  const handleAnalysisComplete = useCallback((newEvent: EventData) => {
     if (!newEvent.followUp.commsPack) {
       newEvent.followUp.commsPack = {
         remarks: '',
@@ -34,20 +34,20 @@ export default function App() {
       };
     }
     setEvents(prev => [newEvent, ...prev]);
-    if (viewMode === 'overview' || viewMode === 'past') setViewMode('upcoming');
+    setViewMode(prev => (prev === 'overview' || prev === 'past') ? 'upcoming' : prev);
     setSelectedEventId(newEvent.id);
-  };
+  }, []);
 
-  const handleUpdateEvent = (updatedEvent: EventData) => {
+  const handleUpdateEvent = useCallback((updatedEvent: EventData) => {
     setEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e));
-  };
+  }, []);
 
-  const handleDeleteEvent = (id: string) => {
+  const handleDeleteEvent = useCallback((id: string) => {
     setEvents(prev => prev.filter(e => e.id !== id));
-    if (selectedEventId === id) setSelectedEventId(null);
-  };
+    setSelectedEventId(prev => prev === id ? null : prev);
+  }, []);
 
-  const handleUpdateContact = (updatedContact: Contact) => {
+  const handleUpdateContact = useCallback((updatedContact: Contact) => {
     setContacts(prev => {
       const exists = prev.find(c => c.id === updatedContact.id);
       if (exists) {
@@ -72,9 +72,9 @@ export default function App() {
       }
       return e;
     }));
-  };
+  }, []);
 
-  const handleDeleteContact = (id: string) => {
+  const handleDeleteContact = useCallback((id: string) => {
     setContacts(prev => prev.filter(c => c.id !== id));
     setEvents(prev => prev.map(e => {
       if (e.contact.contactId === id) {
@@ -82,15 +82,15 @@ export default function App() {
       }
       return e;
     }));
-    if (selectedContactId === id) setSelectedContactId(null);
-  };
+    setSelectedContactId(prev => prev === id ? null : prev);
+  }, []);
 
-  const handleViewContactProfile = (contactId: string) => {
+  const handleViewContactProfile = useCallback((contactId: string) => {
     setSelectedContactId(contactId);
     setViewMode('contacts');
-  };
+  }, []);
 
-  const handleRenameStakeholder = (oldName: string, newName: string) => {
+  const handleRenameStakeholder = useCallback((oldName: string, newName: string) => {
     setEvents(prev => prev.map(e => {
       if (e.analysis.institution === oldName) {
         return {
@@ -103,7 +103,11 @@ export default function App() {
       }
       return e;
     }));
-  };
+  }, []);
+
+  const handleSelectEvent = useCallback((id: string) => {
+    setSelectedEventId(id);
+  }, []);
 
   const filteredEvents = useMemo(() => {
     const lowerSearchTerm = searchTerm.toLowerCase();
@@ -240,8 +244,8 @@ export default function App() {
                         key={event.id} 
                         event={event} 
                         isSelected={selectedEventId === event.id}
-                        onClick={() => setSelectedEventId(event.id)}
-                        onDelete={() => handleDeleteEvent(event.id)}
+                        onSelect={handleSelectEvent}
+                        onDelete={handleDeleteEvent}
                         />
                     ))
                     )}
