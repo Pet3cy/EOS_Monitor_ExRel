@@ -79,15 +79,6 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
       }
     }));
     setIsEditing(true);
-    setShowContactPicker(false);
-  };
-
-  const handleCreateContact = (newContact: Contact) => {
-    if (onAddContact) {
-      onAddContact(newContact);
-    }
-    handlePickContact(newContact);
-    setShowNewContactModal(false);
   };
 
   const handleExportJSON = () => {
@@ -432,11 +423,6 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
             message="Are you sure you want to remove this event and all associated data? This action cannot be undone."
         />
 
-        <NewContactModal
-            isOpen={showNewContactModal}
-            onClose={() => setShowNewContactModal(false)}
-            onSave={handleCreateContact}
-        />
     </div>
   );
 };
