@@ -72,3 +72,5 @@ export interface EventData {
   followUp: FollowUpDetails;
 }
 
+
+// Note: Global JSX namespace override is intentionally omitted to enforce strict type checking.
