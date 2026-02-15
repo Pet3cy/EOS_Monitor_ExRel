@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type, Schema } from "@google/genai";
-import { AnalysisResult, Priority } from "../types";
+import { AnalysisResult, Priority, EventData } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -114,7 +114,7 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
   };
 };
 
-export const generateBriefing = async (event: any) => {
+export const generateBriefing = async (event: EventData) => {
   const prompt = `Create a 1-page executive briefing for a representative attending the following event:
   Event: ${event.analysis.eventName}
   Institution: ${event.analysis.institution}
