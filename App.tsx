@@ -105,10 +105,11 @@ export default function App() {
       return status.startsWith('Completed') || status === 'Not Relevant';
   };
 
+  const lowerSearchTerm = searchTerm.toLowerCase();
   const filteredEvents = events.filter(e => {
     const matchesSearch = 
-      e.analysis.eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      e.analysis.institution.toLowerCase().includes(searchTerm.toLowerCase());
+      e.analysis.eventName.toLowerCase().includes(lowerSearchTerm) ||
+      e.analysis.institution.toLowerCase().includes(lowerSearchTerm);
     
     if (!matchesSearch) return false;
 
