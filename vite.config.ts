@@ -12,7 +12,6 @@ export default defineConfig(({ mode }) => {
       plugins: [react()],
       build: {
         outDir: 'Frontend/build',
-        emptyOutDir: true,
       },
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),

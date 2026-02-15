@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { AnalysisResult, Priority, EventData } from "../types";
 
@@ -96,23 +95,34 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
     parts.push({ text: `Analyze the following invitation (check for email headers):\n\n${input.text}` });
   }
 
-  const response = await ai.models.generateContent({
-    model: GEMINI_MODEL,
-    contents: { parts },
-    config: {
-      systemInstruction: SYSTEM_INSTRUCTION,
-      responseMimeType: "application/json",
-      responseSchema: responseSchema,
-    },
-  });
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: { parts },
+      config: {
+        systemInstruction: SYSTEM_INSTRUCTION,
+        responseMimeType: "application/json",
+        responseSchema: responseSchema,
+      },
+    });
 
-  const data = JSON.parse(response.text || "{}");
-  
-  return {
-    ...data,
-    priority: data.priority as Priority,
-    linkedActivities: data.linkedActivities || [],
-  };
+    try {
+      const data = JSON.parse(response.text || "{}");
+
+      return {
+        ...data,
+        priority: data.priority as Priority,
+        linkedActivities: data.linkedActivities || [],
+      };
+    } catch (parseError) {
+      throw new Error(`Failed to parse AI response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('Failed to parse AI response')) {
+      throw error;
+    }
+    throw new Error(`Failed to analyze invitation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 };
 
 export const generateBriefing = async (event: EventData) => {
