@@ -1,13 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
 import { EventData, Priority, RepresentativeRole, Contact } from '../types';
 import { PriorityBadge } from './PriorityBadge';
-import { 
-  Calendar, MapPin, Building2, AlertCircle, Clock, FileText, 
-  UserPlus, Mail, MessageSquare, CheckCircle, Save, Mic, FileAudio, Loader2, Sparkles, Megaphone, Image as ImageIcon, X, Link as LinkIcon, ExternalLink, Briefcase, Trash2, Copy, FileCheck, Users, User, FileJson, FileSpreadsheet, Download
-} from 'lucide-react';
-import { summarizeFollowUp, generateBriefing } from '../services/geminiService';
+import { Calendar, MapPin, Building2, AlertCircle, FileText, CheckCircle, Save, Loader2, Sparkles, ExternalLink, Briefcase, Trash2, Users, User, FileJson, FileSpreadsheet } from 'lucide-react';
+import { generateBriefing } from '../services/geminiService';
+import { deepCopyEvent } from '../utils/eventUtils';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
+import { NewContactModal } from './NewContactModal';
 
 interface EventDetailProps {
   event: EventData;
@@ -15,21 +13,22 @@ interface EventDetailProps {
   onDelete: () => void;
   contacts?: Contact[];
   onViewContact?: (contactId: string) => void;
+  onAddContact?: (contact: Contact) => void;
 }
 
 type TabType = 'context' | 'logistics' | 'prep' | 'outcomes';
 
-export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDelete, contacts = [], onViewContact }) => {
+export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDelete, contacts = [], onViewContact, onAddContact }) => {
   const [localEvent, setLocalEvent] = useState<EventData>(event);
   const [activeTab, setActiveTab] = useState<TabType>('context');
   const [isEditing, setIsEditing] = useState(false);
-  const [isSummarizing, setIsSummarizing] = useState(false);
   const [isGeneratingBrief, setIsGeneratingBrief] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
+  const [showNewContactModal, setShowNewContactModal] = useState(false);
 
   useEffect(() => {
-    setLocalEvent(JSON.parse(JSON.stringify(event)));
+    setLocalEvent(deepCopyEvent(event));
     setIsEditing(false);
   }, [event]);
 
@@ -69,7 +68,6 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
       }
     }));
     setIsEditing(true);
-    setShowContactPicker(false);
   };
 
   const handleExportJSON = () => {
@@ -100,7 +98,14 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
 
     const flatEvent = flattenObject(localEvent);
     const headers = Object.keys(flatEvent);
-    const values = Object.values(flatEvent).map(v => `"${v.replace(/"/g, '""')}"`); // Escape quotes
+    const values = Object.values(flatEvent).map(v => {
+      const sanitized = v.replace(/"/g, '""');
+      const dangerousChars = ['=', '+', '-', '@', '\t', '\r'];
+      if (dangerousChars.some(char => sanitized.startsWith(char))) {
+        return `"'${sanitized}"`;
+      }
+      return `"${sanitized}"`;
+    });
 
     const csvContent = "data:text/csv;charset=utf-8," 
       + headers.join(",") + "\n" 
@@ -298,7 +303,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                                 </button>
                                             ))}
                                             <button 
-                                                onClick={() => { setShowContactPicker(false); /* Logic to add new contact could go here */ }}
+                                                onClick={() => { setShowContactPicker(false); setShowNewContactModal(true); }}
                                                 className="w-full text-left px-4 py-2 hover:bg-slate-50 text-xs font-bold text-blue-600 border-t border-slate-100"
                                             >
                                                 + Create New Contact
@@ -392,6 +397,12 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                 </div>
             )}
         </div>
+
+        <NewContactModal
+            isOpen={showNewContactModal}
+            onClose={() => setShowNewContactModal(false)}
+            onSave={handleCreateContact}
+        />
 
         <ConfirmDeleteModal 
             isOpen={showDeleteConfirm}
