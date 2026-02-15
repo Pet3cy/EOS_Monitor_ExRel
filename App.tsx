@@ -216,6 +216,10 @@ const MOCK_EVENTS: EventData[] = [
 
 type ViewMode = 'calendar' | 'upcoming' | 'past' | 'overview' | 'contacts';
 
+const isCompletedOrArchived = (status: string) => {
+  return status.startsWith('Completed') || status === 'Not Relevant';
+};
+
 export default function App() {
   const [events, setEvents] = useState<EventData[]>(MOCK_EVENTS);
   const [contacts, setContacts] = useState<Contact[]>(MOCK_CONTACTS);
@@ -306,24 +310,23 @@ export default function App() {
     }));
   };
 
-  const isCompletedOrArchived = (status: string) => {
-      return status.startsWith('Completed') || status === 'Not Relevant';
-  };
+  const filteredEvents = useMemo(() => {
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    return events.filter(e => {
+      const matchesSearch =
+        e.analysis.eventName.toLowerCase().includes(lowerSearchTerm) ||
+        e.analysis.institution.toLowerCase().includes(lowerSearchTerm);
 
-  const filteredEvents = events.filter(e => {
-    const matchesSearch = 
-      e.analysis.eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      e.analysis.institution.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    if (!matchesSearch) return false;
+      if (!matchesSearch) return false;
 
-    if (viewMode === 'upcoming') {
-      return !isCompletedOrArchived(e.followUp.status);
-    } else if (viewMode === 'past') {
-      return isCompletedOrArchived(e.followUp.status);
-    }
-    return true;
-  });
+      if (viewMode === 'upcoming') {
+        return !isCompletedOrArchived(e.followUp.status);
+      } else if (viewMode === 'past') {
+        return isCompletedOrArchived(e.followUp.status);
+      }
+      return true;
+    });
+  }, [events, searchTerm, viewMode]);
 
   const selectedEvent = events.find(e => e.id === selectedEventId);
 
