@@ -6,6 +6,7 @@ import {
   UserPlus, Mail, MessageSquare, CheckCircle, Save, Mic, FileAudio, Loader2, Sparkles, Megaphone, Image as ImageIcon, X, Link as LinkIcon, ExternalLink, Briefcase, Trash2, Copy, FileCheck, Users, User, FileJson, FileSpreadsheet, Download
 } from 'lucide-react';
 import { generateBriefing } from '../services/geminiService';
+import { deepCopyEvent } from '../utils/eventUtils';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { NewContactModal } from './NewContactModal';
 
@@ -31,7 +32,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   const [showNewContactModal, setShowNewContactModal] = useState(false);
 
   useEffect(() => {
-    setLocalEvent(structuredClone(event));
+    setLocalEvent(deepCopyEvent(event));
     setIsEditing(false);
   }, [event]);
 
@@ -82,13 +83,6 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     setShowContactPicker(false);
   };
 
-  const handleCreateContact = (newContact: Contact) => {
-    if (onAddContact) {
-      onAddContact(newContact);
-    }
-    handlePickContact(newContact);
-    setShowNewContactModal(false);
-  };
 
   const handleExportJSON = () => {
     const dataStr = JSON.stringify(localEvent, null, 2);
