@@ -2,7 +2,19 @@ import { GoogleGenAI } from "@google/genai";
 import { AnalysisResult, Priority, EventData } from "../types";
 import { OBESSU_DATA_CONTEXT, SYSTEM_INSTRUCTION, responseSchema } from "./prompts";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const GEMINI_MODEL_NAME = "gemini-1.5-flash-latest";
+
+let ai: GoogleGenAI | null = null;
+
+const getAiClient = (): GoogleGenAI => {
+  if (!process.env.API_KEY) {
+    throw new Error("API_KEY environment variable is missing");
+  }
+  if (!ai) {
+    ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  }
+  return ai;
+};
 
 // Caching configuration
 const CACHE_PREFIX = 'gemini_cache_v2_';
@@ -88,7 +100,7 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
   }
 
   const response = await getAiClient().models.generateContent({
-    model: GEMINI_MODEL,
+    model: GEMINI_MODEL_NAME,
     contents: { parts },
     config: {
       systemInstruction: SYSTEM_INSTRUCTION,
@@ -127,10 +139,22 @@ export const generateBriefing = async (event: EventData) => {
   4. Suggested opening statement points.`;
 
   const response = await getAiClient().models.generateContent({
-    model: GEMINI_MODEL,
+    model: GEMINI_MODEL_NAME,
     contents: [{ parts: [{ text: prompt }] }],
   });
 
   return response.text;
 };
 
+export const summarizeFollowUp = async (file: { mimeType: string, data: string }) => {
+  const response = await getAiClient().models.generateContent({
+    model: GEMINI_MODEL_NAME,
+    contents: {
+      parts: [
+        { inlineData: file },
+        { text: "Summarize this document focusing on key outcomes, decisions, and follow-up actions. Keep it professional." }
+      ]
+    },
+  });
+  return response.text;
+};

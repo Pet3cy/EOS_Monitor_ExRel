@@ -68,7 +68,10 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
       }
     }));
     setIsEditing(true);
+    setShowContactPicker(false);
   };
+
+
 
   const handleExportJSON = () => {
     const dataStr = JSON.stringify(localEvent, null, 2);
@@ -411,6 +414,8 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
             title="Delete Event?"
             message="Are you sure you want to remove this event and all associated data? This action cannot be undone."
         />
+
+
     </div>
   );
 };
