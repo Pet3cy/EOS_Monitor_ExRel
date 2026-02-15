@@ -21,10 +21,10 @@ export function generateCalendarWeeks(
     // Find first Monday of the year (ISO week standard often uses Monday)
     const day = yearStart.getDay();
     const diff = yearStart.getDate() - day + (day === 0 ? -6 : 1);
-    const firstMonday = new Date(year, 0, diff);
+    const firstMonday = new Date(yearStart.setDate(diff));
 
-    const rangeStart = new Date(`${startDateFilter}T00:00:00`);
-    const rangeEnd = new Date(`${endDateFilter}T00:00:00`);
+    const rangeStart = new Date(startDateFilter);
+    const rangeEnd = new Date(endDateFilter);
 
     // Ensure range dates are valid
     if (isNaN(rangeStart.getTime()) || isNaN(rangeEnd.getTime())) {
