@@ -1,8 +1,8 @@
-
 import { GoogleGenAI, Type, Schema } from "@google/genai";
-import { AnalysisResult, Priority } from "../types";
+import { AnalysisResult, Priority, EventData } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3-flash-preview";
 
 const OBESSU_DATA_CONTEXT = `
 ORGANIZATIONAL STRUCTURE & PORTFOLIOS (2026):
@@ -95,26 +95,37 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
     parts.push({ text: `Analyze the following invitation (check for email headers):\n\n${input.text}` });
   }
 
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: { parts },
-    config: {
-      systemInstruction: SYSTEM_INSTRUCTION,
-      responseMimeType: "application/json",
-      responseSchema: responseSchema,
-    },
-  });
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: { parts },
+      config: {
+        systemInstruction: SYSTEM_INSTRUCTION,
+        responseMimeType: "application/json",
+        responseSchema: responseSchema,
+      },
+    });
 
-  const data = JSON.parse(response.text || "{}");
-  
-  return {
-    ...data,
-    priority: data.priority as Priority,
-    linkedActivities: data.linkedActivities || [],
-  };
+    try {
+      const data = JSON.parse(response.text || "{}");
+
+      return {
+        ...data,
+        priority: data.priority as Priority,
+        linkedActivities: data.linkedActivities || [],
+      };
+    } catch (parseError) {
+      throw new Error(`Failed to parse AI response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('Failed to parse AI response')) {
+      throw error;
+    }
+    throw new Error(`Failed to analyze invitation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 };
 
-export const generateBriefing = async (event: any) => {
+export const generateBriefing = async (event: EventData) => {
   const prompt = `Create a 1-page executive briefing for a representative attending the following event:
   Event: ${event.analysis.eventName}
   Institution: ${event.analysis.institution}
@@ -132,7 +143,7 @@ export const generateBriefing = async (event: any) => {
   4. Suggested opening statement points.`;
 
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: GEMINI_MODEL,
     contents: [{ parts: [{ text: prompt }] }],
   });
 
@@ -141,7 +152,7 @@ export const generateBriefing = async (event: any) => {
 
 export const summarizeFollowUp = async (file: { mimeType: string, data: string }) => {
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: GEMINI_MODEL,
     contents: {
       parts: [
         { inlineData: file },
