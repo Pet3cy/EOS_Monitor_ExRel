@@ -3,6 +3,7 @@ import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { AnalysisResult, Priority, EventData } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3-flash-preview";
 
 const OBESSU_DATA_CONTEXT = `
 ORGANIZATIONAL STRUCTURE & PORTFOLIOS (2026):
@@ -96,7 +97,7 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
   }
 
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: GEMINI_MODEL,
     contents: { parts },
     config: {
       systemInstruction: SYSTEM_INSTRUCTION,
@@ -132,7 +133,7 @@ export const generateBriefing = async (event: EventData) => {
   4. Suggested opening statement points.`;
 
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: GEMINI_MODEL,
     contents: [{ parts: [{ text: prompt }] }],
   });
 
@@ -141,7 +142,7 @@ export const generateBriefing = async (event: EventData) => {
 
 export const summarizeFollowUp = async (file: { mimeType: string, data: string }) => {
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: GEMINI_MODEL,
     contents: {
       parts: [
         { inlineData: file },
