@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --experimental-transform-types --test services/*.test.ts"
+    "test:services": "node --experimental-transform-types --test services/*.test.ts"
   },
   "dependencies": {
     "@google/genai": "^1.39.0",
