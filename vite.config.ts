@@ -16,6 +16,9 @@ export default defineConfig(({ mode }) => {
         globals: true,
         setupFiles: './setupTests.ts',
       },
+      build: {
+        outDir: 'Frontend/build',
+      },
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
