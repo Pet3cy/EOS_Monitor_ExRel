@@ -3,6 +3,7 @@ import { EventData, Priority, RepresentativeRole, Contact } from '../types';
 import { PriorityBadge } from './PriorityBadge';
 import { Calendar, MapPin, Building2, AlertCircle, FileText, CheckCircle, Save, Loader2, Sparkles, ExternalLink, Briefcase, Trash2, Users, User, FileJson, FileSpreadsheet } from 'lucide-react';
 import { generateBriefing } from '../services/geminiService';
+import { deepCopyEvent } from '../utils/eventUtils';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { NewContactModal } from './NewContactModal';
 
@@ -27,7 +28,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   const [showNewContactModal, setShowNewContactModal] = useState(false);
 
   useEffect(() => {
-    setLocalEvent(structuredClone(event));
+    setLocalEvent(deepCopyEvent(event));
     setIsEditing(false);
   }, [event]);
 
@@ -69,7 +70,6 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     setIsEditing(true);
     setShowContactPicker(false);
   };
-
 
 
   const handleExportJSON = () => {
