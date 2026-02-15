@@ -1,0 +1,5 @@
+services:
+  - type: pstatic
+    name: obessu-event-analyzer
+    buildCommand: npm install && npm run build
+    publishPath: ./dist
