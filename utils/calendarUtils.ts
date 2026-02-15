@@ -23,8 +23,8 @@ export function generateCalendarWeeks(
     const diff = yearStart.getDate() - day + (day === 0 ? -6 : 1);
     const firstMonday = new Date(yearStart.setDate(diff));
 
-    const rangeStart = new Date(startDateFilter);
-    const rangeEnd = new Date(endDateFilter);
+    const rangeStart = new Date(`${startDateFilter}T00:00:00`);
+    const rangeEnd = new Date(`${endDateFilter}T00:00:00`);
 
     // Ensure range dates are valid
     if (isNaN(rangeStart.getTime()) || isNaN(rangeEnd.getTime())) {
