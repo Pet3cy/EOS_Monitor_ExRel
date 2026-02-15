@@ -31,7 +31,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   const [showNewContactModal, setShowNewContactModal] = useState(false);
 
   useEffect(() => {
-    setLocalEvent(JSON.parse(JSON.stringify(event)));
+    setLocalEvent(structuredClone(event));
     setIsEditing(false);
   }, [event]);
 
@@ -56,6 +56,14 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     } finally {
       setIsGeneratingBrief(false);
     }
+  };
+
+  const handleCreateContact = (newContact: Contact) => {
+    if (onAddContact) {
+      onAddContact(newContact);
+    }
+    handlePickContact(newContact);
+    setShowNewContactModal(false);
   };
 
   const handlePickContact = (contact: Contact) => {
@@ -110,7 +118,14 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
 
     const flatEvent = flattenObject(localEvent);
     const headers = Object.keys(flatEvent);
-    const values = Object.values(flatEvent).map(v => `"${v.replace(/"/g, '""')}"`); // Escape quotes
+    const values = Object.values(flatEvent).map(v => {
+      const sanitized = v.replace(/"/g, '""');
+      const dangerousChars = ['=', '+', '-', '@', '\t', '\r'];
+      if (dangerousChars.some(char => sanitized.startsWith(char))) {
+        return `"'${sanitized}"`;
+      }
+      return `"${sanitized}"`;
+    });
 
     const csvContent = "data:text/csv;charset=utf-8," 
       + headers.join(",") + "\n" 
@@ -402,6 +417,12 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                 </div>
             )}
         </div>
+
+        <NewContactModal
+            isOpen={showNewContactModal}
+            onClose={() => setShowNewContactModal(false)}
+            onSave={handleCreateContact}
+        />
 
         <ConfirmDeleteModal 
             isOpen={showDeleteConfirm}
