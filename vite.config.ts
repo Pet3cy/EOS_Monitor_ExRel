@@ -11,13 +11,8 @@ export default defineConfig(({ mode }) => {
         host: '0.0.0.0',
       },
       plugins: [react()],
-      test: {
-        environment: 'jsdom',
-        globals: true,
-        setupFiles: './setupTests.ts',
-      },
       build: {
-        outDir: 'Frontend/build',
+        outDir: 'Frontend/build'
       },
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
