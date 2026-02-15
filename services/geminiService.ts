@@ -2,7 +2,7 @@ import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { AnalysisResult, Priority } from "../types";
 import { OBESSU_DATA_CONTEXT, SYSTEM_INSTRUCTION } from "./prompts";
 
-const GEMINI_MODEL_NAME = "gemini-3-flash-preview";
+const GEMINI_MODEL_NAME = "gemini-1.5-flash-latest";
 
 let ai: GoogleGenAI | null = null;
 
