@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Plus, Search, Layout, Filter, CalendarClock, History, PieChart, Users, Calendar as CalendarIcon } from 'lucide-react';
 import { EventData, Contact } from './types';
@@ -254,6 +253,7 @@ export default function App() {
                         onDelete={() => handleDeleteEvent(selectedEvent.id)}
                         contacts={contacts}
                         onViewContact={handleViewContactProfile}
+                        onAddContact={handleUpdateContact}
                     />
                 ) : (
                     <div className="h-full flex flex-col items-center justify-center text-slate-400">
