@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { analyzeInvitation } from './geminiService';
 
 const { generateContentMock } = vi.hoisted(() => {
@@ -26,8 +26,15 @@ vi.mock('@google/genai', () => {
 });
 
 describe('analyzeInvitation', () => {
+  const originalApiKey = process.env.API_KEY;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.API_KEY = 'test-api-key';
+  });
+
+  afterEach(() => {
+    process.env.API_KEY = originalApiKey;
   });
 
   it('should analyze text input correctly', async () => {
@@ -112,7 +119,7 @@ describe('analyzeInvitation', () => {
           text: 'Invalid JSON',
       });
 
-      const input = { text: 'Test' };
+      const input = { text: 'Test Invalid JSON' }; // Unique input
 
       await expect(analyzeInvitation(input)).rejects.toThrow();
   });
@@ -122,12 +129,18 @@ describe('analyzeInvitation', () => {
           text: null,
       });
 
-      const input = { text: 'Test' };
+      const input = { text: 'Test Empty Response' }; // Unique input
       const result = await analyzeInvitation(input);
 
       expect(result).toEqual({
           priority: undefined,
           linkedActivities: [],
       });
+  });
+
+  it('should throw error when API_KEY is missing', async () => {
+    delete process.env.API_KEY;
+    const input = { text: 'Unique Test Input For API Key Check' }; // Unique input to bypass cache
+    await expect(analyzeInvitation(input)).rejects.toThrow('API_KEY environment variable is missing');
   });
 });
