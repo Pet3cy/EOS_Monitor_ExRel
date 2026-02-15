@@ -135,4 +135,80 @@ describe('generateCalendarWeeks', () => {
 
      expect(week2?.events.find(e => e.id === '2')).toBeDefined();
   });
+
+  describe('Year boundary alignment', () => {
+      // 2023: Jan 1 is Sunday. Week 1 should start Mon Dec 26 2022.
+      it('should start week 1 on Dec 26 2022 for year 2023 (Jan 1 is Sunday)', () => {
+          const weeks = generateCalendarWeeks([], 2023, '2023-01-01', '2023-12-31', 'All', 'All');
+          expect(weeks[0].number).toBe(1);
+          expect(weeks[0].start.getFullYear()).toBe(2022);
+          expect(weeks[0].start.getMonth()).toBe(11); // Dec
+          expect(weeks[0].start.getDate()).toBe(26);
+      });
+
+      // 2024: Jan 1 is Monday. Week 1 should start Mon Jan 01 2024.
+      it('should start week 1 on Jan 01 2024 for year 2024 (Jan 1 is Monday)', () => {
+          const weeks = generateCalendarWeeks([], 2024, '2024-01-01', '2024-12-31', 'All', 'All');
+          expect(weeks[0].number).toBe(1);
+          expect(weeks[0].start.getFullYear()).toBe(2024);
+          expect(weeks[0].start.getMonth()).toBe(0); // Jan
+          expect(weeks[0].start.getDate()).toBe(1);
+      });
+
+      // 2025: Jan 1 is Wednesday. Week 1 should start Mon Dec 30 2024.
+      it('should start week 1 on Dec 30 2024 for year 2025 (Jan 1 is Wednesday)', () => {
+          const weeks = generateCalendarWeeks([], 2025, '2025-01-01', '2025-12-31', 'All', 'All');
+          expect(weeks[0].number).toBe(1);
+          expect(weeks[0].start.getFullYear()).toBe(2024);
+          expect(weeks[0].start.getMonth()).toBe(11); // Dec
+          expect(weeks[0].start.getDate()).toBe(30);
+      });
+
+       // 2026: Jan 1 is Thursday. Week 1 should start Mon Dec 29 2025.
+      it('should start week 1 on Dec 29 2025 for year 2026 (Jan 1 is Thursday)', () => {
+          const weeks = generateCalendarWeeks([], 2026, '2026-01-01', '2026-12-31', 'All', 'All');
+          expect(weeks[0].number).toBe(1);
+          expect(weeks[0].start.getFullYear()).toBe(2025);
+          expect(weeks[0].start.getMonth()).toBe(11); // Dec
+          expect(weeks[0].start.getDate()).toBe(29);
+      });
+  });
+
+  describe('Leap year handling', () => {
+      it('should handle events on Feb 29th', () => {
+          const leapEvent = createEvent('leap1', '2024-02-29', Priority.High, 'Theme A');
+          const weeks = generateCalendarWeeks([leapEvent], 2024, '2024-01-01', '2024-12-31', 'All', 'All');
+
+          const weekWithEvent = weeks.find(w => w.events.find(e => e.id === 'leap1'));
+          expect(weekWithEvent).toBeDefined();
+
+          // Feb 29 2024 is Thursday.
+          // Week starts Mon Feb 26, ends Sun Mar 3.
+          expect(weekWithEvent?.start.getDate()).toBe(26);
+          expect(weekWithEvent?.start.getMonth()).toBe(1); // Feb
+          expect(weekWithEvent?.end.getDate()).toBe(3);
+          expect(weekWithEvent?.end.getMonth()).toBe(2); // Mar
+      });
+  });
+
+  describe('Invalid date handling', () => {
+      it('should gracefully ignore events with invalid dates', () => {
+           const invalidEvent = createEvent('inv1', 'invalid-date-string', Priority.High, 'Theme A');
+           const validEvent = createEvent('val1', '2026-06-15', Priority.High, 'Theme A');
+
+           const weeks = generateCalendarWeeks([invalidEvent, validEvent], 2026, '2026-01-01', '2026-12-31', 'All', 'All');
+
+           // Should find valid event
+           expect(weeks.some(w => w.events.some(e => e.id === 'val1'))).toBeTruthy();
+
+           // Should NOT find invalid event
+           expect(weeks.some(w => w.events.some(e => e.id === 'inv1'))).toBeFalsy();
+      });
+
+      it('should gracefully ignore events with empty dates', () => {
+           const emptyDateEvent = createEvent('empty1', '', Priority.High, 'Theme A');
+           const weeks = generateCalendarWeeks([emptyDateEvent], 2026, '2026-01-01', '2026-12-31', 'All', 'All');
+           expect(weeks.some(w => w.events.some(e => e.id === 'empty1'))).toBeFalsy();
+      });
+  });
 });
