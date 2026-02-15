@@ -31,6 +31,9 @@ export function generateCalendarWeeks(
         return [];
     }
 
+    // Pre-parse dates to avoid repeated parsing in the loop
+    const eventDates = events.map(event => new Date(event.analysis.date));
+
     for (let i = 0; i < 53; i++) { // Some years have 53 weeks
       const weekStart = new Date(firstMonday);
       weekStart.setDate(firstMonday.getDate() + i * 7);
@@ -45,8 +48,8 @@ export function generateCalendarWeeks(
       if (weekEnd < rangeStart || weekStart > rangeEnd) continue;
 
       // Find events in this week that match all filters
-      const weekEvents = events.filter(event => {
-        const eventDate = new Date(event.analysis.date);
+      const weekEvents = events.filter((event, index) => {
+        const eventDate = eventDates[index];
         const matchesDate = eventDate >= weekStart && eventDate <= weekEnd;
         const matchesPriority = priorityFilter === 'All' || event.analysis.priority === priorityFilter;
         const matchesTheme = themeFilter === 'All' || event.analysis.theme === themeFilter;

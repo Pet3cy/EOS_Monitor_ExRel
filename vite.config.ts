@@ -6,9 +6,10 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
 
-    // Check for RENDER environment variable to set custom output directory
+    // Check for RENDER or NETLIFY environment variables to set custom output directory
     const isRender = process.env.RENDER === 'true';
-    const outDir = isRender ? 'Frontend/build' : 'dist';
+    const isNetlify = process.env.NETLIFY === 'true';
+    const outDir = (isRender || isNetlify) ? 'Frontend/build' : 'dist';
 
     return {
       server: {
@@ -16,9 +17,6 @@ export default defineConfig(({ mode }) => {
         host: '0.0.0.0',
       },
       plugins: [react()],
-      build: {
-        outDir: 'Frontend/build'
-      },
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
