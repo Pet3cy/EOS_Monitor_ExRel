@@ -29,7 +29,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   const [showContactPicker, setShowContactPicker] = useState(false);
 
   useEffect(() => {
-    setLocalEvent(JSON.parse(JSON.stringify(event)));
+    setLocalEvent(structuredClone(event));
     setIsEditing(false);
   }, [event]);
 
