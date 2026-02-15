@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
-import { AnalysisResult, Priority } from "../types";
+import { AnalysisResult, Priority, EventData } from "../types";
 import { OBESSU_DATA_CONTEXT, SYSTEM_INSTRUCTION } from "./prompts";
 
 const GEMINI_MODEL = "gemini-1.5-flash";
