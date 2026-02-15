@@ -6,10 +6,7 @@ import {
   X, 
   AlertCircle, 
   Building2, 
-  MapPin, 
-  Tag,
-  ChevronRight,
-  Search
+  MapPin
 } from 'lucide-react';
 import { generateCalendarWeeks } from '../utils/calendarUtils';
 
