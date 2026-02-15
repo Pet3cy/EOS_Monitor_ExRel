@@ -30,7 +30,7 @@ export default defineConfig(({ mode }) => {
         }
       },
       build: {
-        outDir: outDir
+        outDir: 'Frontend/build'
       }
     };
 });
