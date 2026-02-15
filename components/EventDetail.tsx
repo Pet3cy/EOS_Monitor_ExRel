@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { EventData, Priority, RepresentativeRole, Contact } from '../types';
 import { PriorityBadge } from './PriorityBadge';
@@ -8,6 +7,7 @@ import {
 } from 'lucide-react';
 import { generateBriefing } from '../services/geminiService';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
+import { NewContactModal } from './NewContactModal';
 
 interface EventDetailProps {
   event: EventData;
@@ -15,11 +15,12 @@ interface EventDetailProps {
   onDelete: () => void;
   contacts?: Contact[];
   onViewContact?: (contactId: string) => void;
+  onAddContact?: (contact: Contact) => void;
 }
 
 type TabType = 'context' | 'logistics' | 'prep' | 'outcomes';
 
-export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDelete, contacts = [], onViewContact }) => {
+export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDelete, contacts = [], onViewContact, onAddContact }) => {
   const [localEvent, setLocalEvent] = useState<EventData>(event);
   const [activeTab, setActiveTab] = useState<TabType>('context');
   const [isEditing, setIsEditing] = useState(false);
@@ -27,6 +28,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   const [isGeneratingBrief, setIsGeneratingBrief] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
+  const [showNewContactModal, setShowNewContactModal] = useState(false);
 
   useEffect(() => {
     setLocalEvent(JSON.parse(JSON.stringify(event)));
@@ -70,6 +72,14 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     }));
     setIsEditing(true);
     setShowContactPicker(false);
+  };
+
+  const handleCreateContact = (newContact: Contact) => {
+    if (onAddContact) {
+      onAddContact(newContact);
+    }
+    handlePickContact(newContact);
+    setShowNewContactModal(false);
   };
 
   const handleExportJSON = () => {
@@ -298,7 +308,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                                 </button>
                                             ))}
                                             <button 
-                                                onClick={() => { setShowContactPicker(false); /* Logic to add new contact could go here */ }}
+                                                onClick={() => { setShowContactPicker(false); setShowNewContactModal(true); }}
                                                 className="w-full text-left px-4 py-2 hover:bg-slate-50 text-xs font-bold text-blue-600 border-t border-slate-100"
                                             >
                                                 + Create New Contact
@@ -399,6 +409,12 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
             onConfirm={onDelete}
             title="Delete Event?"
             message="Are you sure you want to remove this event and all associated data? This action cannot be undone."
+        />
+
+        <NewContactModal
+            isOpen={showNewContactModal}
+            onClose={() => setShowNewContactModal(false)}
+            onSave={handleCreateContact}
         />
     </div>
   );
