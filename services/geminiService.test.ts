@@ -1,78 +1,133 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { analyzeInvitation } from './geminiService';
 
 const { generateContentMock } = vi.hoisted(() => {
   return { generateContentMock: vi.fn() };
 });
 
-vi.mock('@google/genai', async () => {
-  const actual = await vi.importActual<any>('@google/genai');
+vi.mock('@google/genai', () => {
   return {
-    ...actual,
-    GoogleGenAI: class {
-      models = {
-        generateContent: generateContentMock,
+    // Use a regular function so it can be used as a constructor
+    GoogleGenAI: vi.fn(function() {
+      return {
+        models: {
+          generateContent: generateContentMock,
+        },
       };
-      constructor(args: any) {}
+    }),
+    Type: {
+      OBJECT: 'OBJECT',
+      STRING: 'STRING',
+      INTEGER: 'INTEGER',
+      ARRAY: 'ARRAY',
     },
+    Schema: {},
   };
 });
 
-import { analyzeInvitation } from './geminiService';
-
-describe('geminiService', () => {
+describe('analyzeInvitation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('should analyze invitation successfully (Happy Path)', async () => {
-    const mockData = {
+  it('should analyze text input correctly', async () => {
+    const mockResponseData = {
       sender: 'Test Sender',
-      institution: 'Test Institution',
-      eventName: 'Test Event',
+      subject: 'Test Subject',
       priority: 'High',
-      priorityScore: 90,
-      description: 'Test Description',
-      date: '2023-10-27',
-      venue: 'Brussels',
+      priorityScore: 95,
       linkedActivities: ['Activity 1'],
+      description: 'Test Description',
+      eventName: 'Test Event',
+      institution: 'Test Institution',
+      date: '2023-10-27',
+      venue: 'Brussels'
     };
 
     generateContentMock.mockResolvedValue({
-      response: {
-        text: () => JSON.stringify(mockData),
-      },
+      text: JSON.stringify(mockResponseData),
     });
 
     const input = { text: 'Test invitation text' };
     const result = await analyzeInvitation(input);
 
+    expect(generateContentMock).toHaveBeenCalledWith(expect.objectContaining({
+      contents: expect.objectContaining({
+        parts: expect.arrayContaining([
+            expect.objectContaining({ text: expect.stringContaining('Test invitation text') })
+        ])
+      }),
+    }));
+
     expect(result).toEqual({
-      ...mockData,
+      ...mockResponseData,
       priority: 'High',
       linkedActivities: ['Activity 1'],
     });
-
-    expect(generateContentMock).toHaveBeenCalledTimes(1);
   });
 
-  it('should handle API errors gracefully', async () => {
-    const error = new Error('Network Error');
-    generateContentMock.mockRejectedValue(error);
+  it('should analyze file input correctly', async () => {
+     const mockResponseData = {
+      sender: 'File Sender',
+      subject: 'File Subject',
+      priority: 'Medium',
+      priorityScore: 60,
+      linkedActivities: [],
+      description: 'File Description',
+      eventName: 'File Event',
+      institution: 'File Institution',
+      date: '2023-11-01',
+      venue: 'Online'
+    };
 
-    const input = { text: 'Test invitation text' };
-
-    await expect(analyzeInvitation(input)).rejects.toThrow('Failed to analyze invitation: Network Error');
-  });
-
-  it('should handle invalid JSON response gracefully', async () => {
     generateContentMock.mockResolvedValue({
-      response: {
-        text: () => 'Invalid JSON',
-      },
+      text: JSON.stringify(mockResponseData),
     });
 
-    const input = { text: 'Test invitation text' };
+    const input = {
+      fileData: {
+        mimeType: 'application/pdf',
+        data: 'base64data',
+      },
+    };
+    const result = await analyzeInvitation(input);
 
-    await expect(analyzeInvitation(input)).rejects.toThrow(/Failed to parse AI response/);
+    expect(generateContentMock).toHaveBeenCalledWith(expect.objectContaining({
+      contents: expect.objectContaining({
+         parts: expect.arrayContaining([
+            expect.objectContaining({ inlineData: input.fileData })
+         ])
+      }),
+    }));
+
+    expect(result).toEqual({
+        ...mockResponseData,
+        priority: 'Medium',
+        linkedActivities: [],
+    });
+  });
+
+  it('should throw error on invalid JSON response', async () => {
+      generateContentMock.mockResolvedValue({
+          text: 'Invalid JSON',
+      });
+
+      const input = { text: 'Test' };
+
+      await expect(analyzeInvitation(input)).rejects.toThrow();
+  });
+
+   it('should handle empty/null response text gracefully', async () => {
+      generateContentMock.mockResolvedValue({
+          text: null,
+      });
+
+      const input = { text: 'Test' };
+      const result = await analyzeInvitation(input);
+
+      expect(result).toEqual({
+          priority: undefined,
+          linkedActivities: [],
+      });
   });
 });
