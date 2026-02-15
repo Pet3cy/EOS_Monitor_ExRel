@@ -32,7 +32,7 @@ export function generateCalendarWeeks(
     }
 
     // Pre-parse dates to avoid repeated parsing in the loop
-    const eventDates = events.map(event => new Date(event.analysis.date));
+const eventDates = events.map(event => new Date(event.analysis.date + 'T00:00:00'));
 
     for (let i = 0; i < 53; i++) { // Some years have 53 weeks
       const weekStart = new Date(firstMonday);
