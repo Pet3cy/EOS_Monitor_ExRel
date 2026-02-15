@@ -32,15 +32,19 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onClick, onDelete, 
     <>
       <div 
         onClick={onClick}
-        className={`p-4 mb-3 rounded-lg border cursor-pointer transition-all hover:shadow-md group/card relative ${
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
+        tabIndex={0}
+        aria-label={`View details for ${analysis.eventName}`}
+        className={`p-4 mb-3 rounded-lg border cursor-pointer transition-all hover:shadow-md group/card relative focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
           isSelected ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'border-slate-200 bg-white'
         }`}
       >
         {/* Quick Action Delete */}
         <button 
           onClick={handleDeleteClick}
-          className="absolute top-2 right-2 p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-all opacity-0 group-hover/card:opacity-100"
+          className="absolute top-2 right-2 p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-all opacity-0 group-hover/card:opacity-100 focus:opacity-100"
           title="Delete Event"
+          aria-label="Delete Event"
         >
           <Trash2 size={14} />
         </button>
