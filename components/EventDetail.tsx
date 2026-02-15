@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { EventData, Priority, RepresentativeRole, Contact } from '../types';
 import { PriorityBadge } from './PriorityBadge';
-import { Calendar, MapPin, Building2, AlertCircle, FileText, CheckCircle, Save, Loader2, Sparkles, ExternalLink, Briefcase, Trash2, Users, User, FileJson, FileSpreadsheet } from 'lucide-react';
-import { summarizeFollowUp, generateBriefing } from '../services/geminiService';
+import { 
+  Calendar, MapPin, Building2, AlertCircle, FileText,
+  CheckCircle, Save, Loader2, Sparkles, ExternalLink,
+  Briefcase, Trash2, Users, User, FileJson, FileSpreadsheet
+} from 'lucide-react';
+import { generateBriefing } from '../services/geminiService';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { NewContactModal } from './NewContactModal';
 
@@ -21,7 +25,6 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   const [localEvent, setLocalEvent] = useState<EventData>(event);
   const [activeTab, setActiveTab] = useState<TabType>('context');
   const [isEditing, setIsEditing] = useState(false);
-  const [isSummarizing, setIsSummarizing] = useState(false);
   const [isGeneratingBrief, setIsGeneratingBrief] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);

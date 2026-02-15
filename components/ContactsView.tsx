@@ -3,8 +3,8 @@ import React, { useState, useMemo } from 'react';
 import { Contact, EventData } from '../types';
 import { 
   Users, UserPlus, Mail, Briefcase, Building, 
-  Search, Edit2, Trash2, X, Save, ExternalLink, 
-  MapPin, Calendar, ChevronRight, Activity, Clock
+  Search, Edit2, Trash2, X, Save,
+  MapPin, Calendar, Activity, Clock
 } from 'lucide-react';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
