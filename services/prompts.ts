@@ -1,3 +1,5 @@
+import { Type, Schema } from "@google/genai";
+
 export const OBESSU_DATA_CONTEXT = `
 ORGANIZATIONAL STRUCTURE & PORTFOLIOS (2026):
 
@@ -47,3 +49,27 @@ Output Requirements:
 - Extract URLs for registration and agendas.
 - Suggest internal OBESSU documents or past positions relevant to the topic.
 `;
+
+export const responseSchema: Schema = {
+  type: Type.OBJECT,
+  properties: {
+    sender: { type: Type.STRING },
+    senderEmail: { type: Type.STRING },
+    subject: { type: Type.STRING },
+    institution: { type: Type.STRING },
+    eventName: { type: Type.STRING },
+    theme: { type: Type.STRING },
+    description: { type: Type.STRING },
+    priority: { type: Type.STRING, enum: ["High", "Medium", "Low", "Irrelevant"] },
+    priorityScore: { type: Type.INTEGER },
+    priorityReasoning: { type: Type.STRING },
+    date: { type: Type.STRING },
+    venue: { type: Type.STRING },
+    initialDeadline: { type: Type.STRING },
+    finalDeadline: { type: Type.STRING },
+    linkedActivities: { type: Type.ARRAY, items: { type: Type.STRING } },
+    registrationLink: { type: Type.STRING },
+    programmeLink: { type: Type.STRING }
+  },
+  required: ["sender", "institution", "eventName", "priority", "priorityScore", "date", "venue", "description"],
+};
