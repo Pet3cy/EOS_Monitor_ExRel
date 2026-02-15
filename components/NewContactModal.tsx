@@ -47,7 +47,7 @@ export const NewContactModal: React.FC<NewContactModalProps> = ({ isOpen, onClos
     if (!validate()) return;
 
     const newContact: Contact = {
-      id: `c${Date.now()}`,
+      id: `c${crypto.randomUUID()}`,
       name: formData.name,
       email: formData.email,
       role: formData.role || 'Member',
