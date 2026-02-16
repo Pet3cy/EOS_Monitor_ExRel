@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { EventData, Priority, RepresentativeRole, Contact } from '../types';
+import { EventData, Contact } from '../types';
 import { PriorityBadge } from './PriorityBadge';
 import { Calendar, MapPin, Building2, AlertCircle, FileText, CheckCircle, Save, Loader2, Sparkles, ExternalLink, Briefcase, Trash2, Users, User, FileJson, FileSpreadsheet } from 'lucide-react';
 import { generateBriefing } from '../services/geminiService';
@@ -52,6 +52,13 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     } finally {
       setIsGeneratingBrief(false);
     }
+  };
+
+  const handleCreateContact = (contact: Contact) => {
+    if (onAddContact) {
+      onAddContact(contact);
+    }
+    setShowNewContactModal(false);
   };
 
   const handlePickContact = (contact: Contact) => {
