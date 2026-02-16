@@ -31,20 +31,19 @@ export function generateCalendarWeeks(
         return [];
     }
 
-    // Optimization: Pre-process and sort events by date
-    // This reduces date parsing from O(W*N) to O(N) and uses binary/linear scan logic (O(N + W)).
+    // Optimization: Pre-process and sort events (O(N log N))
     const processedEvents = events
-      .map(event => {
-        const d = new Date(event.analysis.date);
-        return {
-          original: event,
-          time: d.getTime()
-        };
+      .filter(event => {
+        if (priorityFilter !== 'All' && event.analysis.priority !== priorityFilter) return false;
+        if (themeFilter !== 'All' && event.analysis.theme !== themeFilter) return false;
+        return true;
       })
-      .filter(item => !isNaN(item.time));
-
-    // Sort by time ascending
-    processedEvents.sort((a, b) => a.time - b.time);
+      .map(event => ({
+        original: event,
+        date: new Date(event.analysis.date)
+      }))
+      .filter(item => !isNaN(item.date.getTime())) // Filter out invalid dates
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
 
     let eventIndex = 0;
 
@@ -64,43 +63,28 @@ export function generateCalendarWeeks(
       // Filter weeks that overlap with the user's selected date range
       if (weekEnd < rangeStart || weekStart > rangeEnd) continue;
 
-      // Skip events strictly before this week
-      // Since weeks are sequential and events are sorted, we can permanently advance the index.
-      while (eventIndex < processedEvents.length && processedEvents[eventIndex].time < weekStartTime) {
+      const currentWeekEvents: EventData[] = [];
+
+      // Skip events before this week (O(N) total over all iterations)
+      while (eventIndex < processedEvents.length && processedEvents[eventIndex].date < weekStart) {
         eventIndex++;
       }
 
-      // Collect events for this week
-      const weekEvents: EventData[] = [];
-      let tempIndex = eventIndex;
-
-      while (tempIndex < processedEvents.length) {
-        const ev = processedEvents[tempIndex];
-
-        // If event is after this week, we can stop scanning for this week.
-        // Since events are sorted, all subsequent events are also after this week.
-        if (ev.time > weekEndTime) break;
-
-        // Apply filters
-        const matchesPriority = priorityFilter === 'All' || ev.original.analysis.priority === priorityFilter;
-        const matchesTheme = themeFilter === 'All' || ev.original.analysis.theme === themeFilter;
-
-        if (matchesPriority && matchesTheme) {
-          weekEvents.push(ev.original);
-        }
-
-        tempIndex++;
+      // Collect events in this week
+      while (eventIndex < processedEvents.length && processedEvents[eventIndex].date <= weekEnd) {
+        currentWeekEvents.push(processedEvents[eventIndex].original);
+        eventIndex++;
       }
 
-      // Optimisation: If filtering by specific priority/theme, only show weeks that have those matches.
-      const hasMatches = weekEvents.length > 0;
+      // If filtering by specific priority/theme, only show weeks that have those matches.
+      const hasMatches = currentWeekEvents.length > 0;
       if (!hasMatches && (priorityFilter !== 'All' || themeFilter !== 'All')) continue;
 
       weeksArr.push({
         number: i + 1,
         start: weekStart,
         end: weekEnd,
-        events: weekEvents
+        events: currentWeekEvents
       });
     }
     return weeksArr;
