@@ -81,3 +81,4 @@ ok 7 - aggregateStakeholders - handling empty input
 -  strips types, so  is crucial for type checking.
 - Duplicate function definitions and component renderings can slip into the codebase (possibly from merge conflicts) and cause build errors or runtime issues.
 -  imports should be carefully managed to avoid unused code.
+- Code Health: Verified that unsafe JSX overrides are removed. Fixed a duplicate function declaration (`handleCreateContact`) in `components/EventDetail.tsx` which was causing type errors. Confirmed that removing the JSX override does not cause regressions when standard types are correctly installed.
