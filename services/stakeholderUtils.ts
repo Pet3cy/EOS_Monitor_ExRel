@@ -1,4 +1,4 @@
-import type { EventData } from '../types.ts';
+import type { EventData } from '../types';
 
 export interface StakeholderStats {
   name: string;

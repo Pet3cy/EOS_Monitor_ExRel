@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { aggregateStakeholders } from './stakeholderUtils.ts';
-import { Priority } from '../types.ts';
-import type { EventData } from '../types.ts';
+import { aggregateStakeholders } from './stakeholderUtils';
+import { Priority } from '../types';
+import type { EventData } from '../types';
 
 const mockEvent = (overrides: any = {}): EventData => ({
   id: '1',
