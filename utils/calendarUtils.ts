@@ -54,6 +54,9 @@ export function generateCalendarWeeks(
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 6);
 
+      const weekStartTime = weekStart.getTime();
+      const weekEndTime = weekEnd.getTime();
+
       // Stop if we've passed the target year entirely
       if (weekStart.getFullYear() > year) break;
 
