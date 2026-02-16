@@ -1,8 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { AnalysisResult, Priority, EventData } from "../types";
 import { OBESSU_DATA_CONTEXT, SYSTEM_INSTRUCTION, responseSchema } from "./prompts";
-
-const GEMINI_MODEL_NAME = "gemini-1.5-flash-latest";
+import { GEMINI_MODEL_NAME, CACHE_PREFIX, MAX_CACHE_SIZE } from "./config";
 
 let ai: GoogleGenAI | null = null;
 
@@ -16,9 +15,6 @@ const getAiClient = (): GoogleGenAI => {
   return ai;
 };
 
-// Caching configuration
-const CACHE_PREFIX = 'gemini_cache_v2_';
-const MAX_CACHE_SIZE = 50;
 const MEMORY_CACHE = new Map<string, AnalysisResult>();
 
 const generateCacheKey = async (input: AnalysisInput): Promise<string> => {

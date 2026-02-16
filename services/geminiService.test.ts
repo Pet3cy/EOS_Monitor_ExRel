@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { analyzeInvitation } from './geminiService';
+import { GEMINI_MODEL_NAME } from './config';
 
 const { generateContentMock } = vi.hoisted(() => {
   return { generateContentMock: vi.fn() };
@@ -59,6 +60,7 @@ describe('analyzeInvitation', () => {
     const result = await analyzeInvitation(input);
 
     expect(generateContentMock).toHaveBeenCalledWith(expect.objectContaining({
+      model: GEMINI_MODEL_NAME,
       contents: expect.objectContaining({
         parts: expect.arrayContaining([
             expect.objectContaining({ text: expect.stringContaining('Test invitation text') })
@@ -100,6 +102,7 @@ describe('analyzeInvitation', () => {
     const result = await analyzeInvitation(input);
 
     expect(generateContentMock).toHaveBeenCalledWith(expect.objectContaining({
+      model: GEMINI_MODEL_NAME,
       contents: expect.objectContaining({
          parts: expect.arrayContaining([
             expect.objectContaining({ inlineData: input.fileData })
