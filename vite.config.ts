@@ -7,7 +7,7 @@ export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
 
     // Check for RENDER environment variable to set custom output directory
-    const isRender = process.env.RENDER === 'true';
+    const isRender = process.env.RENDER === 'true' || process.env.NETLIFY === 'true';
     const outDir = isRender ? 'Frontend/build' : 'dist';
 
     return {
@@ -17,7 +17,7 @@ export default defineConfig(({ mode }) => {
       },
       plugins: [react()],
       build: {
-        outDir: 'Frontend/build',
+        outDir: outDir,
       },
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
