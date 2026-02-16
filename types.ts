@@ -72,5 +72,6 @@ export interface EventData {
   followUp: FollowUpDetails;
 }
 
+export type ViewMode = 'calendar' | 'upcoming' | 'past' | 'overview' | 'contacts';
 
 // Note: Global JSX namespace override is intentionally omitted to enforce strict type checking.

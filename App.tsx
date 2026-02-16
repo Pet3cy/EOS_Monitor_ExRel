@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Plus, Search, Layout, Filter, CalendarClock, History, PieChart, Users, Calendar as CalendarIcon } from 'lucide-react';
-import { EventData, Contact } from './types';
+import { EventData, Contact, ViewMode } from './types';
+import { filterEvents } from './utils/eventUtils';
 import { EventCard } from './components/EventCard';
 import { EventDetail } from './components/EventDetail';
 import { UploadModal } from './components/UploadModal';
@@ -8,12 +9,6 @@ import { Overview } from './components/Overview';
 import { CalendarView } from './components/CalendarView';
 import { ContactsView } from './components/ContactsView';
 import { MOCK_CONTACTS, MOCK_EVENTS } from './data/mockData';
-
-type ViewMode = 'calendar' | 'upcoming' | 'past' | 'overview' | 'contacts';
-
-const isCompletedOrArchived = (status: string) => {
-    return status.startsWith('Completed') || status === 'Not Relevant';
-};
 
 export default function App() {
   const [events, setEvents] = useState<EventData[]>(MOCK_EVENTS);
@@ -110,21 +105,7 @@ export default function App() {
   }, []);
 
   const filteredEvents = useMemo(() => {
-    const lowerSearchTerm = searchTerm.toLowerCase();
-    return events.filter(e => {
-      const matchesSearch =
-        e.analysis.eventName.toLowerCase().includes(lowerSearchTerm) ||
-        e.analysis.institution.toLowerCase().includes(lowerSearchTerm);
-
-      if (!matchesSearch) return false;
-
-      if (viewMode === 'upcoming') {
-        return !isCompletedOrArchived(e.followUp.status);
-      } else if (viewMode === 'past') {
-        return isCompletedOrArchived(e.followUp.status);
-      }
-      return true;
-    });
+    return filterEvents(events, searchTerm, viewMode);
   }, [events, searchTerm, viewMode]);
 
   const selectedEvent = events.find(e => e.id === selectedEventId);
