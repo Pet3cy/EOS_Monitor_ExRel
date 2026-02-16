@@ -121,7 +121,7 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
   return result;
 };
 
-export const generateBriefing = async (event: EventData) => {
+export const generateBriefing = async (event: EventData): Promise<string> => {
   const prompt = `Create a 1-page executive briefing for a representative attending the following event:
   Event: ${event.analysis.eventName}
   Institution: ${event.analysis.institution}
@@ -143,7 +143,7 @@ export const generateBriefing = async (event: EventData) => {
     contents: [{ parts: [{ text: prompt }] }],
   });
 
-  return response.text;
+  return response.text || "";
 };
 
 export const summarizeFollowUp = async (file: { mimeType: string, data: string }) => {
@@ -156,5 +156,5 @@ export const summarizeFollowUp = async (file: { mimeType: string, data: string }
       ]
     },
   });
-  return response.text;
+  return response.text || "";
 };
