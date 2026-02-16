@@ -121,13 +121,19 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
   return result;
 };
 
-export const generateBriefing = async (event: EventData) => {
+export const generateBriefing = async (event: EventData): Promise<string> => {
+  if (!event || !event.analysis) {
+    throw new Error('Invalid event data: missing analysis results.');
+  }
+
+  const { analysis } = event;
+
   const prompt = `Create a 1-page executive briefing for a representative attending the following event:
-  Event: ${event.analysis.eventName}
-  Institution: ${event.analysis.institution}
-  Theme: ${event.analysis.theme}
-  Context: ${event.analysis.description}
-  Linked Activities: ${event.analysis.linkedActivities.join(', ')}
+  Event: ${analysis.eventName || 'N/A'}
+  Institution: ${analysis.institution || 'N/A'}
+  Theme: ${analysis.theme || 'N/A'}
+  Context: ${analysis.description || 'N/A'}
+  Linked Activities: ${(analysis.linkedActivities || []).join(', ')}
   
   CONTEXT:
   ${OBESSU_DATA_CONTEXT}
@@ -143,7 +149,7 @@ export const generateBriefing = async (event: EventData) => {
     contents: [{ parts: [{ text: prompt }] }],
   });
 
-  return response.text;
+  return response.text || '';
 };
 
 export const summarizeFollowUp = async (file: { mimeType: string, data: string }) => {
