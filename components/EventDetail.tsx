@@ -27,6 +27,13 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [showNewContactModal, setShowNewContactModal] = useState(false);
 
+  const handleCreateContact = (contact: Contact) => {
+    if (onAddContact) {
+        onAddContact(contact);
+    }
+    setShowNewContactModal(false);
+  };
+
   useEffect(() => {
     setLocalEvent(deepCopyEvent(event));
     setIsEditing(false);
