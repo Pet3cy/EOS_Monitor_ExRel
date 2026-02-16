@@ -87,6 +87,9 @@ export interface AnalysisInput {
 }
 
 export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisResult> => {
+  if (!input.text && !input.fileData) {
+    throw new Error("Input must contain either text or fileData");
+  }
   const cacheKey = await generateCacheKey(input);
   const cachedResult = getFromCache(cacheKey);
   if (cachedResult) return cachedResult;
