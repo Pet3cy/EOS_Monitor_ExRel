@@ -7,11 +7,12 @@ const GEMINI_MODEL_NAME = "gemini-1.5-flash-latest";
 let ai: GoogleGenAI | null = null;
 
 const getAiClient = (): GoogleGenAI => {
-  if (!process.env.API_KEY) {
-    throw new Error("API_KEY environment variable is missing");
+  const apiKey = process.env.API_KEY;
+  if (!apiKey || apiKey.trim() === "") {
+    throw new Error("API_KEY environment variable is missing or empty. Please check your configuration.");
   }
   if (!ai) {
-    ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    ai = new GoogleGenAI({ apiKey });
   }
   return ai;
 };

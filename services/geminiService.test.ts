@@ -141,6 +141,6 @@ describe('analyzeInvitation', () => {
   it('should throw error when API_KEY is missing', async () => {
     delete process.env.API_KEY;
     const input = { text: 'Unique Test Input For API Key Check' }; // Unique input to bypass cache
-    await expect(analyzeInvitation(input)).rejects.toThrow('API_KEY environment variable is missing');
+    await expect(analyzeInvitation(input)).rejects.toThrow('API_KEY environment variable is missing or empty. Please check your configuration.');
   });
 });
