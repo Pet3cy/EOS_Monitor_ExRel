@@ -30,7 +30,7 @@ export default defineConfig(({ mode }) => {
       },
       resolve: {
         alias: {
-          'mammoth': path.resolve(__dirname, 'node_modules/mammoth/mammoth.browser.js'),
+
           '@': path.resolve(__dirname, '.'),
         }
       },
