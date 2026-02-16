@@ -43,6 +43,8 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     setIsEditing(true);
   };
 
+  const handleCreateContact = (contact: Contact) => { if (onAddContact) { onAddContact(contact); } };
+
   const handleBriefingGen = async () => {
     setIsGeneratingBrief(true);
     try {
