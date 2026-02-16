@@ -27,7 +27,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   const [showNewContactModal, setShowNewContactModal] = useState(false);
 
   useEffect(() => {
-    setLocalEvent({ ...event });
+    setLocalEvent(structuredClone(event));
     setIsEditing(false);
   }, [event]);
 
@@ -52,13 +52,6 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     } finally {
       setIsGeneratingBrief(false);
     }
-  };
-
-  const handleCreateContact = (contact: Contact) => {
-    if (onAddContact) {
-      onAddContact(contact);
-    }
-    setShowNewContactModal(false);
   };
 
   const handlePickContact = (contact: Contact) => {
