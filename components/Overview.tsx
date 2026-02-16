@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { EventData } from '../types';
+import { aggregateStakeholders } from '../services/stakeholderUtils';
 import { Building2, FileText, CheckCircle2, Layers, Edit2, Check, X } from 'lucide-react';
 
 interface OverviewProps {
