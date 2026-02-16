@@ -2,7 +2,22 @@
   command = "npm run build"
   publish = "Frontend/build"
 
+[build.environment]
+  SNYK_TOKEN = ""
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+
+[[plugins]]
+  package = "netlify-plugin-a11y"
+  [plugins.inputs]
+    checkPaths = ['/a11y-test.html']
+    timeout = 120000
+
+[[plugins]]
+  package = "netlify-plugin-fetch-feeds"
+  [plugins.inputs]
+    dataDir = "data"
+    feeds = []
