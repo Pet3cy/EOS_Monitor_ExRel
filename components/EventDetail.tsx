@@ -27,7 +27,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   const [showNewContactModal, setShowNewContactModal] = useState(false);
 
   useEffect(() => {
-    setLocalEvent(structuredClone(event));
+    setLocalEvent({ ...event });
     setIsEditing(false);
   }, [event]);
 
