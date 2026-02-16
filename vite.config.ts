@@ -9,9 +9,10 @@ const __dirname = path.dirname(__filename);
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, process.cwd(), '');
 
-    // Check for RENDER environment variable to set custom output directory
-    const isRender = process.env.RENDER === 'true';
-    const outDir = isRender ? 'Frontend/build' : 'dist';
+    // Force output to Frontend/build to match Render/Netlify expectations
+    // Memory says: "Render Dashboard settings ... expects output in Frontend/build"
+    // and "Netlify ... publishing Frontend/build"
+    const outDir = 'Frontend/build';
 
     return {
       server: {
