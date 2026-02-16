@@ -71,6 +71,14 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     setShowContactPicker(false);
   };
 
+  const handleCreateContact = (contact: Contact) => {
+    if (onAddContact) {
+      onAddContact(contact);
+    }
+    handlePickContact(contact);
+    setShowNewContactModal(false);
+  };
+
 
 
   const handleExportJSON = () => {
