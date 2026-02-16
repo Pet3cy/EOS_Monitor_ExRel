@@ -31,6 +31,22 @@ export function generateCalendarWeeks(
         return [];
     }
 
+    // Optimization: Pre-process and sort events (O(N log N))
+    const processedEvents = events
+      .filter(event => {
+        if (priorityFilter !== 'All' && event.analysis.priority !== priorityFilter) return false;
+        if (themeFilter !== 'All' && event.analysis.theme !== themeFilter) return false;
+        return true;
+      })
+      .map(event => ({
+        original: event,
+        date: new Date(event.analysis.date)
+      }))
+      .filter(item => !isNaN(item.date.getTime())) // Filter out invalid dates
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
+
+    let eventIndex = 0;
+
     for (let i = 0; i < 53; i++) { // Some years have 53 weeks
       const weekStart = new Date(firstMonday);
       weekStart.setDate(firstMonday.getDate() + i * 7);
@@ -38,30 +54,37 @@ export function generateCalendarWeeks(
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 6);
 
+      const weekStartTime = weekStart.getTime();
+      const weekEndTime = weekEnd.getTime();
+
       // Stop if we've passed the target year entirely
       if (weekStart.getFullYear() > year) break;
 
       // Filter weeks that overlap with the user's selected date range
       if (weekEnd < rangeStart || weekStart > rangeEnd) continue;
 
-      // Find events in this week that match all filters
-      const weekEvents = events.filter(event => {
-        const eventDate = new Date(event.analysis.date);
-        const matchesDate = eventDate >= weekStart && eventDate <= weekEnd;
-        const matchesPriority = priorityFilter === 'All' || event.analysis.priority === priorityFilter;
-        const matchesTheme = themeFilter === 'All' || event.analysis.theme === themeFilter;
-        return matchesDate && matchesPriority && matchesTheme;
-      });
+      const currentWeekEvents: EventData[] = [];
 
-      // Optimisation: If filtering by specific priority/theme, only show weeks that have those matches.
-      const hasMatches = weekEvents.length > 0;
+      // Skip events before this week (O(N) total over all iterations)
+      while (eventIndex < processedEvents.length && processedEvents[eventIndex].date < weekStart) {
+        eventIndex++;
+      }
+
+      // Collect events in this week
+      while (eventIndex < processedEvents.length && processedEvents[eventIndex].date <= weekEnd) {
+        currentWeekEvents.push(processedEvents[eventIndex].original);
+        eventIndex++;
+      }
+
+      // If filtering by specific priority/theme, only show weeks that have those matches.
+      const hasMatches = currentWeekEvents.length > 0;
       if (!hasMatches && (priorityFilter !== 'All' || themeFilter !== 'All')) continue;
 
       weeksArr.push({
         number: i + 1,
         start: weekStart,
         end: weekEnd,
-        events: weekEvents
+        events: currentWeekEvents
       });
     }
     return weeksArr;
