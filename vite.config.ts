@@ -23,6 +23,18 @@ export default defineConfig(({ mode }) => {
       build: {
         outDir: outDir,
         emptyOutDir: true,
+        rollupOptions: {
+          external: ['mammoth', 'react', 'react-dom', 'lucide-react', '@google/genai'],
+          output: {
+            paths: {
+              mammoth: 'https://esm.sh/mammoth@1.6.0',
+              react: 'https://esm.sh/react@^19.2.4',
+              'react-dom': 'https://esm.sh/react-dom@^19.2.4',
+              'lucide-react': 'https://esm.sh/lucide-react@^0.563.0',
+              '@google/genai': 'https://esm.sh/@google/genai@^1.39.0',
+            }
+          }
+        }
       },
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY || ''),
