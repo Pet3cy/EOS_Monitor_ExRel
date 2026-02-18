@@ -30,6 +30,7 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
   const [isAdding, setIsAdding] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
+  // Optimization: Pre-calculate lowercased fields to avoid repeated toLowerCase() calls during filter operations.
   const searchableContacts = useMemo(() => {
     return contacts.map(c => ({
       original: c,
@@ -55,7 +56,9 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
     if (!selectedContactId) return [];
     return events
         .filter(e => e.contact.contactId === selectedContactId)
-        .sort((a, b) => new Date(b.analysis.date).getTime() - new Date(a.analysis.date).getTime());
+        .map(e => ({ original: e, timestamp: new Date(e.analysis.date).getTime() }))
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .map(item => item.original);
   }, [selectedContactId, events]);
 
   const handleSave = (e: React.FormEvent) => {
