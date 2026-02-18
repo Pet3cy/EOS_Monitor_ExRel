@@ -2,16 +2,25 @@
   publish = "dist"
   command = "npm run build"
 
-[build.environment]
-  NETLIFY_NEXT_PLUGIN_SKIP = "true"
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
 
-[context.production.environment]
-  NETLIFY_NEXT_PLUGIN_SKIP = "true"
-
-[context.deploy-preview.environment]
-  NETLIFY_NEXT_PLUGIN_SKIP = "true"
-
-[context.branch-deploy.environment]
-  NETLIFY_NEXT_PLUGIN_SKIP = "true"
+[[plugins]]
+  package = "netlify-plugin-a11y"
 
 
+[[plugins]]
+  package = "netlify-plugin-fetch-feeds"
+  [plugins.inputs]
+    dataDir = "data/feeds"
+    feeds = [
+      { name = "obessu", url = "https://www.obessu.org/feed/", ttl = 300 }
+    ]
+
+[[plugins]]
+  package = "@netlify/plugin-sitemap"
+
+[[plugins]]
+  package = "@netlify/plugin-lighthouse"
