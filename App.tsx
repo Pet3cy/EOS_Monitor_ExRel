@@ -109,10 +109,9 @@ export default function App() {
     setSelectedEventId(id);
   }, []);
 
-
   const searchableEvents = useMemo(() => {
     return events.map(e => ({
-      original: e,
+      ...e,
       lowerEventName: e.analysis.eventName.toLowerCase(),
       lowerInstitution: e.analysis.institution.toLowerCase()
     }));
@@ -120,10 +119,10 @@ export default function App() {
 
   const filteredEvents = useMemo(() => {
     const lowerSearchTerm = searchTerm.toLowerCase();
-    return searchableEvents.filter(item => {
+    return searchableEvents.filter(e => {
       const matchesSearch =
-        item.lowerEventName.includes(lowerSearchTerm) ||
-        item.lowerInstitution.includes(lowerSearchTerm);
+        e.lowerEventName.includes(lowerSearchTerm) ||
+        e.lowerInstitution.includes(lowerSearchTerm);
 
       if (!matchesSearch) return false;
 
@@ -134,7 +133,7 @@ export default function App() {
         return isCompletedOrArchived(e.followUp.status);
       }
       return true;
-    }).map(item => item.original);
+    });
   }, [searchableEvents, searchTerm, viewMode]);
 
   const selectedEvent = events.find(e => e.id === selectedEventId);

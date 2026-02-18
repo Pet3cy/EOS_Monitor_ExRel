@@ -54,6 +54,8 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     }
   };
 
+
+
   const handlePickContact = (contact: Contact) => {
     setLocalEvent(prev => ({
       ...prev,
