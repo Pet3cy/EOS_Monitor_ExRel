@@ -111,7 +111,7 @@ export default function App() {
 
   const searchableEvents = useMemo(() => {
     return events.map(e => ({
-      ...e,
+      original: e,
       lowerEventName: e.analysis.eventName.toLowerCase(),
       lowerInstitution: e.analysis.institution.toLowerCase()
     }));
@@ -119,21 +119,23 @@ export default function App() {
 
   const filteredEvents = useMemo(() => {
     const lowerSearchTerm = searchTerm.toLowerCase();
-    return searchableEvents.filter(e => {
-      const matchesSearch =
-        e.lowerEventName.includes(lowerSearchTerm) ||
-        e.lowerInstitution.includes(lowerSearchTerm);
+    return searchableEvents
+      .filter(item => {
+        const matchesSearch =
+          item.lowerEventName.includes(lowerSearchTerm) ||
+          item.lowerInstitution.includes(lowerSearchTerm);
 
-      if (!matchesSearch) return false;
+        if (!matchesSearch) return false;
 
-      const e = item.original;
-      if (viewMode === 'upcoming') {
-        return !isCompletedOrArchived(e.followUp.status);
-      } else if (viewMode === 'past') {
-        return isCompletedOrArchived(e.followUp.status);
-      }
-      return true;
-    });
+        const e = item.original;
+        if (viewMode === 'upcoming') {
+          return !isCompletedOrArchived(e.followUp.status);
+        } else if (viewMode === 'past') {
+          return isCompletedOrArchived(e.followUp.status);
+        }
+        return true;
+      })
+      .map(item => item.original);
   }, [searchableEvents, searchTerm, viewMode]);
 
   const selectedEvent = events.find(e => e.id === selectedEventId);
