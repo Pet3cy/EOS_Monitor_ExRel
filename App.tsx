@@ -126,6 +126,7 @@ export default function App() {
 
       if (!matchesSearch) return false;
 
+      const e = item.original;
       if (viewMode === 'upcoming') {
         return !isCompletedOrArchived(e.followUp.status);
       } else if (viewMode === 'past') {
