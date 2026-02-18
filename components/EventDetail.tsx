@@ -54,6 +54,13 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     }
   };
 
+  const handleCreateContact = (contact: Contact) => {
+    if (onAddContact) {
+      onAddContact(contact);
+    }
+    setShowNewContactModal(false);
+  };
+
   const handlePickContact = (contact: Contact) => {
     setLocalEvent(prev => ({
       ...prev,

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { analyzeInvitation } from './geminiService';
+import { analyzeInvitation, generateBriefing } from './geminiService';
+import { EventData, Priority } from '../types';
 
 const { generateContentMock } = vi.hoisted(() => {
   return { generateContentMock: vi.fn() };
@@ -142,5 +143,113 @@ describe('analyzeInvitation', () => {
     delete process.env.API_KEY;
     const input = { text: 'Unique Test Input For API Key Check' }; // Unique input to bypass cache
     await expect(analyzeInvitation(input)).rejects.toThrow('API_KEY environment variable is missing');
+  });
+});
+
+describe('generateBriefing', () => {
+  const originalApiKey = process.env.API_KEY;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.API_KEY = 'test-api-key';
+  });
+
+  afterEach(() => {
+    process.env.API_KEY = originalApiKey;
+  });
+
+  it('should generate briefing successfully', async () => {
+    const mockResponseText = 'Briefing content';
+    generateContentMock.mockResolvedValue({
+      text: mockResponseText,
+    });
+
+    const mockEvent: EventData = {
+        id: '1',
+        createdAt: 1234567890,
+        originalText: 'original',
+        contact: {
+             polContact: 'pol', name: 'name', email: 'email', role: 'role', organization: 'org', repRole: 'Speaker', notes: 'notes'
+        },
+        followUp: {
+            prepResources: '', briefing: '', commsPack: { remarks: '', representative: '', datePlace: '', additionalInfo: '' }, postEventNotes: '', status: 'To Respond'
+        },
+        analysis: {
+            sender: 'sender',
+            institution: 'Test Institution',
+            eventName: 'Test Event',
+            theme: 'Test Theme',
+            description: 'Test Description',
+            priority: Priority.High,
+            priorityScore: 90,
+            priorityReasoning: '',
+            date: '',
+            venue: '',
+            initialDeadline: '',
+            finalDeadline: '',
+            linkedActivities: ['Activity 1', 'Activity 2']
+        }
+    };
+
+    const result = await generateBriefing(mockEvent);
+
+    expect(generateContentMock).toHaveBeenCalledWith(expect.objectContaining({
+      contents: expect.arrayContaining([
+        expect.objectContaining({
+          parts: expect.arrayContaining([
+            expect.objectContaining({
+              text: expect.stringContaining('Test Event')
+            }),
+            expect.objectContaining({
+                text: expect.stringContaining('Activity 1, Activity 2')
+            })
+          ])
+        })
+      ])
+    }));
+    expect(result).toBe(mockResponseText);
+  });
+
+  it('should throw error if event data is missing', async () => {
+    await expect(generateBriefing(null as any)).rejects.toThrow('Invalid event data');
+  });
+
+  it('should throw error if analysis data is missing', async () => {
+      const mockEvent = { id: '1' } as EventData;
+      await expect(generateBriefing(mockEvent)).rejects.toThrow('Invalid event data');
+  });
+
+  it('should handle missing optional fields in analysis', async () => {
+      generateContentMock.mockResolvedValue({ text: 'Success' });
+       const mockEvent: EventData = {
+        id: '1',
+        createdAt: 1234567890,
+        originalText: 'original',
+        contact: {} as any,
+        followUp: {} as any,
+        analysis: {
+            eventName: undefined, // Missing
+            institution: undefined,
+            theme: undefined,
+            description: undefined,
+            linkedActivities: undefined
+        } as any
+    };
+
+    const result = await generateBriefing(mockEvent);
+    expect(result).toBe('Success');
+
+    // verify N/A are used
+     expect(generateContentMock).toHaveBeenCalledWith(expect.objectContaining({
+      contents: expect.arrayContaining([
+        expect.objectContaining({
+          parts: expect.arrayContaining([
+            expect.objectContaining({
+              text: expect.stringContaining('Event: N/A')
+            })
+          ])
+        })
+      ])
+    }));
   });
 });

@@ -1,8 +1,26 @@
 [build]
-  command = "yarn build"
-  publish = "Frontend/build"
+  publish = "dist"
+  command = "npm run build"
 
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+
+[[plugins]]
+  package = "netlify-plugin-a11y"
+
+
+[[plugins]]
+  package = "netlify-plugin-fetch-feeds"
+  [plugins.inputs]
+    dataDir = "data/feeds"
+    feeds = [
+      { name = "obessu", url = "https://www.obessu.org/feed/", ttl = 300 }
+    ]
+
+[[plugins]]
+  package = "@netlify/plugin-sitemap"
+
+[[plugins]]
+  package = "@netlify/plugin-lighthouse"
