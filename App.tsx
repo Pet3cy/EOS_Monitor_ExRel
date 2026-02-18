@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { Plus, Search, Layout, Filter, CalendarClock, History, PieChart, Users, Calendar as CalendarIcon } from 'lucide-react';
 import { EventData, Contact } from './types';
 import { EventCard } from './components/EventCard';
@@ -10,6 +10,11 @@ import { ContactsView } from './components/ContactsView';
 import { MOCK_CONTACTS, MOCK_EVENTS } from './data/mockData';
 
 type ViewMode = 'calendar' | 'upcoming' | 'past' | 'overview' | 'contacts';
+
+interface SearchableEvent extends EventData {
+  lowerEventName: string;
+  lowerInstitution: string;
+}
 
 const isCompletedOrArchived = (status: string) => {
     return status.startsWith('Completed') || status === 'Not Relevant';
@@ -23,6 +28,10 @@ export default function App() {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('calendar');
+
+  // Cache to store searchable wrappers. WeakMap ensures no memory leaks when events are removed.
+  // We use this to preserve referential identity of wrappers across renders if the source event hasn't changed.
+  const eventCache = useRef(new WeakMap<EventData, SearchableEvent>());
 
   const handleAnalysisComplete = useCallback((newEvent: EventData) => {
     if (!newEvent.followUp.commsPack) {
@@ -109,12 +118,30 @@ export default function App() {
     setSelectedEventId(id);
   }, []);
 
+  // Optimization: Pre-calculate lowercased strings for search to avoid doing it on every keystroke.
+  // We use the cache to return the exact same wrapper object if the event object hasn't changed,
+  // which allows React.memo in EventCard to work effectively.
+  const searchableEvents = useMemo(() => {
+    return events.map(e => {
+      let wrapper = eventCache.current.get(e);
+      if (!wrapper) {
+        wrapper = {
+          ...e,
+          lowerEventName: e.analysis.eventName.toLowerCase(),
+          lowerInstitution: e.analysis.institution.toLowerCase(),
+        };
+        eventCache.current.set(e, wrapper);
+      }
+      return wrapper;
+    });
+  }, [events]);
+
   const filteredEvents = useMemo(() => {
     const lowerSearchTerm = searchTerm.toLowerCase();
-    return events.filter(e => {
+    return searchableEvents.filter(e => {
       const matchesSearch =
-        e.analysis.eventName.toLowerCase().includes(lowerSearchTerm) ||
-        e.analysis.institution.toLowerCase().includes(lowerSearchTerm);
+        e.lowerEventName.includes(lowerSearchTerm) ||
+        e.lowerInstitution.includes(lowerSearchTerm);
 
       if (!matchesSearch) return false;
 
@@ -125,7 +152,7 @@ export default function App() {
       }
       return true;
     });
-  }, [events, searchTerm, viewMode]);
+  }, [searchableEvents, searchTerm, viewMode]);
 
   const selectedEvent = events.find(e => e.id === selectedEventId);
 
