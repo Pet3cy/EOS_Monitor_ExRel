@@ -30,21 +30,35 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
   const [isAdding, setIsAdding] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
+  // Optimization: Pre-calculate lowercased fields to avoid repeated toLowerCase() calls during filter operations.
+  const searchableContacts = useMemo(() => {
+    return contacts.map(c => ({
+      original: c,
+      lowerName: c.name.toLowerCase(),
+      lowerEmail: c.email.toLowerCase(),
+      lowerOrg: c.organization.toLowerCase()
+    }));
+  }, [contacts]);
+
   const filteredContacts = useMemo(() => {
     const lowerSearchTerm = searchTerm.toLowerCase();
-    return contacts.filter(c =>
-      c.name.toLowerCase().includes(lowerSearchTerm) ||
-      c.email.toLowerCase().includes(lowerSearchTerm) ||
-      c.organization.toLowerCase().includes(lowerSearchTerm)
-    );
-  }, [contacts, searchTerm]);
+    return searchableContacts
+      .filter(item =>
+        item.lowerName.includes(lowerSearchTerm) ||
+        item.lowerEmail.includes(lowerSearchTerm) ||
+        item.lowerOrg.includes(lowerSearchTerm)
+      )
+      .map(item => item.original);
+  }, [searchableContacts, searchTerm]);
 
   const selectedContact = contacts.find(c => c.id === selectedContactId);
   const contactEvents = useMemo(() => {
     if (!selectedContactId) return [];
     return events
         .filter(e => e.contact.contactId === selectedContactId)
-        .sort((a, b) => new Date(b.analysis.date).getTime() - new Date(a.analysis.date).getTime());
+        .map(e => ({ original: e, timestamp: new Date(e.analysis.date).getTime() }))
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .map(item => item.original);
   }, [selectedContactId, events]);
 
   const handleSave = (e: React.FormEvent) => {

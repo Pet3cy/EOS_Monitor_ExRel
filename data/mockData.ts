@@ -1,4 +1,5 @@
 import { Contact, EventData, Priority } from '../types';
+
 export const MOCK_CONTACTS: Contact[] = [
   { id: 'c20', name: 'Alessandro Di Miceli', email: 'alessandro@obessu.org', role: 'Board Member', organization: 'OBESSU', notes: 'Portfolio: VET and Apprenticeships' },
   { id: 'c21', name: 'Elodie Böhling', email: 'elodie@obessu.org', role: 'Board Member', organization: 'OBESSU', notes: 'Portfolio: Democracy and Student Rights' },
@@ -12,6 +13,16 @@ export const MOCK_CONTACTS: Contact[] = [
   { id: 'c29', name: 'Francesca Osima', email: 'francesca@obessu.org', role: 'Head of Projects and Operations', organization: 'OBESSU', notes: 'Project management' },
   { id: 'c30', name: 'Daniele Sabato', email: 'daniele@obessu.org', role: 'Project & Policy Coordinator', organization: 'OBESSU', notes: 'VET Strategy' }
 ];
+
+const getContact = (id: string) => {
+  const contact = MOCK_CONTACTS.find(c => c.id === id);
+  if (!contact) {
+    throw new Error(`Contact with id ${id} not found`);
+  }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { notes, ...contactWithoutNotes } = contact;
+  return contactWithoutNotes;
+};
 
 export const MOCK_EVENTS: EventData[] = [
   {
@@ -35,10 +46,7 @@ export const MOCK_EVENTS: EventData[] = [
     },
     contact: {
         contactId: 'c27',
-        name: 'Panagiotis Chatzimichail',
-        email: 'panagiotis@obessu.org',
-        role: 'Head of External Affairs',
-        organization: 'OBESSU',
+        ...getContact('c27'),
         repRole: 'Speaker',
         polContact: 'Rui Teixeira',
         notes: ''
@@ -72,10 +80,7 @@ export const MOCK_EVENTS: EventData[] = [
     },
     contact: {
         contactId: 'c21',
-        name: 'Elodie Böhling',
-        email: 'elodie@obessu.org',
-        role: 'Board Member',
-        organization: 'OBESSU',
+        ...getContact('c21'),
         repRole: 'Participant',
         polContact: 'Panagiotis',
         notes: ''
@@ -111,10 +116,7 @@ export const MOCK_EVENTS: EventData[] = [
     },
     contact: {
         contactId: 'c27',
-        name: 'Panagiotis Chatzimichail',
-        email: 'panagiotis@obessu.org',
-        role: 'Head of External Affairs',
-        organization: 'OBESSU',
+        ...getContact('c27'),
         repRole: 'Activity Host',
         polContact: 'Rui Teixeira',
         notes: ''
@@ -148,10 +150,7 @@ export const MOCK_EVENTS: EventData[] = [
     },
     contact: {
         contactId: 'c20',
-        name: 'Alessandro Di Miceli',
-        email: 'alessandro@obessu.org',
-        role: 'Board Member',
-        organization: 'OBESSU',
+        ...getContact('c20'),
         repRole: 'Participant',
         polContact: 'Daniele Sabato',
         notes: ''
@@ -186,10 +185,7 @@ export const MOCK_EVENTS: EventData[] = [
     },
     contact: {
         contactId: 'c30',
-        name: 'Daniele Sabato',
-        email: 'daniele@obessu.org',
-        role: 'Project & Policy Coordinator',
-        organization: 'OBESSU',
+        ...getContact('c30'),
         repRole: 'Speaker',
         polContact: 'Panagiotis',
         notes: ''

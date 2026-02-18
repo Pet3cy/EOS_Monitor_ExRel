@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { EventData, Priority, RepresentativeRole, Contact } from '../types';
+import { EventData, Contact } from '../types';
 import { PriorityBadge } from './PriorityBadge';
 import { Calendar, MapPin, Building2, AlertCircle, FileText, CheckCircle, Save, Loader2, Sparkles, ExternalLink, Briefcase, Trash2, Users, User, FileJson, FileSpreadsheet } from 'lucide-react';
 import { generateBriefing } from '../services/geminiService';
@@ -54,6 +54,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     }
   };
 
+
   const handlePickContact = (contact: Contact) => {
     setLocalEvent(prev => ({
       ...prev,
@@ -70,7 +71,13 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     setShowContactPicker(false);
   };
 
-
+  const handleCreateContact = (newContact: Contact) => {
+    if (onAddContact) {
+      onAddContact(newContact);
+    }
+    handlePickContact(newContact);
+    setShowNewContactModal(false);
+  };
 
   const handleExportJSON = () => {
     const dataStr = JSON.stringify(localEvent, null, 2);
