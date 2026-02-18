@@ -1,4 +1,3 @@
-
 export enum Priority {
   High = 'High',
   Medium = 'Medium',
@@ -73,12 +72,5 @@ export interface EventData {
   followUp: FollowUpDetails;
 }
 
-// Augment the global JSX namespace to include IntrinsicElements
-// This fixes the "Property 'div' does not exist on type 'JSX.IntrinsicElements'" errors
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      [elemName: string]: any;
-    }
-  }
-}
+
+// Note: Global JSX namespace override is intentionally omitted to enforce strict type checking.

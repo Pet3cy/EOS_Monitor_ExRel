@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { EventData, Priority } from '../types';
 import { 
@@ -7,11 +6,21 @@ import {
   X, 
   AlertCircle, 
   Building2, 
-  MapPin, 
-  Tag,
-  ChevronRight,
-  Search
+  MapPin
 } from 'lucide-react';
+import { generateCalendarWeeks } from '../utils/calendarUtils';
+
+const toDateString = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const currentMonthName = (date: Date) => date.toLocaleString('default', { month: 'long' });
+
+const todayKey = toDateString(new Date());
+
 
 interface CalendarViewProps {
   events: EventData[];
@@ -29,74 +38,19 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
     return ['All', ...Array.from(uniqueThemes)].sort();
   }, [events]);
 
-  const toDateString = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
 
   // Generate and filter weeks for 2026
   const filteredWeeks = useMemo(() => {
-    const weeksArr = [];
-    const yearStart = new Date(2026, 0, 1);
-    
-    // Find first Monday of the year (ISO week standard often uses Monday)
-    const day = yearStart.getDay();
-    const diff = yearStart.getDate() - day + (day === 0 ? -6 : 1);
-    const firstMonday = new Date(yearStart.setDate(diff));
-
-    const rangeStart = new Date(startDateFilter);
-    const rangeEnd = new Date(endDateFilter);
-
-    // Ensure range dates are valid
-    if (isNaN(rangeStart.getTime()) || isNaN(rangeEnd.getTime())) {
-        return [];
-    }
-
-    for (let i = 0; i < 53; i++) { // Some years have 53 weeks
-      const weekStart = new Date(firstMonday);
-      weekStart.setDate(firstMonday.getDate() + i * 7);
-      
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6);
-      
-      // Stop if we've passed 2026 entirely
-      if (weekStart.getFullYear() > 2026) break;
-      
-      // Filter weeks that overlap with the user's selected date range
-      if (weekEnd < rangeStart || weekStart > rangeEnd) continue;
-
-      // Find events in this week that match all filters
-      const weekEvents = events.filter(event => {
-        const eventDate = new Date(event.analysis.date);
-        const matchesDate = eventDate >= weekStart && eventDate <= weekEnd;
-        const matchesPriority = priorityFilter === 'All' || event.analysis.priority === priorityFilter;
-        const matchesTheme = themeFilter === 'All' || event.analysis.theme === themeFilter;
-        return matchesDate && matchesPriority && matchesTheme;
-      });
-
-      // Only show weeks with events if not filtering by range strictly, 
-      // but let's show all weeks in range so it looks like a calendar.
-      // However, to keep it clean, maybe only show weeks with events OR current week?
-      // Let's stick to showing all weeks in the filtered range if the filter is specific, or just weeks with events if generic.
-      // For "Calendar Overview", showing empty weeks might be good for planning.
-      
-      // Optimisation: If filtering by specific priority/theme, only show weeks that have those matches.
-      const hasMatches = weekEvents.length > 0;
-      if (!hasMatches && (priorityFilter !== 'All' || themeFilter !== 'All')) continue;
-
-      weeksArr.push({
-        number: i + 1,
-        start: weekStart,
-        end: weekEnd,
-        events: weekEvents
-      });
-    }
-    return weeksArr;
+    return generateCalendarWeeks(
+      events,
+      2026,
+      startDateFilter,
+      endDateFilter,
+      priorityFilter,
+      themeFilter
+    );
   }, [events, priorityFilter, themeFilter, startDateFilter, endDateFilter]);
 
-  const currentMonthName = (date: Date) => date.toLocaleString('default', { month: 'long' });
 
   const resetFilters = () => {
     setPriorityFilter('All');
@@ -227,6 +181,16 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
                 return d;
               });
 
+              // Optimization: Group events by date to avoid O(N) filtering per day
+              const eventsByDate = new Map<string, EventData[]>();
+              for (const event of week.events) {
+                const d = event.analysis.date;
+                if (!eventsByDate.has(d)) {
+                  eventsByDate.set(d, []);
+                }
+                eventsByDate.get(d)!.push(event);
+              }
+
               // Month separator logic
               const isFirstWeekOfMonth = week.start.getDate() <= 7;
               const monthLabel = isFirstWeekOfMonth ? (
@@ -254,8 +218,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
                     <div className="grid grid-cols-1 md:grid-cols-7 divide-y md:divide-y-0 md:divide-x divide-slate-100">
                         {weekDays.map(day => {
                             const dateKey = toDateString(day);
-                            const dayEvents = week.events.filter(e => e.analysis.date === dateKey);
-                            const isToday = toDateString(new Date()) === dateKey;
+                            const dayEvents = eventsByDate.get(dateKey) || [];
+                            const isToday = todayKey === dateKey;
                             const isWeekend = day.getDay() === 0 || day.getDay() === 6;
 
                             return (
