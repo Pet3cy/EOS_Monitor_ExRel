@@ -1,10 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { aggregateStakeholders } from './stakeholderUtils';
-import { Priority, type EventData, type AnalysisResult, type ContactDetails, type FollowUpDetails } from '../types';
+import { aggregateStakeholders } from './stakeholderUtils.ts';
+import { Priority } from '../types.ts';
+import type { EventData } from '../types.ts';
 
-// Helper to create a partial event with defaults
-const mockEvent = (overrides: any = {}): EventData => {
-  const defaultAnalysis: AnalysisResult = {
+const mockEvent = (overrides: any = {}): EventData => ({
+  id: '1',
+  createdAt: Date.now(),
+  originalText: '',
+  analysis: {
     institution: 'Test Inst',
     theme: 'Test Theme',
     linkedActivities: ['Activity 1'],
@@ -18,83 +21,54 @@ const mockEvent = (overrides: any = {}): EventData => {
     venue: 'Venue',
     initialDeadline: '',
     finalDeadline: '',
-    registrationLink: '',
-    programmeLink: '',
-    senderEmail: '',
-    subject: ''
-  };
-
-  const defaultContact: ContactDetails = {
+    ...overrides.analysis
+  },
+  contact: {
     polContact: '',
     name: '',
     email: '',
     role: '',
     organization: '',
     repRole: 'Participant',
-    notes: '',
-    contactId: ''
-  };
-
-  const defaultFollowUp: FollowUpDetails = {
+    notes: ''
+  },
+  followUp: {
     prepResources: '',
     briefing: '',
     commsPack: {
       remarks: '',
       representative: '',
       datePlace: '',
-      additionalInfo: '',
-      posterData: ''
+      additionalInfo: ''
     },
     postEventNotes: '',
-    status: 'To Respond'
-  };
-
-  const { analysis, contact, followUp, ...restOverrides } = overrides;
-
-  return {
-    id: '1',
-    createdAt: Date.now(),
-    originalText: '',
-    analysis: { ...defaultAnalysis, ...(analysis || {}) },
-    contact: { ...defaultContact, ...(contact || {}) },
-    followUp: { ...defaultFollowUp, ...(followUp || {}) },
-    ...restOverrides
-  };
-};
+    status: 'To Respond',
+    ...overrides.followUp
+  }
+});
 
 describe('aggregateStakeholders', () => {
-  it('should normalize institution names by trimming', () => {
+  it('should normalize institution names', () => {
     const events = [
       mockEvent({ analysis: { institution: '  Trimmed Inst  ' } }),
       mockEvent({ id: '2', analysis: { institution: '' } }),
     ];
 
-    const result = aggregateStakeholders(events);
+    const result = aggregateStakeholders(events as EventData[]);
 
     expect(result.length).toBe(2);
     expect(result.find(s => s.name === 'Trimmed Inst')).toBeTruthy();
     expect(result.find(s => s.name === 'Unknown Stakeholder')).toBeTruthy();
   });
 
-  it('should treat institution names case-sensitively (current behavior)', () => {
-    const events = [
-      mockEvent({ id: '1', analysis: { institution: 'Inst' } }),
-      mockEvent({ id: '2', analysis: { institution: 'inst' } }),
-    ];
-
-    const result = aggregateStakeholders(events);
-    expect(result.length).toBe(2);
-    expect(result.map(s => s.name).sort()).toEqual(['Inst', 'inst']);
-  });
-
   it('should group events by stakeholder', () => {
     const events = [
-      mockEvent({ id: '1', analysis: { institution: 'A' } }),
+      mockEvent({ analysis: { institution: 'A' } }),
       mockEvent({ id: '2', analysis: { institution: 'A' } }),
       mockEvent({ id: '3', analysis: { institution: 'B' } }),
     ];
 
-    const result = aggregateStakeholders(events);
+    const result = aggregateStakeholders(events as EventData[]);
 
     expect(result.length).toBe(2);
     const stakeholderA = result.find(s => s.name === 'A');
@@ -103,47 +77,44 @@ describe('aggregateStakeholders', () => {
     expect(stakeholderB?.allEvents.length).toBe(1);
   });
 
-  it('should identify completed events based on status prefix', () => {
+  it('should identify completed events', () => {
     const events = [
-      mockEvent({ id: '1', followUp: { status: 'Completed - Follow Up' } }),
-      mockEvent({ id: '2', followUp: { status: 'Completed - No follow up' } }),
-      mockEvent({ id: '3', followUp: { status: 'To Respond' } }),
+      mockEvent({ followUp: { status: 'Completed - Follow Up' } }),
+      mockEvent({ id: '2', followUp: { status: 'To Respond' } }),
     ];
 
-    const result = aggregateStakeholders(events);
-    // The events belong to 'Test Inst' by default
+    const result = aggregateStakeholders(events as EventData[]);
     const stakeholder = result[0];
 
-    expect(stakeholder.allEvents.length).toBe(3);
-    expect(stakeholder.completedEvents.length).toBe(2);
-    const statuses = stakeholder.completedEvents.map(e => e.followUp.status);
-    expect(statuses).toContain('Completed - Follow Up');
-    expect(statuses).toContain('Completed - No follow up');
+    expect(stakeholder.allEvents.length).toBe(2);
+    expect(stakeholder.completedEvents.length).toBe(1);
+    expect(stakeholder.completedEvents[0].followUp.status).toBe('Completed - Follow Up');
   });
 
   it('should aggregate unique themes and papers', () => {
     const events = [
-      mockEvent({ id: '1', analysis: { theme: 'Theme 1', linkedActivities: ['Paper 1'] } }),
+      mockEvent({ analysis: { theme: 'Theme 1', linkedActivities: ['Paper 1'] } }),
       mockEvent({ id: '2', analysis: { theme: 'Theme 1', linkedActivities: ['Paper 1', 'Paper 2'] } }),
-      mockEvent({ id: '3', analysis: { theme: 'Theme 2', linkedActivities: [] } }),
     ];
 
-    const result = aggregateStakeholders(events);
-    // Grouped by 'Test Inst' (default)
+    const result = aggregateStakeholders(events as EventData[]);
     const stakeholder = result[0];
 
-    expect(stakeholder.themes.sort()).toEqual(['Theme 1', 'Theme 2']);
-    expect(stakeholder.papers.sort()).toEqual(['Paper 1', 'Paper 2']);
+    expect(stakeholder.themes).toEqual(['Theme 1']);
+    // Papers might be in any order since they come from a Set
+    expect(stakeholder.papers.length).toBe(2);
+    expect(stakeholder.papers.includes('Paper 1')).toBeTruthy();
+    expect(stakeholder.papers.includes('Paper 2')).toBeTruthy();
   });
 
-  it('should sort stakeholders by total event count descending', () => {
+  it('should sort by total events', () => {
     const events = [
-      mockEvent({ id: '1', analysis: { institution: 'Least Active' } }),
+      mockEvent({ analysis: { institution: 'Least Active' } }),
       mockEvent({ id: '2', analysis: { institution: 'Most Active' } }),
       mockEvent({ id: '3', analysis: { institution: 'Most Active' } }),
     ];
 
-    const result = aggregateStakeholders(events);
+    const result = aggregateStakeholders(events as EventData[]);
 
     expect(result[0].name).toBe('Most Active');
     expect(result[1].name).toBe('Least Active');

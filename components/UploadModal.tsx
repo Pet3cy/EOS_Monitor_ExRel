@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { Upload, X, Loader2, FileText, File, Mail, Clipboard, CheckCircle2 } from 'lucide-react';
+import mammoth from 'mammoth';
 import { analyzeInvitation, AnalysisInput } from '../services/geminiService';
 import { EventData, Priority } from '../types';
-const mammoth = (window as any).mammoth;
 
 interface UploadModalProps {
   onClose: () => void;
