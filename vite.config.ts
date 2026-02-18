@@ -10,6 +10,8 @@ export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, process.cwd(), '');
 
     // Force output to Frontend/build to match Render/Netlify expectations
+    // Memory says: "Render Dashboard settings ... expects output in Frontend/build"
+    // and "Netlify ... publishing Frontend/build"
     const outDir = 'Frontend/build';
 
     return {
@@ -18,15 +20,17 @@ export default defineConfig(({ mode }) => {
         host: '0.0.0.0',
       },
       plugins: [react()],
+      build: {
+        outDir: outDir,
+        emptyOutDir: true,
+      },
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY || ''),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || '')
       },
       resolve: {
         alias: {
-
           '@': path.resolve(__dirname, '.'),
-          'mammoth': 'mammoth/mammoth.browser.js'
         }
       },
       test: {

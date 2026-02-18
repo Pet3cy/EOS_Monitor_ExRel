@@ -10,18 +10,6 @@ import {
 } from 'lucide-react';
 import { generateCalendarWeeks } from '../utils/calendarUtils';
 
-const toDateString = (date: Date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
-
-const currentMonthName = (date: Date) => date.toLocaleString('default', { month: 'long' });
-
-const todayKey = toDateString(new Date());
-
-
 interface CalendarViewProps {
   events: EventData[];
 }
@@ -38,6 +26,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
     return ['All', ...Array.from(uniqueThemes)].sort();
   }, [events]);
 
+  const toDateString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   // Generate and filter weeks for 2026
   const filteredWeeks = useMemo(() => {
@@ -51,6 +45,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
     );
   }, [events, priorityFilter, themeFilter, startDateFilter, endDateFilter]);
 
+  const currentMonthName = (date: Date) => date.toLocaleString('default', { month: 'long' });
 
   const resetFilters = () => {
     setPriorityFilter('All');
@@ -181,16 +176,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
                 return d;
               });
 
-              // Optimization: Group events by date to avoid O(N) filtering per day
-              const eventsByDate = new Map<string, EventData[]>();
-              for (const event of week.events) {
-                const d = event.analysis.date;
-                if (!eventsByDate.has(d)) {
-                  eventsByDate.set(d, []);
-                }
-                eventsByDate.get(d)!.push(event);
-              }
-
               // Month separator logic
               const isFirstWeekOfMonth = week.start.getDate() <= 7;
               const monthLabel = isFirstWeekOfMonth ? (
@@ -218,8 +203,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
                     <div className="grid grid-cols-1 md:grid-cols-7 divide-y md:divide-y-0 md:divide-x divide-slate-100">
                         {weekDays.map(day => {
                             const dateKey = toDateString(day);
-                            const dayEvents = eventsByDate.get(dateKey) || [];
-                            const isToday = todayKey === dateKey;
+                            const dayEvents = week.events.filter(e => e.analysis.date === dateKey);
+                            const isToday = toDateString(new Date()) === dateKey;
                             const isWeekend = day.getDay() === 0 || day.getDay() === 6;
 
                             return (
