@@ -23,9 +23,6 @@ export default defineConfig(({ mode }) => {
       build: {
         outDir: outDir,
         emptyOutDir: true,
-        rollupOptions: {
-          external: ['mammoth']
-        }
       },
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY || ''),
@@ -34,6 +31,7 @@ export default defineConfig(({ mode }) => {
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),
+          'mammoth': 'mammoth/mammoth.browser.js'
         }
       },
       test: {

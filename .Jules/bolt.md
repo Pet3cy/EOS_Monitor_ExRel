@@ -9,3 +9,7 @@
 ## 2024-05-23 - Externalizing Node-Dependent Libraries
 **Learning:** The `mammoth` library depends on Node.js built-ins (`path`, `fs`) which causes Vite build warnings and potential runtime failures in browser environments if bundled. Externalizing it via `vite.config.ts` (`rollupOptions.external`) allows the browser to load the browser-compatible ESM version via `importmap`, resolving build warnings and significantly reducing bundle size (~500kB reduction).
 **Action:** Always check build logs for "module externalized for browser compatibility" warnings and consider externalizing such libraries if an ESM CDN alternative is available.
+
+## 2024-05-23 - Bundling UMD Libraries in Vite
+**Learning:** While externalizing libraries like `mammoth` can save bundle size, relying on external CDNs or import maps can sometimes cause deployment issues if the build/deploy environment (e.g. Netlify) has strict checks or if the CDN resolution fails. A safer alternative for libraries with a specific browser build (e.g. `mammoth.browser.js`) is to alias the import in `vite.config.ts` (`resolve.alias: { 'mammoth': 'mammoth/mammoth.browser.js' }`). This bundles the browser-compatible version directly, ensuring stability and removing Node.js dependency warnings, albeit at the cost of increased bundle size.
+**Action:** If externalization causes deployment failures, fallback to aliasing the package to its browser-compatible distribution file.
