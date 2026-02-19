@@ -17,7 +17,7 @@ interface ContactsViewProps {
   setSelectedContactId: (id: string | null) => void;
 }
 
-export const ContactsView: React.FC<ContactsViewProps> = ({ 
+export const ContactsView: React.FC<ContactsViewProps> = React.memo(({
   contacts, 
   events, 
   onUpdateContact, 
@@ -327,4 +327,4 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
       />
     </div>
   );
-};
+});
