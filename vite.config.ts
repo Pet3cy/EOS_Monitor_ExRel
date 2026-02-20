@@ -23,6 +23,9 @@ export default defineConfig(({ mode }) => {
       build: {
         outDir: outDir,
         emptyOutDir: true,
+        rollupOptions: {
+          external: ['mammoth']
+        }
       },
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY || ''),

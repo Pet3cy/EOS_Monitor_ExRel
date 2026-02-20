@@ -211,4 +211,33 @@ describe('generateCalendarWeeks', () => {
            expect(weeks.some(w => w.events.some(e => e.id === 'empty1'))).toBeFalsy();
       });
   });
+
+  describe('Days distribution', () => {
+    it('should correctly distribute events into days', () => {
+      const event1 = createEvent('1', '2026-06-15', Priority.High, 'Theme A'); // Monday
+      const event2 = createEvent('2', '2026-06-15', Priority.High, 'Theme A'); // Monday
+      const event3 = createEvent('3', '2026-06-17', Priority.High, 'Theme A'); // Wednesday
+
+      const weeks = generateCalendarWeeks([event1, event2, event3], 2026, '2026-01-01', '2026-12-31', 'All', 'All');
+
+      const targetWeek = weeks.find(w => w.events.some(e => e.id === '1'));
+      expect(targetWeek).toBeDefined();
+      expect(targetWeek?.days).toHaveLength(7);
+
+      const monday = targetWeek?.days.find(d => d.dateString === '2026-06-15');
+      expect(monday).toBeDefined();
+      expect(monday?.events).toHaveLength(2);
+      expect(monday?.events.map(e => e.id)).toContain('1');
+      expect(monday?.events.map(e => e.id)).toContain('2');
+
+      const wednesday = targetWeek?.days.find(d => d.dateString === '2026-06-17');
+      expect(wednesday).toBeDefined();
+      expect(wednesday?.events).toHaveLength(1);
+      expect(wednesday?.events[0].id).toBe('3');
+
+      const tuesday = targetWeek?.days.find(d => d.dateString === '2026-06-16');
+      expect(tuesday).toBeDefined();
+      expect(tuesday?.events).toHaveLength(0);
+    });
+  });
 });

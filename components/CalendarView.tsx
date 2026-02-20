@@ -5,8 +5,6 @@ import {
   Filter, 
   X, 
   AlertCircle, 
-  Building2, 
-  MapPin
 } from 'lucide-react';
 import { generateCalendarWeeks } from '../utils/calendarUtils';
 
@@ -26,12 +24,13 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
     return ['All', ...Array.from(uniqueThemes)].sort();
   }, [events]);
 
-  const toDateString = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
+  const todayString = useMemo(() => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
-  };
+  }, []);
 
   // Generate and filter weeks for 2026
   const filteredWeeks = useMemo(() => {
@@ -170,13 +169,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
             </div>
           ) : (
             filteredWeeks.map((week) => {
-              const weekDays = Array.from({ length: 7 }, (_, i) => {
-                const d = new Date(week.start);
-                d.setDate(week.start.getDate() + i);
-                return d;
-              });
-
-              // Month separator logic
               const isFirstWeekOfMonth = week.start.getDate() <= 7;
               const monthLabel = isFirstWeekOfMonth ? (
                 <div className="mb-4">
@@ -201,20 +193,19 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
                     
                     {/* Days Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-7 divide-y md:divide-y-0 md:divide-x divide-slate-100">
-                        {weekDays.map(day => {
-                            const dateKey = toDateString(day);
-                            const dayEvents = week.events.filter(e => e.analysis.date === dateKey);
-                            const isToday = toDateString(new Date()) === dateKey;
-                            const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+                        {week.days.map(day => {
+                            const { date: dayDate, dateString: dateKey, events: dayEvents } = day;
+                            const isToday = todayString === dateKey;
+                            const isWeekend = dayDate.getDay() === 0 || dayDate.getDay() === 6;
 
                             return (
                                 <div key={dateKey} className={`min-h-[160px] p-3 flex flex-col group ${isToday ? 'bg-blue-50/20' : isWeekend ? 'bg-slate-50/30' : ''} hover:bg-slate-50 transition-colors`}>
                                     <div className="flex items-center justify-between mb-3">
                                         <span className={`text-[10px] font-bold uppercase tracking-wider ${isToday ? 'text-blue-600' : 'text-slate-400'}`}>
-                                            {day.toLocaleDateString('en-US', { weekday: 'short' })}
+                                            {dayDate.toLocaleDateString('en-US', { weekday: 'short' })}
                                         </span>
                                         <span className={`text-sm font-bold flex items-center justify-center w-6 h-6 rounded-full ${isToday ? 'bg-blue-600 text-white' : 'text-slate-700'}`}>
-                                            {day.getDate()}
+                                            {dayDate.getDate()}
                                         </span>
                                     </div>
                                     
