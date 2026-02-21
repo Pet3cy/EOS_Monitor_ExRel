@@ -1,11 +1,36 @@
 import { EventData, Priority } from '../types';
 
+export interface DayData {
+  date: Date;
+  dateString: string;
+  events: EventData[];
+}
+
 export interface WeekData {
   number: number;
   start: Date;
   end: Date;
+  days: DayData[];
   events: EventData[];
 }
+
+// Helper to ensure local date parsing from YYYY-MM-DD string
+const parseDate = (dateStr: string): Date => {
+  if (!dateStr) return new Date(NaN);
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return new Date(NaN);
+
+  const [y, m, d] = parts.map(Number);
+  return new Date(y, m - 1, d);
+};
+
+// Helper for date string (Local)
+const toDateString = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 export function generateCalendarWeeks(
   events: EventData[],
@@ -23,10 +48,13 @@ export function generateCalendarWeeks(
     const diff = yearStart.getDate() - day + (day === 0 ? -6 : 1);
     const firstMonday = new Date(yearStart.setDate(diff));
 
-    const rangeStart = new Date(startDateFilter);
-    const rangeEnd = new Date(endDateFilter);
+    let rangeStart = parseDate(startDateFilter);
+    let rangeEnd = parseDate(endDateFilter);
 
-    // Ensure range dates are valid
+    // Fallback if invalid (though input type="date" usually ensures valid YYYY-MM-DD)
+    if (isNaN(rangeStart.getTime())) rangeStart = new Date(startDateFilter);
+    if (isNaN(rangeEnd.getTime())) rangeEnd = new Date(endDateFilter);
+
     if (isNaN(rangeStart.getTime()) || isNaN(rangeEnd.getTime())) {
         return [];
     }
@@ -40,7 +68,7 @@ export function generateCalendarWeeks(
       })
       .map(event => ({
         original: event,
-        date: new Date(event.analysis.date)
+        date: parseDate(event.analysis.date) // Use local parsing
       }))
       .filter(item => !isNaN(item.date.getTime())) // Filter out invalid dates
       .sort((a, b) => a.date.getTime() - b.date.getTime());
@@ -54,9 +82,6 @@ export function generateCalendarWeeks(
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 6);
 
-      const weekStartTime = weekStart.getTime();
-      const weekEndTime = weekEnd.getTime();
-
       // Stop if we've passed the target year entirely
       if (weekStart.getFullYear() > year) break;
 
@@ -64,15 +89,35 @@ export function generateCalendarWeeks(
       if (weekEnd < rangeStart || weekStart > rangeEnd) continue;
 
       const currentWeekEvents: EventData[] = [];
+      const currentWeekDays: DayData[] = [];
+
+      // Initialize days for this week
+      for (let d = 0; d < 7; d++) {
+          const dDate = new Date(weekStart);
+          dDate.setDate(weekStart.getDate() + d);
+          currentWeekDays.push({
+              date: dDate,
+              dateString: toDateString(dDate),
+              events: []
+          });
+      }
 
       // Skip events before this week (O(N) total over all iterations)
       while (eventIndex < processedEvents.length && processedEvents[eventIndex].date < weekStart) {
         eventIndex++;
       }
 
-      // Collect events in this week
+      // Collect events in this week AND distribute to days
       while (eventIndex < processedEvents.length && processedEvents[eventIndex].date <= weekEnd) {
-        currentWeekEvents.push(processedEvents[eventIndex].original);
+        const pEvent = processedEvents[eventIndex];
+        currentWeekEvents.push(pEvent.original);
+
+        // Find correct day bucket
+        const dayDiff = Math.round((pEvent.date.getTime() - weekStart.getTime()) / (1000 * 60 * 60 * 24));
+        if (dayDiff >= 0 && dayDiff < 7) {
+            currentWeekDays[dayDiff].events.push(pEvent.original);
+        }
+
         eventIndex++;
       }
 
@@ -84,6 +129,7 @@ export function generateCalendarWeeks(
         number: i + 1,
         start: weekStart,
         end: weekEnd,
+        days: currentWeekDays,
         events: currentWeekEvents
       });
     }

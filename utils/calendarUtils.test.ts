@@ -9,6 +9,7 @@ const createEvent = (id: string, date: string, priority: Priority, theme: string
   originalText: '',
   analysis: {
     sender: '',
+    senderEmail: '',
     institution: '',
     eventName: `Event ${id}`,
     theme,
@@ -23,6 +24,7 @@ const createEvent = (id: string, date: string, priority: Priority, theme: string
     linkedActivities: [],
   },
   contact: {
+    contactId: '',
     polContact: '',
     name: '',
     email: '',
@@ -210,5 +212,28 @@ describe('generateCalendarWeeks', () => {
            const weeks = generateCalendarWeeks([emptyDateEvent], 2026, '2026-01-01', '2026-12-31', 'All', 'All');
            expect(weeks.some(w => w.events.some(e => e.id === 'empty1'))).toBeFalsy();
       });
+  });
+
+  describe('Optimization: Pre-calculated Days', () => {
+    it('should populate days correctly for each week', () => {
+        // Jan 1 2026 is Thursday
+        const event = createEvent('1', '2026-01-01', Priority.High, 'Theme A');
+        const weeks = generateCalendarWeeks([event], 2026, '2026-01-01', '2026-01-31', 'All', 'All');
+
+        const week1 = weeks[0];
+        expect(week1.days).toHaveLength(7);
+
+        // Week 1 starts Dec 29 2025 (Monday)
+        expect(week1.days[0].date.getDate()).toBe(29);
+        expect(week1.days[0].dateString).toBe('2025-12-29');
+
+        // Thursday (Jan 1 2026) -> Index 3 (Mon=0, Tue=1, Wed=2, Thu=3)
+        expect(week1.days[3].dateString).toBe('2026-01-01');
+        expect(week1.days[3].events).toHaveLength(1);
+        expect(week1.days[3].events[0].id).toBe('1');
+
+        // Check other days empty
+        expect(week1.days[0].events).toHaveLength(0);
+    });
   });
 });
