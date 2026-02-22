@@ -7,7 +7,7 @@
   [plugins.inputs]
     # Required by netlify-plugin-fetch-feeds.
     # Keep this as an empty list unless/until real feed URLs are needed.
-    dataDir = "Frontend/build/feeds"
+    dataDir = "_data/feeds"
     feeds = "[]"
 
 [[redirects]]
