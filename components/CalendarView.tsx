@@ -14,7 +14,7 @@ interface CalendarViewProps {
   events: EventData[];
 }
 
-export const CalendarView: React.FC<CalendarViewProps> = React.memo(({ events }) => {
+export const CalendarView = React.memo(({ events }: CalendarViewProps) => {
   const [priorityFilter, setPriorityFilter] = useState<Priority | 'All'>('All');
   const [themeFilter, setThemeFilter] = useState<string>('All');
   const [startDateFilter, setStartDateFilter] = useState<string>('2026-01-01');
