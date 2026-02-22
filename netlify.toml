@@ -6,7 +6,7 @@
   package = "netlify-plugin-fetch-feeds"
   [plugins.inputs]
     dataDir = "data/feeds"
-    feeds = "[]"
+    feeds = "[]" # Placeholder to satisfy plugin validation.
 
 [[redirects]]
   from = "/*"
