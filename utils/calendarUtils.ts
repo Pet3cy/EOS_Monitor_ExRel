@@ -1,11 +1,25 @@
 import { EventData, Priority } from '../types';
 
+export interface DayData {
+    date: Date;
+    dateString: string; // YYYY-MM-DD
+    events: EventData[];
+}
+
 export interface WeekData {
   number: number;
   start: Date;
   end: Date;
-  events: EventData[];
+  events: EventData[]; // Keeping for backward compatibility and efficient checking
+  days: DayData[]; // Optimized for rendering
 }
+
+const toDateString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
 
 export function generateCalendarWeeks(
   events: EventData[],
@@ -54,9 +68,6 @@ export function generateCalendarWeeks(
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 6);
 
-      const weekStartTime = weekStart.getTime();
-      const weekEndTime = weekEnd.getTime();
-
       // Stop if we've passed the target year entirely
       if (weekStart.getFullYear() > year) break;
 
@@ -64,15 +75,37 @@ export function generateCalendarWeeks(
       if (weekEnd < rangeStart || weekStart > rangeEnd) continue;
 
       const currentWeekEvents: EventData[] = [];
+      const days: DayData[] = [];
+
+      // Initialize days for this week
+      for (let d = 0; d < 7; d++) {
+          const dayDate = new Date(weekStart);
+          dayDate.setDate(weekStart.getDate() + d);
+          days.push({
+              date: dayDate,
+              dateString: toDateString(dayDate),
+              events: []
+          });
+      }
 
       // Skip events before this week (O(N) total over all iterations)
       while (eventIndex < processedEvents.length && processedEvents[eventIndex].date < weekStart) {
         eventIndex++;
       }
 
-      // Collect events in this week
+      // Collect events in this week and distribute to days
       while (eventIndex < processedEvents.length && processedEvents[eventIndex].date <= weekEnd) {
-        currentWeekEvents.push(processedEvents[eventIndex].original);
+        const evt = processedEvents[eventIndex];
+        currentWeekEvents.push(evt.original);
+
+        // Find the day this event belongs to
+        // We use string matching to be consistent with how CalendarView was filtering
+        const eventDateStr = evt.original.analysis.date;
+        const day = days.find(d => d.dateString === eventDateStr);
+        if (day) {
+            day.events.push(evt.original);
+        }
+
         eventIndex++;
       }
 
@@ -84,7 +117,8 @@ export function generateCalendarWeeks(
         number: i + 1,
         start: weekStart,
         end: weekEnd,
-        events: currentWeekEvents
+        events: currentWeekEvents,
+        days: days
       });
     }
     return weeksArr;
