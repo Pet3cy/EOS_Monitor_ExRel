@@ -2,6 +2,12 @@
   command = "yarn build"
   publish = "Frontend/build"
 
+[[plugins]]
+  package = "netlify-plugin-fetch-feeds"
+  [plugins.inputs]
+    dataDir = "data/feeds"
+    feeds = "[]"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
