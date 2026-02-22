@@ -9,7 +9,7 @@ interface OverviewProps {
   onRenameStakeholder?: (oldName: string, newName: string) => void;
 }
 
-export const Overview: React.FC<OverviewProps> = React.memo(({ events, onRenameStakeholder }) => {
+export const Overview = React.memo(({ events, onRenameStakeholder }: OverviewProps) => {
   const [editingStakeholder, setEditingStakeholder] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
 
