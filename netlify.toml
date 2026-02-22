@@ -2,6 +2,16 @@
   command = "yarn build"
   publish = "Frontend/build"
 
+[[plugins]]
+  package = "netlify-plugin-fetch-feeds"
+  [plugins.inputs]
+    dataDir = "Frontend/public/feeds"
+    feeds = """
+    [
+      { "url": "https://news.google.com/rss/search?q=OBESSU", "filename": "obessu-news.xml" }
+    ]
+    """
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
