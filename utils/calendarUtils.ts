@@ -51,9 +51,15 @@ export function generateCalendarWeeks(
     let rangeStart = parseDate(startDateFilter);
     let rangeEnd = parseDate(endDateFilter);
 
-    // Fallback if invalid (though input type="date" usually ensures valid YYYY-MM-DD)
-    if (isNaN(rangeStart.getTime())) rangeStart = new Date(startDateFilter);
-    if (isNaN(rangeEnd.getTime())) rangeEnd = new Date(endDateFilter);
+    if (isNaN(rangeStart.getTime())) {
+        // Handle invalid start date more explicitly, e.g., throw an error or set a default
+        // For now, keeping original fallback but consider stricter handling.
+        rangeStart = new Date(startDateFilter);
+    }
+    if (isNaN(rangeEnd.getTime())) {
+        // Handle invalid end date more explicitly
+        rangeEnd = new Date(endDateFilter);
+    }
 
     if (isNaN(rangeStart.getTime()) || isNaN(rangeEnd.getTime())) {
         return [];
