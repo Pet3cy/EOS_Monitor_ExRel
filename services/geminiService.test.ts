@@ -143,4 +143,55 @@ describe('analyzeInvitation', () => {
     const input = { text: 'Unique Test Input For API Key Check' }; // Unique input to bypass cache
     await expect(analyzeInvitation(input)).rejects.toThrow('API_KEY environment variable is missing');
   });
+
+  describe('Caching', () => {
+    let sessionStorageMock: any;
+    let localStorageMock: any;
+
+    beforeEach(() => {
+      sessionStorageMock = {
+        getItem: vi.fn(),
+        setItem: vi.fn(),
+      };
+      localStorageMock = {
+        getItem: vi.fn(),
+        setItem: vi.fn(),
+      };
+      vi.stubGlobal('sessionStorage', sessionStorageMock);
+      vi.stubGlobal('localStorage', localStorageMock);
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('should use sessionStorage and not localStorage', async () => {
+      const mockResponseData = {
+        sender: 'Cache Sender',
+        subject: 'Cache Subject',
+        priority: 'Low',
+        priorityScore: 20,
+        linkedActivities: [],
+        description: 'Cache Description',
+        eventName: 'Cache Event',
+        institution: 'Cache Institution',
+        date: '2023-12-01',
+        venue: 'Virtual'
+      };
+
+      generateContentMock.mockResolvedValue({
+        text: JSON.stringify(mockResponseData),
+      });
+
+      const input = { text: 'Testing cache storage' };
+      await analyzeInvitation(input);
+
+      // Verify sessionStorage was used
+      expect(sessionStorageMock.setItem).toHaveBeenCalled();
+
+      // Verify localStorage was NOT used
+      expect(localStorageMock.setItem).not.toHaveBeenCalled();
+      expect(localStorageMock.getItem).not.toHaveBeenCalled();
+    });
+  });
 });
