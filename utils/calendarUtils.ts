@@ -102,11 +102,9 @@ export function generateCalendarWeeks(
         currentWeekEvents.push(ev);
 
         // Find the day this event belongs to
-        // Find the day this event belongs to using the already parsed date to ensure consistency and efficiency
-        const eventDate = processedEvents[eventIndex].date;
-        const dayIndex = Math.round((eventDate.getTime() - weekStart.getTime()) / 86400000);
-        if (currentWeekDays[dayIndex]) {
-            currentWeekDays[dayIndex].events.push(ev);
+        const dayData = currentWeekDays.find(d => d.dateString === ev.analysis.date);
+        if (dayData) {
+            dayData.events.push(ev);
         }
 
         eventIndex++;
