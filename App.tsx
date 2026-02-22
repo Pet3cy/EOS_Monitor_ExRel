@@ -26,7 +26,7 @@ const MOCK_CONTACTS: Contact[] = [
 const MOCK_EVENTS: EventData[] = [
   {
     id: 'e1',
-    createdAt: Date.now(),
+    createdAt: new Date('2026-02-01T10:00:00Z').getTime(),
     originalText: 'Solidar Webinar invitation',
     analysis: {
       sender: 'Panagiotis Chatzimichail',
