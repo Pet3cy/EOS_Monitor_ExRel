@@ -127,8 +127,8 @@ export default function App() {
       if (!wrapper) {
         wrapper = {
           ...e,
-          lowerEventName: e.analysis.eventName.toLowerCase(),
-          lowerInstitution: e.analysis.institution.toLowerCase(),
+          lowerEventName: e.analysis.eventName?.toLowerCase() ?? '',
+          lowerInstitution: e.analysis.institution?.toLowerCase() ?? '',
         };
         eventCache.current.set(e, wrapper);
       }
