@@ -119,7 +119,7 @@ export function generateCalendarWeeks(
         currentWeekEvents.push(pEvent.original);
 
         // Find correct day bucket
-        const dayDiff = Math.round((pEvent.date.getTime() - weekStart.getTime()) / (1000 * 60 * 60 * 24));
+        const dayDiff = Math.floor((pEvent.date.getTime() - weekStart.getTime()) / (1000 * 60 * 60 * 24));
         if (dayDiff >= 0 && dayDiff < 7) {
             currentWeekDays[dayDiff].events.push(pEvent.original);
         }
