@@ -111,7 +111,7 @@ export default function App() {
 
   const filteredEvents = useMemo(() => {
     // Optimization: Skip filtering if we're not in a view that displays the event list
-    if (viewMode === 'calendar' || viewMode === 'overview' || viewMode === 'contacts') {
+    if (['calendar', 'overview', 'contacts'].includes(viewMode)) {
       return [];
     }
     const lowerSearchTerm = searchTerm.toLowerCase();
