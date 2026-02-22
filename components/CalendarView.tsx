@@ -189,7 +189,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
                     {/* Days Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-7 divide-y md:divide-y-0 md:divide-x divide-slate-100">
                         {week.days.map(day => {
-                            const today = useMemo(() => new Date(), []);
+                            const today = new Date();
                             const isToday = day.date.getDate() === today.getDate() &&
                                           day.date.getMonth() === today.getMonth() &&
                                           day.date.getFullYear() === today.getFullYear();
