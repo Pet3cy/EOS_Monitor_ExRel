@@ -9,7 +9,6 @@ const createEvent = (id: string, date: string, priority: Priority, theme: string
   originalText: '',
   analysis: {
     sender: '',
-    sender: '',
     institution: '',
     eventName: `Event ${id}`,
     theme,
