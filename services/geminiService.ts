@@ -19,7 +19,7 @@ const getAiClient = (): GoogleGenAI => {
 // Caching configuration
 const CACHE_PREFIX = 'gemini_cache_v2_';
 const MAX_CACHE_SIZE = 50;
-const MEMORY_CACHE = new Map<string, any>();
+const MEMORY_CACHE = new Map<string, AnalysisResult | string>();
 
 const generateHash = async (content: string): Promise<string> => {
   if (typeof crypto !== 'undefined' && crypto.subtle) {
