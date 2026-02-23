@@ -6,8 +6,8 @@ def run():
             browser = p.chromium.launch(headless=True)
             page = browser.new_page()
             page.goto("http://localhost:3000")
-            # Wait a bit just in case
-            page.wait_for_timeout(2000)
+            # Wait for a key element to ensure the page is loaded and styled.
+            page.wait_for_selector('h1:has-text("OBESSU Event Flow")')
 
             page.screenshot(path="verification.png")
 
