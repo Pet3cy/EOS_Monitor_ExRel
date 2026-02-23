@@ -18,6 +18,8 @@ const getAiClient = (): GoogleGenAI => {
 };
 
 // Caching configuration
+// SECURITY: Using CacheService which uses sessionStorage (cleared on tab close)
+// instead of localStorage to prevent persistence of sensitive analysis data.
 const sessionCacheService = new CacheService<AnalysisResult>('gemini_cache_v2_', 50);
 
 export interface AnalysisInput {
