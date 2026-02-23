@@ -4,11 +4,7 @@ import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
-    const env = loadEnv(mode, '.', '');
-
-    // Check for RENDER environment variable to set custom output directory
-    const isRender = process.env.RENDER === 'true';
-    const outDir = isRender ? 'Frontend/build' : 'dist';
+    const env = loadEnv(mode, process.cwd(), '');
 
     return {
       server: {
@@ -25,7 +21,7 @@ export default defineConfig(({ mode }) => {
       },
       resolve: {
         alias: {
-          '@': path.resolve(__dirname, '.'),
+          '@': path.resolve(process.cwd(), '.'),
         }
       }
     };
