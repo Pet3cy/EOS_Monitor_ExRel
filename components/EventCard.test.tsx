@@ -261,4 +261,65 @@ describe('EventCard Component', () => {
     );
     expect(screen.getByText('Not Relevant')).toHaveClass('text-gray-400');
   });
+
+  it('renders "No contact assigned" when contact name is missing', () => {
+    const onSelect = vi.fn();
+    const onDelete = vi.fn();
+    const noContactEvent = {
+      ...mockEvent,
+      contact: { ...mockContact, name: '' }
+    };
+
+    render(
+      <EventCard
+        event={noContactEvent}
+        onSelect={onSelect}
+        onDelete={onDelete}
+        isSelected={false}
+      />
+    );
+
+    expect(screen.getByText('No contact assigned')).toBeInTheDocument();
+  });
+
+  it('stops propagation when clicking delete button', () => {
+    const onSelect = vi.fn();
+    const onDelete = vi.fn();
+
+    render(
+      <EventCard
+        event={mockEvent}
+        onSelect={onSelect}
+        onDelete={onDelete}
+        isSelected={false}
+      />
+    );
+
+    const deleteButton = screen.getByLabelText('Delete Event');
+    fireEvent.click(deleteButton);
+
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(screen.getByText('Delete Invitation?')).toBeInTheDocument();
+  });
+
+  it('applies default status color for unknown status', () => {
+    const onSelect = vi.fn();
+    const onDelete = vi.fn();
+    const unknownStatusEvent = {
+      ...mockEvent,
+      followUp: { ...mockFollowUp, status: 'Pending Review' as any }
+    };
+
+    render(
+      <EventCard
+        event={unknownStatusEvent}
+        onSelect={onSelect}
+        onDelete={onDelete}
+        isSelected={false}
+      />
+    );
+
+    const statusElement = screen.getByText('Pending Review');
+    expect(statusElement).toHaveClass('text-slate-500');
+  });
 });
