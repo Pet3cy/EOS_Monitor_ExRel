@@ -52,12 +52,9 @@ export function generateCalendarWeeks(
     let rangeEnd = parseDate(endDateFilter);
 
     if (isNaN(rangeStart.getTime())) {
-        // Handle invalid start date more explicitly, e.g., throw an error or set a default
-        // For now, keeping original fallback but consider stricter handling.
         rangeStart = new Date(startDateFilter);
     }
     if (isNaN(rangeEnd.getTime())) {
-        // Handle invalid end date more explicitly
         rangeEnd = new Date(endDateFilter);
     }
 
@@ -65,21 +62,22 @@ export function generateCalendarWeeks(
         return [];
     }
 
-    // Optimization: Pre-process and sort events (O(N log N))
-    const processedEvents = events
-      .filter(event => {
-        if (priorityFilter !== 'All' && event.analysis.priority !== priorityFilter) return false;
-        if (themeFilter !== 'All' && event.analysis.theme !== themeFilter) return false;
-        return true;
-      })
-      .map(event => ({
-        original: event,
-        date: parseDate(event.analysis.date) // Use local parsing
-      }))
-      .filter(item => !isNaN(item.date.getTime())) // Filter out invalid dates
-      .sort((a, b) => a.date.getTime() - b.date.getTime());
+    // Optimization: Use a Map for O(1) lookups instead of sorting O(N log N)
+    const eventsByDate = new Map<string, EventData[]>();
 
-    let eventIndex = 0;
+    for (const event of events) {
+        if (priorityFilter !== 'All' && event.analysis.priority !== priorityFilter) continue;
+        if (themeFilter !== 'All' && event.analysis.theme !== themeFilter) continue;
+
+        const date = parseDate(event.analysis.date);
+        if (isNaN(date.getTime())) continue;
+
+        const dateKey = toDateString(date);
+        if (!eventsByDate.has(dateKey)) {
+            eventsByDate.set(dateKey, []);
+        }
+        eventsByDate.get(dateKey)!.push(event);
+    }
 
     for (let i = 0; i < 53; i++) { // Some years have 53 weeks
       const weekStart = new Date(firstMonday);
@@ -94,37 +92,26 @@ export function generateCalendarWeeks(
       // Filter weeks that overlap with the user's selected date range
       if (weekEnd < rangeStart || weekStart > rangeEnd) continue;
 
-      const currentWeekEvents: EventData[] = [];
       const currentWeekDays: DayData[] = [];
+      const currentWeekEvents: EventData[] = [];
 
       // Initialize days for this week
       for (let d = 0; d < 7; d++) {
           const dDate = new Date(weekStart);
           dDate.setDate(weekStart.getDate() + d);
+          const dateKey = toDateString(dDate);
+
+          const dayEvents = eventsByDate.get(dateKey) || [];
+
           currentWeekDays.push({
               date: dDate,
-              dateString: toDateString(dDate),
-              events: []
+              dateString: dateKey,
+              events: dayEvents
           });
-      }
 
-      // Skip events before this week (O(N) total over all iterations)
-      while (eventIndex < processedEvents.length && processedEvents[eventIndex].date < weekStart) {
-        eventIndex++;
-      }
-
-      // Collect events in this week AND distribute to days
-      while (eventIndex < processedEvents.length && processedEvents[eventIndex].date <= weekEnd) {
-        const pEvent = processedEvents[eventIndex];
-        currentWeekEvents.push(pEvent.original);
-
-        // Find correct day bucket
-        const dayDiff = Math.floor((pEvent.date.getTime() - weekStart.getTime()) / (1000 * 60 * 60 * 24));
-        if (dayDiff >= 0 && dayDiff < 7) {
-            currentWeekDays[dayDiff].events.push(pEvent.original);
-        }
-
-        eventIndex++;
+          if (dayEvents.length > 0) {
+              currentWeekEvents.push(...dayEvents);
+          }
       }
 
       // If filtering by specific priority/theme, only show weeks that have those matches.
