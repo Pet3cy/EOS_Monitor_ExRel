@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateCalendarWeeks } from './calendarUtils';
+import { generateCalendarWeeks, toDateString } from './calendarUtils';
 import { EventData, Priority } from '../types';
 
 // Mock EventData helper
@@ -234,6 +234,23 @@ describe('generateCalendarWeeks', () => {
 
         // Check other days empty
         expect(week1.days[0].events).toHaveLength(0);
+    });
+  });
+
+  describe('toDateString helper', () => {
+    it('should format dates as YYYY-MM-DD', () => {
+      const date = new Date(2023, 0, 5); // Jan 5, 2023
+      expect(toDateString(date)).toBe('2023-01-05');
+    });
+
+    it('should pad single digit months and days', () => {
+      const date = new Date(2023, 8, 9); // Sep 9, 2023
+      expect(toDateString(date)).toBe('2023-09-09');
+    });
+
+    it('should handle double digit months and days', () => {
+      const date = new Date(2023, 9, 10); // Oct 10, 2023
+      expect(toDateString(date)).toBe('2023-10-10');
     });
   });
 });
