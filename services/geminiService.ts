@@ -19,6 +19,7 @@ const getAiClient = (): GoogleGenAI => {
 
 // Caching configuration
 const sessionCacheService = new CacheService<AnalysisResult>('gemini_cache_v2_', 50);
+const briefingCacheService = new CacheService<string>('gemini_briefing_cache_v1_', 20);
 
 export interface AnalysisInput {
   text?: string;
@@ -75,6 +76,24 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
 };
 
 export const generateBriefing = async (event: EventData): Promise<string> => {
+  // Generate a unique cache key based on the relevant analysis data
+  // We use JSON.stringify to ensure all fields that might affect the briefing are included
+  const cacheKeyInput = JSON.stringify({
+    eventName: event.analysis.eventName,
+    institution: event.analysis.institution,
+    theme: event.analysis.theme,
+    description: event.analysis.description,
+    linkedActivities: event.analysis.linkedActivities,
+    date: event.analysis.date,
+    venue: event.analysis.venue
+  });
+  const cacheKey = await briefingCacheService.generateHash(cacheKeyInput);
+
+  const cachedBriefing = briefingCacheService.get(cacheKey);
+  if (cachedBriefing) {
+    return cachedBriefing;
+  }
+
   const prompt = `Create a 1-page executive briefing for a representative attending the following event:
   Event: ${event.analysis.eventName}
   Institution: ${event.analysis.institution}
@@ -96,7 +115,11 @@ export const generateBriefing = async (event: EventData): Promise<string> => {
     contents: [{ parts: [{ text: prompt }] }],
   });
 
-  return response.text || "";
+  const result = response.text || "";
+  if (result) {
+    briefingCacheService.set(cacheKey, result);
+  }
+  return result;
 };
 
 export const summarizeFollowUp = async (file: { mimeType: string, data: string }) => {
