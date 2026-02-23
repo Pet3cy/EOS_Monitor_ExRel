@@ -5,47 +5,96 @@ import { PriorityBadge } from './PriorityBadge';
 import { Priority } from '../types';
 
 describe('PriorityBadge', () => {
-  it('renders High priority correctly', () => {
-    render(<PriorityBadge priority={Priority.High} />);
-    const badge = screen.getByText('High Priority');
+  const baseClasses = [
+    'px-2.5',
+    'py-0.5',
+    'rounded-full',
+    'text-xs',
+    'font-medium',
+    'border',
+  ];
+
+  const testCases = [
+    {
+      priority: Priority.High,
+      text: 'High Priority',
+      classes: ['bg-green-100', 'text-green-800', 'border-green-200'],
+    },
+    {
+      priority: Priority.Medium,
+      text: 'Medium Priority',
+      classes: ['bg-orange-100', 'text-orange-800', 'border-orange-200'],
+    },
+    {
+      priority: Priority.Low,
+      text: 'Low Priority',
+      classes: ['bg-yellow-100', 'text-yellow-800', 'border-yellow-200'],
+    },
+    {
+      priority: Priority.Irrelevant,
+      text: 'Irrelevant Priority',
+      classes: ['bg-red-100', 'text-red-800', 'border-red-200'],
+    },
+    {
+      priority: 'Unknown' as Priority,
+      text: 'Unknown Priority',
+      classes: ['bg-gray-100', 'text-gray-800', 'border-gray-200'],
+    },
+    // Edge case: Undefined priority
+    {
+      priority: undefined as unknown as Priority,
+      text: 'Priority',
+      classes: ['bg-gray-100', 'text-gray-800', 'border-gray-200'],
+    },
+    // Edge case: Null priority
+    {
+      priority: null as unknown as Priority,
+      text: 'Priority',
+      classes: ['bg-gray-100', 'text-gray-800', 'border-gray-200'],
+    },
+  ];
+
+  it.each(testCases)('renders correctly with appropriate styles', ({ priority, text, classes }) => {
+    render(<PriorityBadge priority={priority} />);
+
+    // Find badge by text and class to avoid matching container elements
+    // This is more robust than checking tagName
+    const badge = screen.getByText((content, element) => {
+        const normalizedContent = content.trim();
+        const expectedText = text.trim();
+        // Check text content matches
+        const textMatches = normalizedContent === expectedText || content === text;
+        // Check it has the badge base class 'rounded-full' to ensure we target the badge element
+        const isBadge = element?.classList.contains('rounded-full') ?? false;
+
+        return textMatches && isBadge;
+    });
+
     expect(badge).toBeInTheDocument();
-    expect(badge).toHaveClass('bg-green-100');
-    expect(badge).toHaveClass('text-green-800');
-    expect(badge).toHaveClass('border-green-200');
+
+    // Check base classes
+    baseClasses.forEach((cls) => {
+      expect(badge).toHaveClass(cls);
+    });
+
+    // Check specific classes
+    classes.forEach((cls) => {
+      expect(badge).toHaveClass(cls);
+    });
   });
 
-  it('renders Medium priority correctly', () => {
-    render(<PriorityBadge priority={Priority.Medium} />);
-    const badge = screen.getByText('Medium Priority');
+  it('renders default style for undefined priority', () => {
+    // @ts-ignore
+    render(<PriorityBadge priority={undefined} />);
+    const badge = screen.getByText(/Priority/);
     expect(badge).toBeInTheDocument();
-    expect(badge).toHaveClass('bg-orange-100');
-    expect(badge).toHaveClass('text-orange-800');
-    expect(badge).toHaveClass('border-orange-200');
-  });
 
-  it('renders Low priority correctly', () => {
-    render(<PriorityBadge priority={Priority.Low} />);
-    const badge = screen.getByText('Low Priority');
-    expect(badge).toBeInTheDocument();
-    expect(badge).toHaveClass('bg-yellow-100');
-    expect(badge).toHaveClass('text-yellow-800');
-    expect(badge).toHaveClass('border-yellow-200');
-  });
+    // Should have base classes
+    baseClasses.forEach((cls) => {
+      expect(badge).toHaveClass(cls);
+    });
 
-  it('renders Irrelevant priority correctly', () => {
-    render(<PriorityBadge priority={Priority.Irrelevant} />);
-    const badge = screen.getByText('Irrelevant Priority');
-    expect(badge).toBeInTheDocument();
-    expect(badge).toHaveClass('bg-red-100');
-    expect(badge).toHaveClass('text-red-800');
-    expect(badge).toHaveClass('border-red-200');
-  });
-
-  it('renders default style for unknown priority', () => {
-    // Cast to any to simulate an unknown priority that might come from an API or bug
-    render(<PriorityBadge priority={'Unknown' as Priority} />);
-    const badge = screen.getByText('Unknown Priority');
-    expect(badge).toBeInTheDocument();
+    // Should have default gray classes
     expect(badge).toHaveClass('bg-gray-100');
     expect(badge).toHaveClass('text-gray-800');
     expect(badge).toHaveClass('border-gray-200');
