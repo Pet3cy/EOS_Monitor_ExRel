@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { analyzeInvitation } from './geminiService';
+import { Priority } from '../types';
+import { analyzeInvitation, generateBriefing } from './geminiService';
 
 const { generateContentMock } = vi.hoisted(() => {
   return { generateContentMock: vi.fn() };
@@ -193,5 +194,82 @@ describe('analyzeInvitation', () => {
       expect(localStorageMock.setItem).not.toHaveBeenCalled();
       expect(localStorageMock.getItem).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('generateBriefing', () => {
+  const originalApiKey = process.env.API_KEY;
+  const mockEvent = {
+    id: '1',
+    analysis: {
+      sender: 'Test Sender',
+      subject: 'Test Subject',
+      priority: Priority.High,
+      priorityScore: 90,
+      linkedActivities: ['Activity 1'],
+      description: 'Test Description',
+      eventName: 'Test Event',
+      institution: 'Test Institution',
+      date: '2023-10-27',
+      venue: 'Brussels',
+      theme: 'Test Theme'
+    },
+    contact: {
+      id: '1',
+      name: 'Test Contact',
+      email: 'test@example.com',
+      role: 'Test Role',
+      institution: 'Test Institution',
+      notes: 'Test Notes'
+    },
+    status: 'Pending'
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.API_KEY = 'test-api-key';
+  });
+
+  afterEach(() => {
+    process.env.API_KEY = originalApiKey;
+  });
+
+  it('should generate briefing correctly', async () => {
+    generateContentMock.mockResolvedValue({
+      text: 'Generated Briefing',
+    });
+
+    // Create a unique event to bypass cache
+    const uniqueEvent = { ...mockEvent, analysis: { ...mockEvent.analysis, description: 'Unique Description ' + Math.random() } };
+
+    const result = await generateBriefing(uniqueEvent as any);
+
+    expect(generateContentMock).toHaveBeenCalledWith(expect.objectContaining({
+      contents: expect.arrayContaining([
+        expect.objectContaining({ parts: expect.arrayContaining([expect.objectContaining({ text: expect.stringContaining('Create a 1-page executive briefing') })]) })
+      ])
+    }));
+    expect(result).toBe('Generated Briefing');
+  });
+
+  it('should cache briefing results', async () => {
+    generateContentMock.mockResolvedValue({
+      text: 'Cached Briefing',
+    });
+
+    // Create a unique event for this test
+    const uniqueEvent = { ...mockEvent, analysis: { ...mockEvent.analysis, description: 'Cached Description ' + Math.random() } };
+
+    // First call
+    const result1 = await generateBriefing(uniqueEvent as any);
+    expect(result1).toBe('Cached Briefing');
+    expect(generateContentMock).toHaveBeenCalledTimes(1);
+
+    // Second call with same event
+    const result2 = await generateBriefing(uniqueEvent as any);
+    expect(result2).toBe('Cached Briefing');
+
+    // Should still be 1 call
+    expect(generateContentMock).toHaveBeenCalledTimes(1);
   });
 });
