@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useEffect } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 
 interface ConfirmDeleteModalProps {
@@ -17,14 +16,37 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
   title, 
   message 
 }) => {
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+      aria-describedby="modal-message"
+    >
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200"
         onClick={onClose}
+        aria-hidden="true"
       />
       
       {/* Modal Container */}
@@ -32,19 +54,28 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
         <div className="p-6">
           <div className="flex items-start gap-4">
             <div className="p-3 bg-red-50 rounded-full text-red-600 shrink-0">
-              <AlertTriangle size={24} />
+              <AlertTriangle size={24} aria-hidden="true" />
             </div>
             <div className="flex-1">
               <div className="flex justify-between items-start">
-                <h3 className="text-lg font-bold text-slate-900 leading-tight mb-1">{title}</h3>
+                <h3
+                  id="modal-title"
+                  className="text-lg font-bold text-slate-900 leading-tight mb-1"
+                >
+                  {title}
+                </h3>
                 <button 
                   onClick={onClose}
                   className="p-1 text-slate-400 hover:text-slate-600 rounded-md transition-colors"
+                  aria-label="Close"
                 >
-                  <X size={18} />
+                  <X size={18} aria-hidden="true" />
                 </button>
               </div>
-              <p className="text-sm text-slate-500 leading-relaxed">
+              <p
+                id="modal-message"
+                className="text-sm text-slate-500 leading-relaxed"
+              >
                 {message}
               </p>
             </div>

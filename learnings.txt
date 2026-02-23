@@ -81,3 +81,7 @@ ok 7 - aggregateStakeholders - handling empty input
 -  strips types, so  is crucial for type checking.
 - Duplicate function definitions and component renderings can slip into the codebase (possibly from merge conflicts) and cause build errors or runtime issues.
 -  imports should be carefully managed to avoid unused code.
+- Testing: Ensure @testing-library/user-event is installed for realistic interaction testing in Vitest/Jest.
+- Testing: Use userEvent.keyboard('{Escape}') to test keyboard shortcuts.
+- Accessibility: Always add role="dialog", aria-modal="true", and aria-labelledby/describedby to custom modals.
+- Accessibility: Ensure close buttons have aria-label.

@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
-import '@testing-library/jest-dom/vitest';
+import '@testing-library/jest-dom';
 
 describe('ConfirmDeleteModal', () => {
   const defaultProps = {
@@ -19,51 +20,82 @@ describe('ConfirmDeleteModal', () => {
 
   it('does not render when isOpen is false', () => {
     render(<ConfirmDeleteModal {...defaultProps} isOpen={false} />);
-    expect(screen.queryByText('Confirm Delete')).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('renders correctly when isOpen is true', () => {
+  it('renders correctly with accessibility attributes when isOpen is true', () => {
     render(<ConfirmDeleteModal {...defaultProps} />);
-    expect(screen.getByText('Confirm Delete')).toBeInTheDocument();
-    expect(screen.getByText('Are you sure you want to delete this item?')).toBeInTheDocument();
-    expect(screen.getByText('Cancel')).toBeInTheDocument();
-    expect(screen.getByText('Delete Permanently')).toBeInTheDocument();
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toBeInTheDocument();
+    expect(dialog).toHaveAttribute('aria-modal', 'true');
+    expect(dialog).toHaveAttribute('aria-labelledby', 'modal-title');
+    expect(dialog).toHaveAttribute('aria-describedby', 'modal-message');
+
+    expect(screen.getByText('Confirm Delete')).toHaveAttribute('id', 'modal-title');
+    expect(screen.getByText('Are you sure you want to delete this item?')).toHaveAttribute('id', 'modal-message');
+
+    expect(screen.getByLabelText('Close')).toBeInTheDocument();
   });
 
-  it('calls onClose when clicking the backdrop', () => {
+  it('calls onClose when clicking the backdrop', async () => {
+    const user = userEvent.setup();
     const { container } = render(<ConfirmDeleteModal {...defaultProps} />);
-    // The backdrop has a specific class identifying it
+
+    // Target backdrop using class selector for precision
     const backdrop = container.querySelector('.bg-slate-900\\/40');
+    expect(backdrop).toBeInTheDocument();
+
     if (backdrop) {
-        fireEvent.click(backdrop);
+        await user.click(backdrop);
         expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
-    } else {
-        throw new Error('Backdrop not found');
     }
   });
 
-  it('calls onClose when clicking the Cancel button', () => {
+  it('calls onClose when clicking the Cancel button', async () => {
+    const user = userEvent.setup();
     render(<ConfirmDeleteModal {...defaultProps} />);
-    const cancelButton = screen.getByText('Cancel');
-    fireEvent.click(cancelButton);
+    const cancelButton = screen.getByRole('button', { name: /cancel/i });
+    await user.click(cancelButton);
     expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('calls onClose when clicking the X button', () => {
+  it('calls onClose when clicking the Close (X) button', async () => {
+    const user = userEvent.setup();
     render(<ConfirmDeleteModal {...defaultProps} />);
-    const buttons = screen.getAllByRole('button');
-    // The X button is the first button in the DOM structure (header)
-    const xButton = buttons[0];
-    fireEvent.click(xButton);
+    const closeButton = screen.getByLabelText('Close');
+    await user.click(closeButton);
     expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('calls onConfirm and onClose when clicking Delete Permanently', () => {
+  it('calls onConfirm and onClose when clicking Delete Permanently', async () => {
+    const user = userEvent.setup();
     render(<ConfirmDeleteModal {...defaultProps} />);
-    const deleteButton = screen.getByText('Delete Permanently');
-    fireEvent.click(deleteButton);
+    const deleteButton = screen.getByRole('button', { name: /delete permanently/i });
+    await user.click(deleteButton);
 
     expect(defaultProps.onConfirm).toHaveBeenCalledTimes(1);
     expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onClose when pressing Escape key', async () => {
+    const user = userEvent.setup();
+    render(<ConfirmDeleteModal {...defaultProps} />);
+
+    await user.keyboard('{Escape}');
+    expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('adds and removes event listener for Escape key', async () => {
+    const addSpy = vi.spyOn(document, 'addEventListener');
+    const removeSpy = vi.spyOn(document, 'removeEventListener');
+
+    const { unmount } = render(<ConfirmDeleteModal {...defaultProps} />);
+
+    expect(addSpy).toHaveBeenCalledWith('keydown', expect.any(Function));
+
+    unmount();
+
+    expect(removeSpy).toHaveBeenCalledWith('keydown', expect.any(Function));
   });
 });
