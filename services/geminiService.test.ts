@@ -165,7 +165,7 @@ describe('analyzeInvitation', () => {
       vi.unstubAllGlobals();
     });
 
-    it('should use sessionStorage and not localStorage', async () => {
+    it('should not use sessionStorage or localStorage', async () => {
       const mockResponseData = {
         sender: 'Cache Sender',
         subject: 'Cache Subject',
@@ -187,7 +187,7 @@ describe('analyzeInvitation', () => {
       await analyzeInvitation(input);
 
       // Verify sessionStorage was used
-      expect(sessionStorageMock.setItem).toHaveBeenCalled();
+      expect(sessionStorageMock.setItem).not.toHaveBeenCalled();
 
       // Verify localStorage was NOT used
       expect(localStorageMock.setItem).not.toHaveBeenCalled();
