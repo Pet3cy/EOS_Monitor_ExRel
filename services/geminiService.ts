@@ -48,7 +48,14 @@ const generateCacheKey = async (input: AnalysisInput): Promise<string> => {
 };
 
 const generateBriefingCacheKey = async (event: EventData): Promise<string> => {
-  const content = `BRIEFING:${event.analysis.eventName}:${event.analysis.institution}:${event.analysis.theme}:${event.analysis.description}:${event.analysis.linkedActivities.join(',')}`;
+  const content = JSON.stringify({
+    type: 'BRIEFING',
+    eventName: event.analysis.eventName,
+    institution: event.analysis.institution,
+    theme: event.analysis.theme,
+    description: event.analysis.description,
+    linkedActivities: event.analysis.linkedActivities.sort(), // Sort to ensure consistent key
+  });
   return generateHash(content);
 };
 
