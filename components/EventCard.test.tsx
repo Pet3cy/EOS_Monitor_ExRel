@@ -71,11 +71,11 @@ describe('EventCard Component', () => {
       />
     );
 
-    expect(screen.getByText('Test Event')).toBeInTheDocument();
-    expect(screen.getByText('Test Institution')).toBeInTheDocument();
-    expect(screen.getByText('2023-10-27')).toBeInTheDocument();
-    expect(screen.getByText('Test Venue')).toBeInTheDocument();
-    expect(screen.getByText(/Contact: Jane Doe/)).toBeInTheDocument();
+    expect(screen.getByText(mockEvent.analysis.eventName)).toBeInTheDocument();
+    expect(screen.getByText(mockEvent.analysis.institution)).toBeInTheDocument();
+    expect(screen.getByText(mockEvent.analysis.date)).toBeInTheDocument();
+    expect(screen.getByText(mockEvent.analysis.venue)).toBeInTheDocument();
+    expect(screen.getByText(`Contact: ${mockEvent.contact.name}`)).toBeInTheDocument();
     expect(screen.getByText('High Priority')).toBeInTheDocument(); // Assuming PriorityBadge renders "High Priority"
     expect(screen.getByText('To Respond')).toBeInTheDocument();
     expect(screen.getByText('To Respond')).toHaveClass('text-blue-600');
