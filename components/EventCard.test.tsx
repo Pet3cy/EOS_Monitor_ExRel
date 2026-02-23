@@ -261,4 +261,66 @@ describe('EventCard Component', () => {
     );
     expect(screen.getByText('Not Relevant')).toHaveClass('text-gray-400');
   });
+
+  it('displays "No contact assigned" when contact name is missing', () => {
+    const onSelect = vi.fn();
+    const onDelete = vi.fn();
+    const noContactEvent = {
+      ...mockEvent,
+      contact: { ...mockContact, name: '' }
+    };
+
+    render(
+      <EventCard
+        event={noContactEvent}
+        onSelect={onSelect}
+        onDelete={onDelete}
+        isSelected={false}
+      />
+    );
+
+    expect(screen.getByText('No contact assigned')).toBeInTheDocument();
+  });
+
+  it('applies default status color for other statuses', () => {
+    const onSelect = vi.fn();
+    const onDelete = vi.fn();
+    const otherStatusEvent = {
+      ...mockEvent,
+      followUp: { ...mockFollowUp, status: 'Prep ready' as const }
+    };
+
+    render(
+      <EventCard
+        event={otherStatusEvent}
+        onSelect={onSelect}
+        onDelete={onDelete}
+        isSelected={false}
+      />
+    );
+
+    const statusElement = screen.getByText('Prep ready');
+    expect(statusElement).toBeInTheDocument();
+    expect(statusElement).toHaveClass('text-slate-500');
+  });
+
+  it('does not trigger onSelect when delete button is clicked', () => {
+    const onSelect = vi.fn();
+    const onDelete = vi.fn();
+
+    render(
+      <EventCard
+        event={mockEvent}
+        onSelect={onSelect}
+        onDelete={onDelete}
+        isSelected={false}
+      />
+    );
+
+    const deleteButton = screen.getByLabelText('Delete Event');
+    fireEvent.click(deleteButton);
+
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(screen.getByText('Delete Invitation?')).toBeInTheDocument();
+  });
 });
