@@ -188,6 +188,7 @@ describe('analyzeInvitation', () => {
 
       // Verify sessionStorage was used
       expect(sessionStorageMock.setItem).not.toHaveBeenCalled();
+      expect(sessionStorageMock.getItem).not.toHaveBeenCalled();
 
       // Verify localStorage was NOT used
       expect(localStorageMock.setItem).not.toHaveBeenCalled();
