@@ -131,7 +131,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onAnalysisCom
         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
           <div>
             <h2 className="text-xl font-bold text-slate-800">Process Invitation</h2>
-            <p className="text-sm text-slate-500">AI-powered extraction for IT & Secretariat</p>
+            <p className="text-sm text-slate-500">Powered by Gemma-2-27b-it • Optimized for Email Parsing</p>
           </div>
           <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-all"><X size={20} /></button>
         </div>

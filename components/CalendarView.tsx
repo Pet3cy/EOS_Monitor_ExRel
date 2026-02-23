@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { EventData, Priority } from '../types';
 import { 
@@ -6,9 +7,11 @@ import {
   X, 
   AlertCircle, 
   Building2, 
-  MapPin
+  MapPin, 
+  Tag,
+  ChevronRight,
+  Search
 } from 'lucide-react';
-import { generateCalendarWeeks } from '../utils/calendarUtils';
 
 interface CalendarViewProps {
   events: EventData[];
@@ -35,14 +38,62 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
 
   // Generate and filter weeks for 2026
   const filteredWeeks = useMemo(() => {
-    return generateCalendarWeeks(
-      events,
-      2026,
-      startDateFilter,
-      endDateFilter,
-      priorityFilter,
-      themeFilter
-    );
+    const weeksArr = [];
+    const yearStart = new Date(2026, 0, 1);
+    
+    // Find first Monday of the year (ISO week standard often uses Monday)
+    const day = yearStart.getDay();
+    const diff = yearStart.getDate() - day + (day === 0 ? -6 : 1);
+    const firstMonday = new Date(yearStart.setDate(diff));
+
+    const rangeStart = new Date(startDateFilter);
+    const rangeEnd = new Date(endDateFilter);
+
+    // Ensure range dates are valid
+    if (isNaN(rangeStart.getTime()) || isNaN(rangeEnd.getTime())) {
+        return [];
+    }
+
+    for (let i = 0; i < 53; i++) { // Some years have 53 weeks
+      const weekStart = new Date(firstMonday);
+      weekStart.setDate(firstMonday.getDate() + i * 7);
+      
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      
+      // Stop if we've passed 2026 entirely
+      if (weekStart.getFullYear() > 2026) break;
+      
+      // Filter weeks that overlap with the user's selected date range
+      if (weekEnd < rangeStart || weekStart > rangeEnd) continue;
+
+      // Find events in this week that match all filters
+      const weekEvents = events.filter(event => {
+        const eventDate = new Date(event.analysis.date);
+        const matchesDate = eventDate >= weekStart && eventDate <= weekEnd;
+        const matchesPriority = priorityFilter === 'All' || event.analysis.priority === priorityFilter;
+        const matchesTheme = themeFilter === 'All' || event.analysis.theme === themeFilter;
+        return matchesDate && matchesPriority && matchesTheme;
+      });
+
+      // Only show weeks with events if not filtering by range strictly, 
+      // but let's show all weeks in range so it looks like a calendar.
+      // However, to keep it clean, maybe only show weeks with events OR current week?
+      // Let's stick to showing all weeks in the filtered range if the filter is specific, or just weeks with events if generic.
+      // For "Calendar Overview", showing empty weeks might be good for planning.
+      
+      // Optimisation: If filtering by specific priority/theme, only show weeks that have those matches.
+      const hasMatches = weekEvents.length > 0;
+      if (!hasMatches && (priorityFilter !== 'All' || themeFilter !== 'All')) continue;
+
+      weeksArr.push({
+        number: i + 1,
+        start: weekStart,
+        end: weekEnd,
+        events: weekEvents
+      });
+    }
+    return weeksArr;
   }, [events, priorityFilter, themeFilter, startDateFilter, endDateFilter]);
 
   const currentMonthName = (date: Date) => date.toLocaleString('default', { month: 'long' });
@@ -170,6 +221,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
             </div>
           ) : (
             filteredWeeks.map((week) => {
+              const weekDays = Array.from({ length: 7 }, (_, i) => {
+                const d = new Date(week.start);
+                d.setDate(week.start.getDate() + i);
+                return d;
+              });
+
               // Month separator logic
               const isFirstWeekOfMonth = week.start.getDate() <= 7;
               const monthLabel = isFirstWeekOfMonth ? (
@@ -195,24 +252,25 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
                     
                     {/* Days Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-7 divide-y md:divide-y-0 md:divide-x divide-slate-100">
-                        {week.days.map(dayData => {
-                            const dateKey = dayData.dateString;
+                        {weekDays.map(day => {
+                            const dateKey = toDateString(day);
+                            const dayEvents = week.events.filter(e => e.analysis.date === dateKey);
                             const isToday = toDateString(new Date()) === dateKey;
-                            const isWeekend = dayData.date.getDay() === 0 || dayData.date.getDay() === 6;
+                            const isWeekend = day.getDay() === 0 || day.getDay() === 6;
 
                             return (
                                 <div key={dateKey} className={`min-h-[160px] p-3 flex flex-col group ${isToday ? 'bg-blue-50/20' : isWeekend ? 'bg-slate-50/30' : ''} hover:bg-slate-50 transition-colors`}>
                                     <div className="flex items-center justify-between mb-3">
                                         <span className={`text-[10px] font-bold uppercase tracking-wider ${isToday ? 'text-blue-600' : 'text-slate-400'}`}>
-                                            {dayData.date.toLocaleDateString('en-US', { weekday: 'short' })}
+                                            {day.toLocaleDateString('en-US', { weekday: 'short' })}
                                         </span>
                                         <span className={`text-sm font-bold flex items-center justify-center w-6 h-6 rounded-full ${isToday ? 'bg-blue-600 text-white' : 'text-slate-700'}`}>
-                                            {dayData.date.getDate()}
+                                            {day.getDate()}
                                         </span>
                                     </div>
                                     
                                     <div className="flex-1 space-y-2">
-                                        {dayData.events.map(event => (
+                                        {dayEvents.map(event => (
                                             <div 
                                                 key={event.id}
                                                 className={`p-2 rounded-lg border text-xs cursor-pointer transition-all hover:shadow-sm ${

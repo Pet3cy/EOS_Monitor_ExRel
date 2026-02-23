@@ -1,10 +1,11 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Contact, EventData } from '../types';
 import { 
   Users, UserPlus, Mail, Briefcase, Building, 
-  Search, Edit2, Trash2, X, Save,
-  MapPin, Calendar, Activity, Clock
+  Search, Edit2, Trash2, X, Save, ExternalLink, 
+  MapPin, Calendar, ChevronRight, Activity, Clock,
+  ArrowUpAZ, ArrowDownAZ, FileText
 } from 'lucide-react';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
@@ -29,28 +30,32 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-
-  const searchableContacts = useMemo(() => {
-    return contacts.map(c => ({
-      original: c,
-      lowerName: c.name.toLowerCase(),
-      lowerEmail: c.email.toLowerCase(),
-      lowerOrg: c.organization.toLowerCase()
-    }));
-  }, [contacts]);
-
-  const filteredContacts = useMemo(() => {
-    const lowerSearchTerm = searchTerm.toLowerCase();
-    return searchableContacts
-      .filter(item =>
-        item.lowerName.includes(lowerSearchTerm) ||
-        item.lowerEmail.includes(lowerSearchTerm) ||
-        item.lowerOrg.includes(lowerSearchTerm)
-      )
-      .map(item => item.original);
-  }, [searchableContacts, searchTerm]);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  
+  // Local buffer for the notes field to allow smooth typing without global re-renders
+  const [notesBuffer, setNotesBuffer] = useState('');
 
   const selectedContact = contacts.find(c => c.id === selectedContactId);
+
+  // Sync notes buffer when selected contact changes
+  useEffect(() => {
+    if (selectedContact) {
+      setNotesBuffer(selectedContact.notes || '');
+    }
+  }, [selectedContactId, contacts]);
+
+  const filteredContacts = useMemo(() => {
+    return contacts.filter(c => 
+      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.organization.toLowerCase().includes(searchTerm.toLowerCase())
+    ).sort((a, b) => {
+      const nameA = a.name.toLowerCase();
+      const nameB = b.name.toLowerCase();
+      return sortOrder === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+    });
+  }, [contacts, searchTerm, sortOrder]);
+
   const contactEvents = useMemo(() => {
     if (!selectedContactId) return [];
     return events
@@ -64,6 +69,15 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
       onUpdateContact(editingContact);
       setEditingContact(null);
       setIsAdding(false);
+    }
+  };
+
+  const handleSaveNotes = () => {
+    if (selectedContact && notesBuffer !== selectedContact.notes) {
+      onUpdateContact({
+        ...selectedContact,
+        notes: notesBuffer
+      });
     }
   };
 
@@ -83,69 +97,87 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
     <div className="flex h-full bg-slate-50">
       {/* Sidebar List */}
       <aside className="w-96 border-r border-slate-200 bg-white flex flex-col shrink-0">
-        <div className="p-4 border-b border-slate-100 flex flex-col gap-4 bg-slate-50/50">
-          <div className="flex justify-between items-center">
+        <div className="p-4 border-b border-slate-100 flex flex-col gap-3 bg-slate-50/50">
+          <div className="flex justify-between items-center mb-1">
             <span className="text-xs font-bold uppercase text-slate-500 tracking-wider flex items-center gap-2">
-              <Users size={14} /> Directory ({contacts.length})
+              <Users size={14} /> Directory ({filteredContacts.length})
             </span>
-            <button 
-              onClick={startAdding}
-              className="p-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-              title="Add Contact"
-            >
-              <UserPlus size={16} />
-            </button>
+            <div className="flex items-center gap-1">
+                <button 
+                  onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                  className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  title={`Sort ${sortOrder === 'asc' ? 'Descending' : 'Ascending'}`}
+                >
+                  {sortOrder === 'asc' ? <ArrowUpAZ size={16} /> : <ArrowDownAZ size={16} />}
+                </button>
+            </div>
           </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input 
-              type="text" 
-              placeholder="Search people..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
-            />
+
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <input 
+                type="text" 
+                placeholder="Search people..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+              />
+            </div>
           </div>
+          
+          <button 
+            onClick={startAdding}
+            className="w-full flex items-center justify-center gap-2 bg-slate-900 text-white py-2.5 rounded-xl text-sm font-bold hover:bg-slate-800 transition-all shadow-md shadow-slate-200"
+          >
+            <UserPlus size={16} /> Add New Contact
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {filteredContacts.map(contact => (
-            <div 
-              key={contact.id}
-              onClick={() => setSelectedContactId(contact.id)}
-              className={`p-4 rounded-xl border cursor-pointer transition-all group ${
-                selectedContactId === contact.id 
-                ? 'border-blue-500 bg-blue-50 shadow-sm' 
-                : 'border-slate-100 bg-white hover:border-slate-200 hover:shadow-sm'
-              }`}
-            >
-              <div className="flex justify-between items-start">
-                <div className="space-y-1">
-                  <h4 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{contact.name}</h4>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-                    <Briefcase size={12} className="text-slate-400" /> {contact.role}
+          {filteredContacts.length === 0 ? (
+            <div className="text-center py-8 text-slate-400 text-sm">
+              No contacts found matching "{searchTerm}"
+            </div>
+          ) : (
+            filteredContacts.map(contact => (
+              <div 
+                key={contact.id}
+                onClick={() => setSelectedContactId(contact.id)}
+                className={`p-4 rounded-xl border cursor-pointer transition-all group ${
+                  selectedContactId === contact.id 
+                  ? 'border-blue-500 bg-blue-50 shadow-sm' 
+                  : 'border-slate-100 bg-white hover:border-slate-200 hover:shadow-sm'
+                }`}
+              >
+                <div className="flex justify-between items-start">
+                  <div className="space-y-1 min-w-0">
+                    <h4 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate">{contact.name}</h4>
+                    <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium truncate">
+                      <Briefcase size={12} className="text-slate-400 shrink-0" /> <span className="truncate">{contact.role}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium truncate">
+                      <Building size={12} className="text-slate-400 shrink-0" /> <span className="truncate">{contact.organization}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium truncate">
-                    <Building size={12} className="text-slate-400" /> {contact.organization}
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setEditingContact(contact); }}
+                      className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md"
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setDeleteId(contact.id); }}
+                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
-                </div>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); setEditingContact(contact); }}
-                    className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md"
-                  >
-                    <Edit2 size={14} />
-                  </button>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); setDeleteId(contact.id); }}
-                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md"
-                  >
-                    <Trash2 size={14} />
-                  </button>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </aside>
 
@@ -198,7 +230,7 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Bio / Administrative Notes</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Bio / Initial Notes</label>
                 <textarea 
                   rows={4}
                   className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 outline-none resize-none"
@@ -219,7 +251,7 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
           <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-300">
             {/* Header Card */}
             <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm flex items-start gap-8">
-              <div className="w-24 h-24 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl flex items-center justify-center text-white text-4xl font-black shadow-lg shadow-blue-100">
+              <div className="w-24 h-24 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl flex items-center justify-center text-white text-4xl font-black shadow-lg shadow-blue-100 shrink-0">
                 {selectedContact.name.charAt(0)}
               </div>
               <div className="flex-1 space-y-4">
@@ -239,11 +271,6 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
                   <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
                     <Mail size={14} className="text-slate-400" /> {selectedContact.email}
                   </div>
-                  {selectedContact.notes && (
-                    <div className="w-full text-sm text-slate-500 italic bg-slate-50 p-4 rounded-xl border border-slate-100">
-                      &ldquo;{selectedContact.notes}&rdquo;
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -299,15 +326,39 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
                   ))}
                 </div>
               ) : (
-                <div className="py-16 text-center bg-white rounded-3xl border border-dashed border-slate-200">
+                <div className="py-10 text-center bg-white rounded-3xl border border-dashed border-slate-200">
                   <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
                       <Activity size={24} className="text-slate-300" />
                   </div>
                   <p className="text-slate-500 font-bold">No activity recorded yet.</p>
-                  <p className="text-xs text-slate-400 mt-1">Assignments and interactions will appear here chronologically.</p>
+                  <p className="text-xs text-slate-400 mt-1">Assignments and interactions will appear here.</p>
                 </div>
               )}
             </div>
+
+            {/* Administrative Context Section */}
+            <div className="pt-6 border-t border-slate-200 space-y-4">
+              <div className="flex items-center gap-3 mb-2">
+                 <div className="p-2 bg-yellow-100 text-yellow-700 rounded-lg shadow-sm shadow-yellow-100">
+                    <FileText size={20} />
+                 </div>
+                 <h3 className="text-xl font-bold text-slate-900">Administrative Context</h3>
+              </div>
+              <div className="relative">
+                <textarea
+                    className="w-full p-6 bg-yellow-50/50 border border-yellow-200 rounded-2xl text-slate-700 focus:ring-4 focus:ring-yellow-500/10 focus:border-yellow-300 outline-none resize-none leading-relaxed shadow-sm transition-all"
+                    rows={6}
+                    value={notesBuffer}
+                    onChange={(e) => setNotesBuffer(e.target.value)}
+                    onBlur={handleSaveNotes}
+                    placeholder="Add persistent notes here: key relationships, political stance, background info, or communication preferences..."
+                />
+                <div className="absolute bottom-4 right-4 text-[10px] font-bold text-yellow-600/60 uppercase tracking-widest pointer-events-none">
+                    Auto-saves on blur
+                </div>
+              </div>
+            </div>
+
           </div>
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-slate-300">

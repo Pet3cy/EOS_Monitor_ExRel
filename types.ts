@@ -1,8 +1,16 @@
+
 export enum Priority {
   High = 'High',
   Medium = 'Medium',
   Low = 'Low',
   Irrelevant = 'Irrelevant',
+}
+
+export interface Recurrence {
+  isRecurring: boolean;
+  frequency: 'Daily' | 'Weekly' | 'Monthly' | 'Yearly';
+  interval: number; // e.g., every 2 weeks
+  endDate?: string;
 }
 
 export interface AnalysisResult {
@@ -16,13 +24,16 @@ export interface AnalysisResult {
   priority: Priority;
   priorityScore: number; // 0-100 scale
   priorityReasoning: string;
+  threadSummary?: string;
   date: string;
+  time?: string;
   venue: string;
   initialDeadline: string;
   finalDeadline: string;
   linkedActivities: string[];
   registrationLink?: string;
   programmeLink?: string;
+  recurrence?: Recurrence;
 }
 
 export type RepresentativeRole = 'Speaker' | 'Participant' | 'Activity Host' | 'Other';
@@ -60,7 +71,7 @@ export interface FollowUpDetails {
   briefing: string;
   commsPack: CommsPack;
   postEventNotes: string;
-  status: 'To Respond' | 'Responsed - On hold for updates' | 'Confirmation - To be briefed' | 'Prep ready' | 'Completed - No follow up' | 'Completed - Follow Up' | 'MOs comms' | 'Not Relevant';
+  status: 'To Respond' | 'Responded - On hold for updates' | 'Confirmation - To be briefed' | 'Prep ready' | 'Completed - No follow up' | 'Completed - Follow Up' | 'MOs comms' | 'Not Relevant';
 }
 
 export interface EventData {
@@ -72,5 +83,12 @@ export interface EventData {
   followUp: FollowUpDetails;
 }
 
-
-// Note: Global JSX namespace override is intentionally omitted to enforce strict type checking.
+// Augment the global JSX namespace to include IntrinsicElements
+// This fixes the "Property 'div' does not exist on type 'JSX.IntrinsicElements'" errors
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      [elemName: string]: any;
+    }
+  }
+}
