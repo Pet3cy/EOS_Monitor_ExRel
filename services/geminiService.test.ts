@@ -121,7 +121,7 @@ describe('analyzeInvitation', () => {
 
       const input = { text: 'Test Invalid JSON' }; // Unique input
 
-      await expect(analyzeInvitation(input)).rejects.toThrow();
+      await expect(analyzeInvitation(input)).rejects.toThrow('Failed to parse analysis result from AI service');
   });
 
    it('should handle empty/null response text gracefully', async () => {
