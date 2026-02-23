@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { AnalysisResult, Priority, EventData } from "../types";
 import { OBESSU_DATA_CONTEXT, SYSTEM_INSTRUCTION, responseSchema } from "./prompts";
+import { CacheService } from "./cacheService";
 
 const GEMINI_MODEL_NAME = "gemini-1.5-flash-latest";
 
@@ -17,66 +18,7 @@ const getAiClient = (): GoogleGenAI => {
 };
 
 // Caching configuration
-const CACHE_PREFIX = 'gemini_cache_v2_';
-const MAX_CACHE_SIZE = 50;
-const MEMORY_CACHE = new Map<string, AnalysisResult>();
-
-const generateCacheKey = async (input: AnalysisInput): Promise<string> => {
-  const content = input.fileData
-    ? `${input.fileData.mimeType}:${input.fileData.data}`
-    : (input.text || '');
-
-  if (typeof crypto !== 'undefined' && crypto.subtle) {
-    const msgBuffer = new TextEncoder().encode(content);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    return `${CACHE_PREFIX}${hashHex}`;
-  }
-
-  let hash = 0;
-  for (let i = 0; i < content.length; i++) {
-    const char = content.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  return `${CACHE_PREFIX}${hash}`;
-};
-
-const getFromCache = (key: string): AnalysisResult | null => {
-  if (MEMORY_CACHE.has(key)) {
-    return MEMORY_CACHE.get(key) || null;
-  }
-  if (typeof sessionStorage !== 'undefined') {
-    try {
-      const item = sessionStorage.getItem(key);
-      if (item) {
-        const parsed = JSON.parse(item);
-        MEMORY_CACHE.set(key, parsed);
-        return parsed;
-      }
-    } catch (e) {
-      console.warn('Error reading from sessionStorage:', e);
-    }
-  }
-  return null;
-};
-
-const saveToCache = (key: string, data: AnalysisResult) => {
-  if (MEMORY_CACHE.size >= MAX_CACHE_SIZE) {
-    const firstKey = MEMORY_CACHE.keys().next().value;
-    if (firstKey) MEMORY_CACHE.delete(firstKey);
-  }
-  MEMORY_CACHE.set(key, data);
-  if (typeof sessionStorage !== 'undefined') {
-    try {
-      sessionStorage.setItem(key, JSON.stringify(data));
-    } catch (e) {
-      console.warn('Failed to save to sessionStorage:', e);
-    }
-  }
-};
-
+const cacheService = new CacheService<AnalysisResult>('gemini_cache_v2_', 50);
 
 export interface AnalysisInput {
   text?: string;
@@ -87,8 +29,12 @@ export interface AnalysisInput {
 }
 
 export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisResult> => {
-  const cacheKey = await generateCacheKey(input);
-  const cachedResult = getFromCache(cacheKey);
+  const content = input.fileData
+    ? `${input.fileData.mimeType}:${input.fileData.data}`
+    : (input.text || '');
+
+  const cacheKey = await cacheService.generateHash(content);
+  const cachedResult = cacheService.get(cacheKey);
   if (cachedResult) return cachedResult;
 
   const parts = [];
@@ -117,7 +63,7 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
     priority: data.priority as Priority,
     linkedActivities: data.linkedActivities || [],
   };
-  saveToCache(cacheKey, result);
+  cacheService.set(cacheKey, result);
   return result;
 };
 
