@@ -52,6 +52,9 @@ export class CacheService<T> {
       if (firstKey) this.memoryCache.delete(firstKey);
     }
     this.memoryCache.set(key, data);
+
+    // SECURITY: Use sessionStorage instead of localStorage to ensure sensitive data
+    // is cleared when the session ends (e.g. tab closed).
     if (typeof sessionStorage !== 'undefined') {
       try {
         sessionStorage.setItem(key, JSON.stringify(data));
