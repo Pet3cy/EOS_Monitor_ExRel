@@ -8,7 +8,7 @@ import {
   Building2, 
   MapPin
 } from 'lucide-react';
-import { generateCalendarWeeks } from '../utils/calendarUtils';
+import { generateCalendarWeeks, toDateString } from '../utils/calendarUtils';
 
 interface CalendarViewProps {
   events: EventData[];
@@ -26,13 +26,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
     return ['All', ...Array.from(uniqueThemes)].sort();
   }, [events]);
 
-  const toDateString = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
   // Generate and filter weeks for 2026
   const filteredWeeks = useMemo(() => {
     return generateCalendarWeeks(
@@ -44,6 +37,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
       themeFilter
     );
   }, [events, priorityFilter, themeFilter, startDateFilter, endDateFilter]);
+
+  // Optimize: Compute today's date string once per mount (or reasonably infrequently)
+  // to avoid recalculating it inside the render loop for every day cell.
+  const todayKey = useMemo(() => toDateString(new Date()), []);
 
   const currentMonthName = (date: Date) => date.toLocaleString('default', { month: 'long' });
 
@@ -197,7 +194,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
                     <div className="grid grid-cols-1 md:grid-cols-7 divide-y md:divide-y-0 md:divide-x divide-slate-100">
                         {week.days.map(dayData => {
                             const dateKey = dayData.dateString;
-                            const isToday = toDateString(new Date()) === dateKey;
+                            // Optimized: compare against pre-calculated todayKey
+                            const isToday = todayKey === dateKey;
                             const isWeekend = dayData.date.getDay() === 0 || dayData.date.getDay() === 6;
 
                             return (
