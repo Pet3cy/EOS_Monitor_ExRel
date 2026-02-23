@@ -18,7 +18,7 @@ const getAiClient = (): GoogleGenAI => {
 };
 
 // Caching configuration
-const cacheService = new CacheService<AnalysisResult>('gemini_cache_v2_', 50);
+const sessionCacheService = new CacheService<AnalysisResult>('gemini_cache_v2_', 50);
 
 export interface AnalysisInput {
   text?: string;
@@ -33,8 +33,8 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
     ? `${input.fileData.mimeType}:${input.fileData.data}`
     : (input.text || '');
 
-  const cacheKey = await cacheService.generateHash(content);
-  const cachedResult = cacheService.get(cacheKey);
+  const cacheKey = await sessionCacheService.generateHash(content);
+  const cachedResult = sessionCacheService.get(cacheKey);
   if (cachedResult) return cachedResult;
 
   const parts = [];
@@ -59,7 +59,7 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
   try {
     data = JSON.parse(response.text || "{}");
   } catch (error) {
-    console.error("Failed to parse Gemini response:", response.text);
+    console.error("Failed to parse Gemini response:", error, response.text);
     throw new Error("Failed to parse analysis result from AI service");
   }
   
@@ -69,11 +69,12 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
     priority: data.priority as Priority,
     linkedActivities: data.linkedActivities || [],
   };
-  cacheService.set(cacheKey, result);
+    // Cache the result using the secure cache service (session-scoped)
+  sessionCacheService.set(cacheKey, result);
   return result;
 };
 
-export const generateBriefing = async (event: EventData) => {
+export const generateBriefing = async (event: EventData): Promise<string> => {
   const prompt = `Create a 1-page executive briefing for a representative attending the following event:
   Event: ${event.analysis.eventName}
   Institution: ${event.analysis.institution}
@@ -95,7 +96,7 @@ export const generateBriefing = async (event: EventData) => {
     contents: [{ parts: [{ text: prompt }] }],
   });
 
-  return response.text;
+  return response.text || "";
 };
 
 export const summarizeFollowUp = async (file: { mimeType: string, data: string }) => {
