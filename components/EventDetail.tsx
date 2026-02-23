@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { EventData, Contact } from '../types';
 import { PriorityBadge } from './PriorityBadge';
 import { Calendar, MapPin, Building2, AlertCircle, FileText, CheckCircle, Save, Loader2, Sparkles, ExternalLink, Briefcase, Trash2, Users, User, FileJson, FileSpreadsheet } from 'lucide-react';
@@ -25,11 +25,6 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [showNewContactModal, setShowNewContactModal] = useState(false);
-
-  useEffect(() => {
-    setLocalEvent({ ...event });
-    setIsEditing(false);
-  }, [event]);
 
   const handleChange = (section: keyof EventData, field: string, value: any) => {
     setLocalEvent(prev => ({
