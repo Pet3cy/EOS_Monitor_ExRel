@@ -255,6 +255,7 @@ export default function App() {
                 <section className="flex-1 p-6 bg-slate-50/50 overflow-hidden">
                 {selectedEvent && filteredEvents.some(e => e.id === selectedEvent.id) ? (
                     <EventDetail 
+                        key={selectedEvent.id}
                         event={selectedEvent} 
                         onUpdate={handleUpdateEvent}
                         onDelete={() => handleDeleteEvent(selectedEvent.id)}
