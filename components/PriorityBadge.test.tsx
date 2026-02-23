@@ -40,11 +40,35 @@ describe('PriorityBadge', () => {
       text: 'Unknown Priority',
       classes: ['bg-gray-100', 'text-gray-800', 'border-gray-200'],
     },
+    // Edge case: Undefined priority
+    {
+      priority: undefined as unknown as Priority,
+      text: 'Priority',
+      classes: ['bg-gray-100', 'text-gray-800', 'border-gray-200'],
+    },
+    // Edge case: Null priority
+    {
+      priority: null as unknown as Priority,
+      text: 'Priority',
+      classes: ['bg-gray-100', 'text-gray-800', 'border-gray-200'],
+    },
   ];
 
-  it.each(testCases)('renders  correctly with appropriate styles', ({ priority, text, classes }) => {
+  it.each(testCases)('renders correctly with appropriate styles', ({ priority, text, classes }) => {
     render(<PriorityBadge priority={priority} />);
-    const badge = screen.getByText(text);
+
+    // Find badge by text and class to avoid matching container elements
+    // This is more robust than checking tagName
+    const badge = screen.getByText((content, element) => {
+        const normalizedContent = content.trim();
+        const expectedText = text.trim();
+        // Check text content matches
+        const textMatches = normalizedContent === expectedText || content === text;
+        // Check it has the badge base class 'rounded-full' to ensure we target the badge element
+        const isBadge = element?.classList.contains('rounded-full') ?? false;
+
+        return textMatches && isBadge;
+    });
 
     expect(badge).toBeInTheDocument();
 
