@@ -90,7 +90,7 @@ describe('generateBriefing Benchmark', () => {
     const end2 = performance.now();
     const duration2 = end2 - start2;
 
-    console.log(`First call duration: ${duration1.toFixed(2)}ms`);
-    console.log(`Second call duration: ${duration2.toFixed(2)}ms`);
+    expect(duration2).toBeLessThan(duration1);
+    expect(duration2).toBeLessThan(1); // Expect cache hit to be very fast
   });
 });
