@@ -5,6 +5,7 @@ import { Calendar, MapPin, Building2, AlertCircle, FileText, CheckCircle, Save, 
 import { generateBriefing } from '../services/geminiService';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { NewContactModal } from './NewContactModal';
+import { exportToCSV, exportToJSON } from '../utils/exportUtils';
 
 interface EventDetailProps {
   event: EventData;
@@ -79,52 +80,13 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   };
 
   const handleExportJSON = () => {
-    const dataStr = JSON.stringify(localEvent, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
     const fileName = `${localEvent.analysis.eventName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`;
-    
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', fileName);
-    linkElement.click();
+    exportToJSON(localEvent, fileName);
   };
 
   const handleExportCSV = () => {
-    const flattenObject = (obj: any, prefix = ''): Record<string, string> => {
-      return Object.keys(obj).reduce((acc: any, k: string) => {
-        const pre = prefix.length ? prefix + '.' : '';
-        if (typeof obj[k] === 'object' && obj[k] !== null && !Array.isArray(obj[k])) {
-          Object.assign(acc, flattenObject(obj[k], pre + k));
-        } else if (Array.isArray(obj[k])) {
-          acc[pre + k] = obj[k].join('; ');
-        } else {
-          acc[pre + k] = String(obj[k]);
-        }
-        return acc;
-      }, {});
-    };
-
-    const flatEvent = flattenObject(localEvent);
-    const headers = Object.keys(flatEvent);
-    const values = Object.values(flatEvent).map(v => {
-      const sanitized = v.replace(/"/g, '""');
-      const dangerousChars = ['=', '+', '-', '@', '\t', '\r'];
-      if (dangerousChars.some(char => sanitized.startsWith(char))) {
-        return `"'${sanitized}"`;
-      }
-      return `"${sanitized}"`;
-    });
-
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + headers.join(",") + "\n" 
-      + values.join(",");
-
     const fileName = `${localEvent.analysis.eventName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.csv`;
-    const encodedUri = encodeURI(csvContent);
-    const linkElement = document.createElement("a");
-    linkElement.setAttribute("href", encodedUri);
-    linkElement.setAttribute("download", fileName);
-    linkElement.click();
+    exportToCSV(localEvent, fileName);
   };
 
   const handleSave = () => {
