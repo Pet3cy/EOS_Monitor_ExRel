@@ -42,7 +42,7 @@ describe('PriorityBadge', () => {
     },
   ];
 
-  it.each(testCases)('renders  correctly with appropriate styles', ({ priority, text, classes }) => {
+  it.each(testCases)('renders correctly with appropriate styles', ({ priority, text, classes }) => {
     render(<PriorityBadge priority={priority} />);
     const badge = screen.getByText(text);
 
@@ -57,5 +57,22 @@ describe('PriorityBadge', () => {
     classes.forEach((cls) => {
       expect(badge).toHaveClass(cls);
     });
+  });
+
+  it('renders default style for undefined priority', () => {
+    // @ts-ignore
+    render(<PriorityBadge priority={undefined} />);
+    const badge = screen.getByText(/Priority/);
+    expect(badge).toBeInTheDocument();
+
+    // Should have base classes
+    baseClasses.forEach((cls) => {
+      expect(badge).toHaveClass(cls);
+    });
+
+    // Should have default gray classes
+    expect(badge).toHaveClass('bg-gray-100');
+    expect(badge).toHaveClass('text-gray-800');
+    expect(badge).toHaveClass('border-gray-200');
   });
 });
