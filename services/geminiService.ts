@@ -19,13 +19,9 @@ const getAiClient = (): GoogleGenAI => {
 // Caching configuration
 const CACHE_PREFIX = 'gemini_cache_v2_';
 const MAX_CACHE_SIZE = 50;
-const MEMORY_CACHE = new Map<string, AnalysisResult>();
+const MEMORY_CACHE = new Map<string, any>();
 
-const generateCacheKey = async (input: AnalysisInput): Promise<string> => {
-  const content = input.fileData
-    ? `${input.fileData.mimeType}:${input.fileData.data}`
-    : (input.text || '');
-
+const generateHash = async (content: string): Promise<string> => {
   if (typeof crypto !== 'undefined' && crypto.subtle) {
     const msgBuffer = new TextEncoder().encode(content);
     const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
@@ -43,9 +39,22 @@ const generateCacheKey = async (input: AnalysisInput): Promise<string> => {
   return `${CACHE_PREFIX}${hash}`;
 };
 
-const getFromCache = (key: string): AnalysisResult | null => {
+const generateCacheKey = async (input: AnalysisInput): Promise<string> => {
+  const content = input.fileData
+    ? `${input.fileData.mimeType}:${input.fileData.data}`
+    : (input.text || '');
+
+  return generateHash(content);
+};
+
+const generateBriefingCacheKey = async (event: EventData): Promise<string> => {
+  const content = `BRIEFING:${event.analysis.eventName}:${event.analysis.institution}:${event.analysis.theme}:${event.analysis.description}:${event.analysis.linkedActivities.join(',')}`;
+  return generateHash(content);
+};
+
+const getFromCache = <T = AnalysisResult>(key: string): T | null => {
   if (MEMORY_CACHE.has(key)) {
-    return MEMORY_CACHE.get(key) || null;
+    return MEMORY_CACHE.get(key) as T || null;
   }
   if (typeof sessionStorage !== 'undefined') {
     try {
@@ -53,7 +62,7 @@ const getFromCache = (key: string): AnalysisResult | null => {
       if (item) {
         const parsed = JSON.parse(item);
         MEMORY_CACHE.set(key, parsed);
-        return parsed;
+        return parsed as T;
       }
     } catch (e) {
       console.warn('Error reading from sessionStorage:', e);
@@ -62,7 +71,7 @@ const getFromCache = (key: string): AnalysisResult | null => {
   return null;
 };
 
-const saveToCache = (key: string, data: AnalysisResult) => {
+const saveToCache = <T>(key: string, data: T) => {
   if (MEMORY_CACHE.size >= MAX_CACHE_SIZE) {
     const firstKey = MEMORY_CACHE.keys().next().value;
     if (firstKey) MEMORY_CACHE.delete(firstKey);
@@ -88,7 +97,7 @@ export interface AnalysisInput {
 
 export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisResult> => {
   const cacheKey = await generateCacheKey(input);
-  const cachedResult = getFromCache(cacheKey);
+  const cachedResult = getFromCache<AnalysisResult>(cacheKey);
   if (cachedResult) return cachedResult;
 
   const parts = [];
@@ -122,6 +131,10 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
 };
 
 export const generateBriefing = async (event: EventData) => {
+  const cacheKey = await generateBriefingCacheKey(event);
+  const cachedResult = getFromCache<string>(cacheKey);
+  if (cachedResult) return cachedResult;
+
   const prompt = `Create a 1-page executive briefing for a representative attending the following event:
   Event: ${event.analysis.eventName}
   Institution: ${event.analysis.institution}
@@ -143,7 +156,9 @@ export const generateBriefing = async (event: EventData) => {
     contents: [{ parts: [{ text: prompt }] }],
   });
 
-  return response.text;
+  const text = response.text || "";
+  saveToCache(cacheKey, text);
+  return text;
 };
 
 export const summarizeFollowUp = async (file: { mimeType: string, data: string }) => {
