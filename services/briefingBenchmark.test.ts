@@ -67,9 +67,11 @@ describe('generateBriefing Benchmark', () => {
         initialDeadline: 'Deadline',
         finalDeadline: 'Deadline',
         sender: 'Sender',
-      } as any,
-      contact: {} as any,
-      followUp: {} as any,
+        sender: 'Sender',
+      },
+      contact: {},
+      followUp: {},
+    };
     };
 
     // Simulate a slow API response
