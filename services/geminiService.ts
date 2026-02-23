@@ -47,18 +47,6 @@ const getFromCache = (key: string): AnalysisResult | null => {
   if (MEMORY_CACHE.has(key)) {
     return MEMORY_CACHE.get(key) || null;
   }
-  if (typeof sessionStorage !== 'undefined') {
-    try {
-      const item = sessionStorage.getItem(key);
-      if (item) {
-        const parsed = JSON.parse(item);
-        MEMORY_CACHE.set(key, parsed);
-        return parsed;
-      }
-    } catch (e) {
-      console.warn('Error reading from sessionStorage:', e);
-    }
-  }
   return null;
 };
 
@@ -68,13 +56,6 @@ const saveToCache = (key: string, data: AnalysisResult) => {
     if (firstKey) MEMORY_CACHE.delete(firstKey);
   }
   MEMORY_CACHE.set(key, data);
-  if (typeof sessionStorage !== 'undefined') {
-    try {
-      sessionStorage.setItem(key, JSON.stringify(data));
-    } catch (e) {
-      console.warn('Failed to save to sessionStorage:', e);
-    }
-  }
 };
 
 
