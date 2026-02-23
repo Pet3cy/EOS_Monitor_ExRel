@@ -1,0 +1,10 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`PriorityBadge > matches snapshot 1`] = `
+<span
+  class="px-2.5 py-0.5 rounded-full text-xs font-medium border bg-green-100 text-green-800 border-green-200"
+>
+  High
+   Priority
+</span>
+`;
