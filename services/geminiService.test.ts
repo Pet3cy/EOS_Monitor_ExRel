@@ -121,21 +121,32 @@ describe('analyzeInvitation', () => {
 
       const input = { text: 'Test Invalid JSON' }; // Unique input
 
-      await expect(analyzeInvitation(input)).rejects.toThrow('Failed to parse analysis result from AI service');
+      await expect(analyzeInvitation(input)).rejects.toThrow(/Failed to parse analysis result from AI service/);
   });
 
-   it('should handle empty/null response text gracefully', async () => {
+   it('should throw error on empty/null response text', async () => {
       generateContentMock.mockResolvedValue({
           text: null,
       });
 
       const input = { text: 'Test Empty Response' }; // Unique input
-      const result = await analyzeInvitation(input);
+      await expect(analyzeInvitation(input)).rejects.toThrow(/Missing required field: sender/);
+  });
 
-      expect(result).toEqual({
-          priority: undefined,
-          linkedActivities: [],
+
+  it('should throw error when analysis result is missing required fields', async () => {
+      const mockResponseData = {
+          sender: 'Test Sender',
+          // Missing other required fields
+      };
+
+      generateContentMock.mockResolvedValue({
+          text: JSON.stringify(mockResponseData),
       });
+
+      const input = { text: 'Test Missing Fields' };
+
+      await expect(analyzeInvitation(input)).rejects.toThrow(/Missing required field/);
   });
 
   it('should throw error when API_KEY is missing', async () => {

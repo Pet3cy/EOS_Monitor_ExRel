@@ -28,6 +28,26 @@ export interface AnalysisInput {
   };
 }
 
+
+const validateAnalysisResult = (data: any) => {
+  const requiredFields = [
+    "sender",
+    "institution",
+    "eventName",
+    "priority",
+    "priorityScore",
+    "date",
+    "venue",
+    "description",
+  ];
+
+  for (const field of requiredFields) {
+    if (data[field] === undefined || data[field] === null) {
+      throw new Error(`Missing required field: ${field}`);
+    }
+  }
+};
+
 export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisResult> => {
   const content = input.fileData
     ? `${input.fileData.mimeType}:${input.fileData.data}`
@@ -58,9 +78,10 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
   let data;
   try {
     data = JSON.parse(response.text || "{}");
+    validateAnalysisResult(data);
   } catch (error) {
-    console.error("Failed to parse Gemini response:", response.text);
-    throw new Error("Failed to parse analysis result from AI service");
+    console.error("Failed to parse Gemini response:", response.text?.slice(0, 200));
+    throw new Error("Failed to parse analysis result from AI service: " + (error instanceof Error ? error.message : "Unknown error"));
   }
   
 
