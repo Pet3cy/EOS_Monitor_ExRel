@@ -109,7 +109,13 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
     },
   });
 
-  const data = JSON.parse(response.text || "{}");
+  let data;
+  try {
+    data = JSON.parse(response.text || "{}");
+  } catch (error) {
+    console.error("Failed to parse Gemini response:", response.text);
+    throw new Error("Failed to parse analysis result from AI service");
+  }
   
 
   const result: AnalysisResult = {
