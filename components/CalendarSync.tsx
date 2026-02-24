@@ -1,0 +1,129 @@
+import React, { useState, useEffect } from 'react';
+import { Calendar as CalendarIcon, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { EventData, Priority } from '../types';
+
+interface CalendarSyncProps {
+  onEventsSynced: (events: EventData[]) => void;
+}
+
+export function CalendarSync({ onEventsSynced }: CalendarSyncProps) {
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+
+  useEffect(() => {
+    checkStatus();
+  }, []);
+
+  const checkStatus = async () => {
+    try {
+      const res = await fetch('/api/auth/status');
+      const data = await res.json();
+      setIsConnected(data.connected);
+    } catch (err) {
+      console.error('Failed to check status:', err);
+    }
+  };
+
+  const handleSync = async () => {
+    if (!isConnected) {
+      setError("Please connect Google Drive/Calendar first.");
+      return;
+    }
+
+    setIsSyncing(true);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/calendar/events');
+      if (!res.ok) {
+        throw new Error('Failed to fetch calendar events');
+      }
+      const data = await res.json();
+
+      const newEvents: EventData[] = data.events.map((event: any) => {
+        let contactName = '';
+        if (event.sourceCalendar === 'panagiotis@obessu.org' || event.sourceCalendar === 'panagiotischatzimichail@gmail.com') {
+          contactName = 'Panagiotis Chatzimichail';
+        } else if (event.sourceCalendar === 'amira@obessu.org') {
+          contactName = 'Amira Bakr';
+        } else if (event.sourceCalendar === 'daniele@obessu.org') {
+          contactName = 'Daniele Sabato';
+        } else if (event.sourceCalendar === 'francesca@obessu.org') {
+          contactName = 'Francesca Osima';
+        } else if (event.sourceCalendar === 'rui@obessu.org') {
+          contactName = 'Rui Teixeira';
+        }
+
+        return {
+          id: `cal-${event.id}`,
+          createdAt: Date.now(),
+          originalText: event.description || '',
+          analysis: {
+            sender: event.creator?.email || 'Unknown',
+            institution: 'Google Calendar',
+            eventName: event.summary || 'Untitled Event',
+            theme: 'Synced Event',
+            description: event.description || '',
+            priority: Priority.Medium,
+            priorityScore: 50,
+            priorityReasoning: 'Imported from Google Calendar',
+            date: event.start?.dateTime?.split('T')[0] || event.start?.date || '',
+            time: event.start?.dateTime ? new Date(event.start.dateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+            venue: event.location || 'Unknown',
+            initialDeadline: '',
+            finalDeadline: '',
+            linkedActivities: [],
+          },
+          contact: {
+            name: contactName,
+            email: event.sourceCalendar || '',
+            role: '',
+            organization: '',
+            notes: '',
+            polContact: '',
+            repRole: 'Participant'
+          },
+          followUp: {
+            briefing: '',
+            postEventNotes: '',
+            status: 'To Respond',
+            prepResources: '',
+            commsPack: {
+              remarks: '',
+              representative: '',
+              datePlace: '',
+              additionalInfo: ''
+            }
+          }
+        };
+      });
+
+      onEventsSynced(newEvents);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  if (!isConnected) return null;
+
+  return (
+    <div className="flex items-center gap-2">
+      {error && (
+        <span className="text-xs text-red-500 flex items-center gap-1">
+          <AlertCircle size={12} /> {error}
+        </span>
+      )}
+      <button
+        onClick={handleSync}
+        disabled={isSyncing}
+        className="flex items-center gap-2 bg-white text-slate-700 border border-slate-300 px-4 py-2 rounded-full text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50"
+      >
+        {isSyncing ? <Loader2 size={16} className="animate-spin" /> : <CalendarIcon size={16} />}
+        {isSyncing ? 'Syncing...' : 'Sync Calendars'}
+      </button>
+    </div>
+  );
+}
