@@ -9,6 +9,9 @@ import {
 import { summarizeFollowUp, generateBriefing } from '../services/geminiService';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
+
+type EventSection = 'analysis' | 'contact' | 'followUp';
+
 interface EventDetailProps {
   event: EventData;
   onUpdate: (updatedEvent: EventData) => void;
@@ -56,11 +59,11 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleChange = (section: keyof EventData, field: string, value: any) => {
+  const handleChange = <K extends EventSection, F extends keyof EventData[K]>(section: K, field: F, value: EventData[K][F]) => {
     setLocalEvent(prev => ({
       ...prev,
       [section]: {
-        ...(prev[section] as any),
+        ...prev[section],
         [field]: value
       }
     }));
@@ -902,7 +905,7 @@ END:VCALENDAR`;
                                             <select 
                                                 className="bg-transparent font-bold text-sm text-slate-700 outline-none"
                                                 value={localEvent.contact.repRole}
-                                                onChange={(e) => handleChange('contact', 'repRole', e.target.value)}
+                                                onChange={(e) => handleChange('contact', 'repRole', e.target.value as RepresentativeRole)}
                                             >
                                                 <option value="Participant">Participant</option>
                                                 <option value="Speaker">Speaker</option>
@@ -958,7 +961,7 @@ END:VCALENDAR`;
                                  <select 
                                     className="p-2 bg-slate-50 border border-slate-200 rounded-lg font-bold text-sm text-slate-700 outline-none min-w-[240px]"
                                     value={localEvent.followUp.status}
-                                    onChange={(e) => handleChange('followUp', 'status', e.target.value)}
+                                    onChange={(e) => handleChange('followUp', 'status', e.target.value as EventData['followUp']['status'])}
                                  >
                                     <option value="To Respond">To Respond</option>
                                     <option value="Responded - On hold for updates">Responded - On hold for updates</option>
