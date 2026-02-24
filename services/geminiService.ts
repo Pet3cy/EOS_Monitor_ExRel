@@ -2,18 +2,7 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { AnalysisResult, Priority } from "../types";
 
-let ai: GoogleGenAI | null = null;
-
-const getAiClient = () => {
-  if (!ai) {
-    const apiKey = process.env.API_KEY;
-    if (!apiKey) {
-      console.warn("API Key missing - AI features will fail");
-    }
-    ai = new GoogleGenAI({ apiKey: apiKey || 'dummy-key' });
-  }
-  return ai;
-};
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const OBESSU_DATA_CONTEXT = `
 ORGANIZATIONAL STRUCTURE & PORTFOLIOS (2026):
@@ -176,8 +165,7 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
     "programmeLink": "string"
   }`;
 
-  const client = getAiClient();
-  const response = await client.models.generateContent({
+  const response = await ai.models.generateContent({
     model: "gemma-2-27b-it",
     contents: { parts },
     config: {
@@ -217,8 +205,7 @@ export const generateBriefing = async (event: any) => {
   3. Key Stakeholders likely present
   4. Suggested opening statement points.`;
 
-  const client = getAiClient();
-  const response = await client.models.generateContent({
+  const response = await ai.models.generateContent({
     model: "gemma-2-27b-it",
     contents: [{ parts: [{ text: prompt }] }],
   });
@@ -227,8 +214,7 @@ export const generateBriefing = async (event: any) => {
 };
 
 export const summarizeFollowUp = async (file: { mimeType: string, data: string }) => {
-  const client = getAiClient();
-  const response = await client.models.generateContent({
+  const response = await ai.models.generateContent({
     model: "gemma-2-27b-it",
     contents: {
       parts: [

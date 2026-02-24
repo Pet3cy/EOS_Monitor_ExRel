@@ -8,9 +8,10 @@ import { EventData, Priority } from '../types';
 interface UploadModalProps {
   onClose: () => void;
   onAnalysisComplete: (event: EventData) => void;
+  isDriveConnected: boolean;
 }
 
-export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onAnalysisComplete }) => {
+export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onAnalysisComplete, isDriveConnected }) => {
   const [text, setText] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -51,13 +52,26 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onAnalysisCom
     }, 600);
 
     try {
-      let input: AnalysisInput = {};
+      let papersContent = '';
+      if (isDriveConnected) {
+        try {
+          const res = await fetch('/api/drive/papers/content');
+          if (res.ok) {
+            const data = await res.json();
+            papersContent = data.content;
+          }
+        } catch (err) {
+          console.error("Failed to fetch papers from Drive", err);
+        }
+      }
+
+      let input: AnalysisInput = { papersContent };
       if (mode === 'file' && selectedFile) {
         if (selectedFile.name.endsWith('.docx')) {
           const result = await mammoth.extractRawText({ arrayBuffer: await selectedFile.arrayBuffer() });
-          input = { text: result.value };
+          input.text = result.value;
         } else if (selectedFile.type === 'application/pdf') {
-          input = { fileData: { mimeType: 'application/pdf', data: await convertFileToBase64(selectedFile) } };
+          input.fileData = { mimeType: 'application/pdf', data: await convertFileToBase64(selectedFile) };
         } else {
           setError("Unsupported file format. Please use PDF or DOCX.");
           setIsAnalyzing(false); 
@@ -65,7 +79,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onAnalysisCom
           return;
         }
       } else {
-        input = { text };
+        input.text = text;
       }
 
       const result = await analyzeInvitation(input);

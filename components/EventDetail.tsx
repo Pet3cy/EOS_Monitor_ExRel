@@ -4,10 +4,11 @@ import { EventData, Priority, RepresentativeRole, Contact } from '../types';
 import { PriorityBadge } from './PriorityBadge';
 import { 
   Calendar, MapPin, Building2, AlertCircle, Clock, FileText, 
-  UserPlus, Mail, MessageSquare, CheckCircle, Save, Mic, FileAudio, Loader2, Sparkles, Megaphone, Image as ImageIcon, X, Link as LinkIcon, ExternalLink, Briefcase, Trash2, Copy, FileCheck, Users, User, FileJson, FileSpreadsheet, Download, Plus, Search, Edit2, Repeat, Repeat1, CalendarPlus, ChevronDown, Target, Zap, ShieldAlert, ArrowRight
+  UserPlus, Mail, MessageSquare, CheckCircle, Save, Mic, FileAudio, Loader2, Sparkles, Megaphone, Image as ImageIcon, X, Link as LinkIcon, ExternalLink, Briefcase, Trash2, Copy, FileCheck, Users, User, FileJson, FileSpreadsheet, Download, Plus, Search, Edit2, Repeat, Repeat1, CalendarPlus, ChevronDown, Target, Zap, ShieldAlert, ArrowRight, HardDrive
 } from 'lucide-react';
 import { summarizeFollowUp, generateBriefing } from '../services/geminiService';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
+import { RelevantPapers } from './RelevantPapers';
 
 interface EventDetailProps {
   event: EventData;
@@ -127,6 +128,30 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', fileName);
     linkElement.click();
+  };
+
+  const handleSaveToDrive = async () => {
+    const dataStr = JSON.stringify(localEvent, null, 2);
+    const fileName = `${localEvent.analysis.eventName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`;
+    
+    try {
+      const res = await fetch('/api/drive/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          folderId: '1k8QPBJrdBFxNtjhi4h3KPV3aL68_0UUQ',
+          fileName,
+          content: dataStr,
+          mimeType: 'application/json'
+        })
+      });
+      
+      if (!res.ok) throw new Error('Upload failed');
+      alert('Successfully saved to Drive Database!');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save to Drive. Please ensure you are connected.');
+    }
   };
 
   const handleExportCSV = () => {
@@ -291,6 +316,7 @@ END:VCALENDAR`;
                  {/* Shared Actions */}
                  <div className="flex items-center gap-1">
                     <button onClick={handleExportJSON} className="p-2 text-slate-400 hover:text-emerald-400 rounded-lg transition-colors" title="Export JSON"><FileJson size={16}/></button>
+                    <button onClick={handleSaveToDrive} className="p-2 text-slate-400 hover:text-emerald-400 rounded-lg transition-colors" title="Save to Drive Database"><HardDrive size={16}/></button>
                     <div className="relative" ref={calendarMenuRef}>
                         <button onClick={() => setShowCalendarMenu(!showCalendarMenu)} className="p-2 text-slate-400 hover:text-emerald-400 rounded-lg transition-colors" title="Calendar">
                             <CalendarPlus size={16}/>
@@ -457,6 +483,7 @@ END:VCALENDAR`;
                                             <span key={i} className="px-3 py-1 bg-slate-800 rounded-full text-xs font-bold text-slate-300 border border-slate-700">{act}</span>
                                         ))}
                                     </div>
+                                    <RelevantPapers folderId="1obdX4rkD2A0Cn_ayk3dtJqR96ASiGl3j" />
                                 </div>
                             </div>
                          </div>
