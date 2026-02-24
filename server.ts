@@ -18,8 +18,8 @@ async function startServer() {
 
   const getOAuth2Client = (redirectUri: string) => {
     return new google.auth.OAuth2(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET,
+      process.env.CLIENT_ID || process.env.GOOGLE_CLIENT_ID,
+      process.env.CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET,
       redirectUri
     );
   };
@@ -31,7 +31,10 @@ async function startServer() {
         return res.status(400).json({ error: "redirectUri is required" });
       }
 
-      if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+      const clientId = process.env.CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
+      const clientSecret = process.env.CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET;
+
+      if (!clientId || !clientSecret) {
         return res.status(500).json({ 
           error: "Missing Google OAuth credentials.",
           needsSetup: true
@@ -83,7 +86,10 @@ async function startServer() {
       return res.status(400).json({ error: "code and redirectUri are required" });
     }
 
-    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    const clientId = process.env.CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET;
+
+    if (!clientId || !clientSecret) {
       return res.status(500).json({ 
         error: "Missing Google OAuth credentials.",
         needsSetup: true
