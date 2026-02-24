@@ -1,8 +1,12 @@
-
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { AnalysisResult, Priority } from "../types";
+import { CacheService } from "./cacheService";
 
 let ai: GoogleGenAI | null = null;
+
+// Initialize caches with specific prefixes
+const analysisCache = new CacheService<AnalysisResult>('gemini_analysis_v2_', 50);
+const briefingCache = new CacheService<string>('gemini_briefing_v2_', 50);
 
 const getAiClient = () => {
   if (!ai) {
@@ -140,6 +144,15 @@ export interface AnalysisInput {
 }
 
 export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisResult> => {
+  // Check cache first
+  const cacheKeyInput = input.fileData ? input.fileData.data : (input.text || '');
+  const cacheKey = await analysisCache.generateKey(cacheKeyInput);
+
+  const cached = await analysisCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   const parts = [];
   if (input.fileData) {
     parts.push({ inlineData: input.fileData });
@@ -193,14 +206,34 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
   
   const data = JSON.parse(text);
   
-  return {
+  const result: AnalysisResult = {
     ...data,
     priority: data.priority as Priority,
     linkedActivities: data.linkedActivities || [],
   };
+
+  // Cache successful result
+  await analysisCache.set(cacheKey, result);
+
+  return result;
 };
 
 export const generateBriefing = async (event: any) => {
+  // Generate cache key based on relevant event data
+  const cacheKeyData = {
+    eventName: event.analysis.eventName,
+    institution: event.analysis.institution,
+    theme: event.analysis.theme,
+    description: event.analysis.description,
+    linkedActivities: event.analysis.linkedActivities
+  };
+  const cacheKey = await briefingCache.generateKey(cacheKeyData);
+
+  const cached = await briefingCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   const prompt = `Create a 1-page executive briefing for a representative attending the following event:
   Event: ${event.analysis.eventName}
   Institution: ${event.analysis.institution}
@@ -223,7 +256,14 @@ export const generateBriefing = async (event: any) => {
     contents: [{ parts: [{ text: prompt }] }],
   });
 
-  return response.text;
+  const result = response.text || '';
+
+  // Cache result
+  if (result) {
+    await briefingCache.set(cacheKey, result);
+  }
+
+  return result;
 };
 
 export const summarizeFollowUp = async (file: { mimeType: string, data: string }) => {
