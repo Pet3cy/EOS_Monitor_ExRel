@@ -42,6 +42,7 @@ async function startServer() {
       const scopes = [
         "https://www.googleapis.com/auth/drive.file",
         "https://www.googleapis.com/auth/drive.readonly",
+        "https://www.googleapis.com/auth/calendar.readonly",
       ];
 
       const authUrl = oauth2Client.generateAuthUrl({
@@ -184,6 +185,53 @@ async function startServer() {
     } catch (error: any) {
       console.error("Error fetching papers content:", error);
       res.status(500).json({ error: error.message || "Failed to fetch papers content" });
+    }
+  });
+
+  app.get("/api/calendar/events", async (req, res) => {
+    if (!userTokens) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    try {
+      const oauth2Client = new google.auth.OAuth2();
+      oauth2Client.setCredentials(userTokens);
+      const calendar = google.calendar({ version: "v3", auth: oauth2Client });
+
+      const calendarIds = [
+        'panagiotis@obessu.org',
+        'amira@obessu.org',
+        'daniele@obessu.org',
+        'francesca@obessu.org',
+        'rui@obessu.org',
+        'panagiotischatzimichail@gmail.com'
+      ];
+
+      const timeMin = new Date('2026-01-01T00:00:00Z').toISOString();
+      let allEvents: any[] = [];
+
+      for (const calendarId of calendarIds) {
+        try {
+          const response = await calendar.events.list({
+            calendarId: calendarId,
+            timeMin: timeMin,
+            maxResults: 50,
+            singleEvents: true,
+            orderBy: 'startTime',
+          });
+          
+          if (response.data.items) {
+            allEvents.push(...response.data.items.map(item => ({ ...item, sourceCalendar: calendarId })));
+          }
+        } catch (err) {
+          console.error(`Failed to fetch events for calendar ${calendarId}`, err);
+        }
+      }
+
+      res.json({ events: allEvents });
+    } catch (error: any) {
+      console.error("Error fetching calendar events:", error);
+      res.status(500).json({ error: error.message || "Failed to fetch calendar events" });
     }
   });
 

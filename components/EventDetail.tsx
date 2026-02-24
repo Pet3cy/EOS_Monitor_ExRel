@@ -1009,8 +1009,13 @@ END:VCALENDAR`;
 
                     {activeTab === 'raw' && (
                         <div className="space-y-6 max-w-4xl">
-                            <Section title="Original Source Text">
+                            <Section title="Extracted JSON Data">
                                 <div className="bg-slate-900 text-slate-300 p-6 rounded-xl font-mono text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap border border-slate-800 h-[500px] overflow-y-auto">
+                                    {JSON.stringify(localEvent, null, 2)}
+                                </div>
+                            </Section>
+                            <Section title="Original Source Text">
+                                <div className="bg-slate-900 text-slate-300 p-6 rounded-xl font-mono text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap border border-slate-800 h-[200px] overflow-y-auto">
                                     {localEvent.originalText || "No original text available."}
                                 </div>
                             </Section>

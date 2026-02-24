@@ -11,6 +11,8 @@ import { ContactsView } from './components/ContactsView';
 
 import { DriveIntegration } from './components/DriveIntegration';
 
+import { CalendarSync } from './components/CalendarSync';
+
 const MOCK_CONTACTS: Contact[] = [
   { id: 'c20', name: 'Alessandro Di Miceli', email: 'alessandro@obessu.org', role: 'Board Member', organization: 'OBESSU', notes: 'Portfolio: VET and Apprenticeships' },
   { id: 'c21', name: 'Elodie Böhling', email: 'elodie@obessu.org', role: 'Board Member', organization: 'OBESSU', notes: 'Portfolio: Democracy and Student Rights' },
@@ -381,14 +383,12 @@ export default function App() {
   };
 
   const handleBulkDelete = () => {
-    if (window.confirm(`Are you sure you want to delete ${selectedEventIds.size} events?`)) {
-      const eventsToDelete = events.filter(e => selectedEventIds.has(e.id));
-      setDeletedEventsHistory({ events: eventsToDelete, timestamp: Date.now() });
-      
-      setEvents(prev => prev.filter(e => !selectedEventIds.has(e.id)));
-      if (selectedEventId && selectedEventIds.has(selectedEventId)) setSelectedEventId(null);
-      setSelectedEventIds(new Set());
-    }
+    const eventsToDelete = events.filter(e => selectedEventIds.has(e.id));
+    setDeletedEventsHistory({ events: eventsToDelete, timestamp: Date.now() });
+    
+    setEvents(prev => prev.filter(e => !selectedEventIds.has(e.id)));
+    if (selectedEventId && selectedEventIds.has(selectedEventId)) setSelectedEventId(null);
+    setSelectedEventIds(new Set());
   };
 
   const handleBulkMarkCompleted = () => {
@@ -420,7 +420,14 @@ export default function App() {
   }, [deletedEventsHistory]);
 
   const selectedEvent = events.find(e => e.id === selectedEventId);
-  const uniqueStatuses = useMemo(() => Array.from(new Set(events.map(e => e.followUp.status))), [events]);
+  const uniqueStatuses = useMemo(() => {
+    const filteredByMode = events.filter(e => {
+      if (viewMode === 'upcoming') return !isCompletedOrArchived(e.followUp.status);
+      if (viewMode === 'past') return isCompletedOrArchived(e.followUp.status);
+      return true;
+    });
+    return Array.from(new Set(filteredByMode.map(e => e.followUp.status)));
+  }, [events, viewMode]);
 
   return (
     <div className="h-screen flex flex-col bg-slate-50 text-slate-900 font-sans">
@@ -434,6 +441,13 @@ export default function App() {
             </div>
             
             <div className="flex items-center gap-4">
+            <CalendarSync onEventsSynced={(newEvents) => {
+              setEvents(prev => {
+                const existingIds = new Set(prev.map(e => e.id));
+                const uniqueNewEvents = newEvents.filter(e => !existingIds.has(e.id));
+                return [...uniqueNewEvents, ...prev];
+              });
+            }} />
             <DriveIntegration />
             <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
