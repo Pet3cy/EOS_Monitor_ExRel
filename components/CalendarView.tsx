@@ -86,11 +86,21 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
       const hasMatches = weekEvents.length > 0;
       if (!hasMatches && (priorityFilter !== 'All' || themeFilter !== 'All')) continue;
 
+      const eventsByDate = new Map<string, EventData[]>();
+      for (const event of weekEvents) {
+        const dateKey = event.analysis.date;
+        if (!eventsByDate.has(dateKey)) {
+          eventsByDate.set(dateKey, []);
+        }
+        eventsByDate.get(dateKey)!.push(event);
+      }
+
       weeksArr.push({
         number: i + 1,
         start: weekStart,
         end: weekEnd,
-        events: weekEvents
+        events: weekEvents,
+        eventsByDate
       });
     }
     return weeksArr;
@@ -254,7 +264,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
                     <div className="grid grid-cols-1 md:grid-cols-7 divide-y md:divide-y-0 md:divide-x divide-slate-100">
                         {weekDays.map(day => {
                             const dateKey = toDateString(day);
-                            const dayEvents = week.events.filter(e => e.analysis.date === dateKey);
+                            const dayEvents = week.eventsByDate.get(dateKey) || [];
                             const isToday = toDateString(new Date()) === dateKey;
                             const isWeekend = day.getDay() === 0 || day.getDay() === 6;
 
