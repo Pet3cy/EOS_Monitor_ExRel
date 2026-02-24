@@ -1,8 +1,10 @@
-
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { AnalysisResult, Priority } from "../types";
+import { CacheService } from "./cacheService";
 
 let ai: GoogleGenAI | null = null;
+// Use CacheService for briefings
+const briefingCacheService = new CacheService<string>('briefing_cache');
 
 const getAiClient = () => {
   if (!ai) {
@@ -189,7 +191,7 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
 
   let text = response.text || "{}";
   // Clean potential markdown formatting
-  text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+  text = text.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '').trim();
   
   const data = JSON.parse(text);
   
@@ -201,6 +203,22 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
 };
 
 export const generateBriefing = async (event: any) => {
+  // Generate cache key based on input parameters that affect the prompt
+  const cacheKeyData = {
+    eventName: event.analysis.eventName,
+    institution: event.analysis.institution,
+    theme: event.analysis.theme,
+    description: event.analysis.description,
+    linkedActivities: event.analysis.linkedActivities
+  };
+
+  const cacheKey = await briefingCacheService.generateKey(cacheKeyData);
+  const cached = briefingCacheService.get(cacheKey);
+
+  if (cached) {
+    return cached;
+  }
+
   const prompt = `Create a 1-page executive briefing for a representative attending the following event:
   Event: ${event.analysis.eventName}
   Institution: ${event.analysis.institution}
@@ -222,6 +240,10 @@ export const generateBriefing = async (event: any) => {
     model: "gemma-2-27b-it",
     contents: [{ parts: [{ text: prompt }] }],
   });
+
+  if (response.text) {
+    briefingCacheService.set(cacheKey, response.text);
+  }
 
   return response.text;
 };
