@@ -2,18 +2,7 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { AnalysisResult, Priority } from "../types";
 
-let ai: GoogleGenAI | null = null;
-
-const getAiClient = () => {
-  if (!ai) {
-    const apiKey = process.env.API_KEY;
-    if (!apiKey) {
-      console.warn("API Key missing - AI features will fail");
-    }
-    ai = new GoogleGenAI({ apiKey: apiKey || 'dummy-key' });
-  }
-  return ai;
-};
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const OBESSU_DATA_CONTEXT = `
 ORGANIZATIONAL STRUCTURE & PORTFOLIOS (2026):
@@ -50,8 +39,8 @@ Use the following organizational context to determine relevance, assign prioriti
 ${OBESSU_DATA_CONTEXT}
 
 Extraction Rules:
-1. Identify Email Metadata: Extract the Subject, Sender Name, and Sender Email if visible in the headers. Handle raw HTML emails, stripping tags to find the core content.
-2. Nested Event Details: Carefully read through long email threads to extract nested details (e.g., if the time was changed in a later reply, use the updated time).
+1. Identify Email Metadata: Extract the Subject, Sender Name, and Sender Email if visible in the headers. Handle raw HTML emails, stripping tags to find the core content. Pay special attention to forwarded messages (e.g., "Fwd:", "Forwarded message") and extract the original sender and context.
+2. Nested Event Details: Carefully read through long email threads to extract nested details (e.g., if the time was changed in a later reply, use the updated time). Identify inline replies and signature blocks to avoid confusion.
 3. Thematic Analysis: Map the event to OBESSU's strategic goals defined in the context above.
 4. Role Mapping: Suggest the most relevant Board Member or Staff based on the portfolios listed above.
 5. NLP Priority Scoring (0-100):
@@ -137,15 +126,20 @@ export interface AnalysisInput {
     mimeType: string;
     data: string;
   };
+  papersContent?: string;
 }
 
 export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisResult> => {
   const parts = [];
   if (input.fileData) {
     parts.push({ inlineData: input.fileData });
-    parts.push({ text: "Analyze this document as an event invitation. If it's an email, extract headers." });
+    parts.push({ text: "Analyze this document as an event invitation. If it's an email, extract headers. Handle complex email threads, forwarded messages, and various formatting." });
   } else if (input.text) {
-    parts.push({ text: `Analyze the following invitation (check for email headers):\n\n${input.text}` });
+    parts.push({ text: `Analyze the following invitation (check for email headers). Handle complex email threads, forwarded messages, and various formatting:\n\n${input.text}` });
+  }
+
+  if (input.papersContent) {
+    parts.push({ text: `Here are some relevant research papers to align with the event:\n\n${input.papersContent}` });
   }
 
   // Enhanced instruction for Gemma to ensure JSON output
@@ -176,8 +170,7 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
     "programmeLink": "string"
   }`;
 
-  const client = getAiClient();
-  const response = await client.models.generateContent({
+  const response = await ai.models.generateContent({
     model: "gemma-2-27b-it",
     contents: { parts },
     config: {
@@ -217,8 +210,7 @@ export const generateBriefing = async (event: any) => {
   3. Key Stakeholders likely present
   4. Suggested opening statement points.`;
 
-  const client = getAiClient();
-  const response = await client.models.generateContent({
+  const response = await ai.models.generateContent({
     model: "gemma-2-27b-it",
     contents: [{ parts: [{ text: prompt }] }],
   });
@@ -227,8 +219,7 @@ export const generateBriefing = async (event: any) => {
 };
 
 export const summarizeFollowUp = async (file: { mimeType: string, data: string }) => {
-  const client = getAiClient();
-  const response = await client.models.generateContent({
+  const response = await ai.models.generateContent({
     model: "gemma-2-27b-it",
     contents: {
       parts: [

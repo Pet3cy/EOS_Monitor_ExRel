@@ -78,6 +78,7 @@ export interface EventData {
   id: string;
   createdAt: number;
   originalText: string;
+  driveLink?: string;
   analysis: AnalysisResult;
   contact: ContactDetails;
   followUp: FollowUpDetails;
