@@ -39,8 +39,8 @@ Use the following organizational context to determine relevance, assign prioriti
 ${OBESSU_DATA_CONTEXT}
 
 Extraction Rules:
-1. Identify Email Metadata: Extract the Subject, Sender Name, and Sender Email if visible in the headers. Handle raw HTML emails, stripping tags to find the core content.
-2. Nested Event Details: Carefully read through long email threads to extract nested details (e.g., if the time was changed in a later reply, use the updated time).
+1. Identify Email Metadata: Extract the Subject, Sender Name, and Sender Email if visible in the headers. Handle raw HTML emails, stripping tags to find the core content. Pay special attention to forwarded messages (e.g., "Fwd:", "Forwarded message") and extract the original sender and context.
+2. Nested Event Details: Carefully read through long email threads to extract nested details (e.g., if the time was changed in a later reply, use the updated time). Identify inline replies and signature blocks to avoid confusion.
 3. Thematic Analysis: Map the event to OBESSU's strategic goals defined in the context above.
 4. Role Mapping: Suggest the most relevant Board Member or Staff based on the portfolios listed above.
 5. NLP Priority Scoring (0-100):
@@ -126,15 +126,20 @@ export interface AnalysisInput {
     mimeType: string;
     data: string;
   };
+  papersContent?: string;
 }
 
 export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisResult> => {
   const parts = [];
   if (input.fileData) {
     parts.push({ inlineData: input.fileData });
-    parts.push({ text: "Analyze this document as an event invitation. If it's an email, extract headers." });
+    parts.push({ text: "Analyze this document as an event invitation. If it's an email, extract headers. Handle complex email threads, forwarded messages, and various formatting." });
   } else if (input.text) {
-    parts.push({ text: `Analyze the following invitation (check for email headers):\n\n${input.text}` });
+    parts.push({ text: `Analyze the following invitation (check for email headers). Handle complex email threads, forwarded messages, and various formatting:\n\n${input.text}` });
+  }
+
+  if (input.papersContent) {
+    parts.push({ text: `Here are some relevant research papers to align with the event:\n\n${input.papersContent}` });
   }
 
   // Enhanced instruction for Gemma to ensure JSON output

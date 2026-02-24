@@ -12,9 +12,10 @@ interface DriveFile {
 
 interface RelevantPapersProps {
   folderId: string;
+  keywords: string[];
 }
 
-export function RelevantPapers({ folderId }: RelevantPapersProps) {
+export function RelevantPapers({ folderId, keywords }: RelevantPapersProps) {
   const [files, setFiles] = useState<DriveFile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +23,7 @@ export function RelevantPapers({ folderId }: RelevantPapersProps) {
 
   useEffect(() => {
     checkAuthAndFetchFiles();
-  }, [folderId]);
+  }, [folderId, keywords]);
 
   const checkAuthAndFetchFiles = async () => {
     setIsLoading(true);
@@ -45,7 +46,23 @@ export function RelevantPapers({ folderId }: RelevantPapersProps) {
       }
       
       const filesData = await filesRes.json();
-      setFiles(filesData.files || []);
+      let fetchedFiles = filesData.files || [];
+      
+      if (keywords && keywords.length > 0) {
+        const stopWords = ['a', 'an', 'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'with', 'about', 'as', 'by', 'of'];
+        const lowerKeywords = keywords
+          .map(k => k.toLowerCase())
+          .filter(k => k.length > 2 && !stopWords.includes(k));
+          
+        if (lowerKeywords.length > 0) {
+          fetchedFiles = fetchedFiles.filter((file: DriveFile) => {
+            const lowerName = file.name.toLowerCase();
+            return lowerKeywords.some(keyword => lowerName.includes(keyword));
+          });
+        }
+      }
+      
+      setFiles(fetchedFiles);
     } catch (err: any) {
       setError(err.message);
     } finally {

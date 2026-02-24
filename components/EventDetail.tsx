@@ -483,7 +483,14 @@ END:VCALENDAR`;
                                             <span key={i} className="px-3 py-1 bg-slate-800 rounded-full text-xs font-bold text-slate-300 border border-slate-700">{act}</span>
                                         ))}
                                     </div>
-                                    <RelevantPapers folderId="1obdX4rkD2A0Cn_ayk3dtJqR96ASiGl3j" />
+                                    <RelevantPapers 
+                                        folderId="1obdX4rkD2A0Cn_ayk3dtJqR96ASiGl3j" 
+                                        keywords={[
+                                            localEvent.analysis.theme, 
+                                            ...localEvent.analysis.eventName.split(' '),
+                                            ...localEvent.analysis.linkedActivities
+                                        ].filter(Boolean)}
+                                    />
                                 </div>
                             </div>
                          </div>

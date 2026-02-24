@@ -32,7 +32,10 @@ async function startServer() {
       }
 
       if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-        return res.status(500).json({ error: "Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET environment variables." });
+        return res.status(500).json({ 
+          error: "Missing Google OAuth credentials.",
+          needsSetup: true
+        });
       }
 
       const oauth2Client = getOAuth2Client(redirectUri);
@@ -80,7 +83,10 @@ async function startServer() {
     }
 
     if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-      return res.status(500).json({ error: "Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET environment variables." });
+      return res.status(500).json({ 
+        error: "Missing Google OAuth credentials.",
+        needsSetup: true
+      });
     }
 
     try {
@@ -128,6 +134,56 @@ async function startServer() {
     } catch (error: any) {
       console.error("Error fetching files:", error);
       res.status(500).json({ error: error.message || "Failed to fetch files" });
+    }
+  });
+
+  app.get("/api/drive/papers/content", async (req, res) => {
+    if (!userTokens) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    try {
+      const oauth2Client = new google.auth.OAuth2();
+      oauth2Client.setCredentials(userTokens);
+      const drive = google.drive({ version: "v3", auth: oauth2Client });
+
+      const folderId = '1obdX4rkD2A0Cn_ayk3dtJqR96ASiGl3j';
+      const response = await drive.files.list({
+        q: `'${folderId}' in parents and trashed = false`,
+        fields: "files(id, name, mimeType)",
+      });
+
+      const files = response.data.files || [];
+      let allContent = '';
+
+      for (const file of files) {
+        if (file.id && file.mimeType === 'text/plain') {
+          try {
+            const fileRes = await drive.files.get({
+              fileId: file.id,
+              alt: 'media'
+            }, { responseType: 'text' });
+            allContent += `\n\n--- Paper: ${file.name} ---\n${fileRes.data}`;
+          } catch (err) {
+            console.error(`Failed to fetch content for ${file.name}`, err);
+          }
+        } else if (file.id && file.mimeType === 'application/vnd.google-apps.document') {
+          try {
+            const fileRes = await drive.files.export({
+              fileId: file.id,
+              mimeType: 'text/plain'
+            }, { responseType: 'text' });
+            allContent += `\n\n--- Paper: ${file.name} ---\n${fileRes.data}`;
+          } catch (err) {
+            console.error(`Failed to export content for ${file.name}`, err);
+          }
+        }
+      }
+
+      res.json({ content: allContent });
+    } catch (error: any) {
+      console.error("Error fetching papers content:", error);
+      res.status(500).json({ error: error.message || "Failed to fetch papers content" });
     }
   });
 
