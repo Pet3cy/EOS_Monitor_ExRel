@@ -20,6 +20,7 @@ interface CalendarViewProps {
 export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
   const [priorityFilter, setPriorityFilter] = useState<Priority | 'All'>('All');
   const [themeFilter, setThemeFilter] = useState<string>('All');
+  const [contactFilter, setContactFilter] = useState<string>('All');
   const [startDateFilter, setStartDateFilter] = useState<string>('2026-01-01');
   const [endDateFilter, setEndDateFilter] = useState<string>('2026-12-31');
 
@@ -28,6 +29,15 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
     const uniqueThemes = new Set(events.map(e => e.analysis.theme));
     return ['All', ...Array.from(uniqueThemes)].sort();
   }, [events]);
+
+  const contacts = [
+    'All',
+    'Panagiotis Chatzimichail',
+    'Amira Bakr',
+    'Daniele Sabato',
+    'Francesca Osima',
+    'Rui Teixeira'
+  ];
 
   const toDateString = (date: Date) => {
     const year = date.getFullYear();
@@ -73,7 +83,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
         const matchesDate = eventDate >= weekStart && eventDate <= weekEnd;
         const matchesPriority = priorityFilter === 'All' || event.analysis.priority === priorityFilter;
         const matchesTheme = themeFilter === 'All' || event.analysis.theme === themeFilter;
-        return matchesDate && matchesPriority && matchesTheme;
+        const matchesContact = contactFilter === 'All' || event.contact.name === contactFilter;
+        return matchesDate && matchesPriority && matchesTheme && matchesContact;
       });
 
       // Only show weeks with events if not filtering by range strictly, 
@@ -82,30 +93,41 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
       // Let's stick to showing all weeks in the filtered range if the filter is specific, or just weeks with events if generic.
       // For "Calendar Overview", showing empty weeks might be good for planning.
       
-      // Optimisation: If filtering by specific priority/theme, only show weeks that have those matches.
+      // Optimisation: If filtering by specific priority/theme/contact, only show weeks that have those matches.
       const hasMatches = weekEvents.length > 0;
-      if (!hasMatches && (priorityFilter !== 'All' || themeFilter !== 'All')) continue;
+      if (!hasMatches && (priorityFilter !== 'All' || themeFilter !== 'All' || contactFilter !== 'All')) continue;
+
+      const eventsByDate = new Map<string, EventData[]>();
+      for (const event of weekEvents) {
+        const dateKey = event.analysis.date;
+        if (!eventsByDate.has(dateKey)) {
+          eventsByDate.set(dateKey, []);
+        }
+        eventsByDate.get(dateKey)!.push(event);
+      }
 
       weeksArr.push({
         number: i + 1,
         start: weekStart,
         end: weekEnd,
-        events: weekEvents
+        events: weekEvents,
+        eventsByDate
       });
     }
     return weeksArr;
-  }, [events, priorityFilter, themeFilter, startDateFilter, endDateFilter]);
+  }, [events, priorityFilter, themeFilter, contactFilter, startDateFilter, endDateFilter]);
 
   const currentMonthName = (date: Date) => date.toLocaleString('default', { month: 'long' });
 
   const resetFilters = () => {
     setPriorityFilter('All');
     setThemeFilter('All');
+    setContactFilter('All');
     setStartDateFilter('2026-01-01');
     setEndDateFilter('2026-12-31');
   };
 
-  const isFiltered = priorityFilter !== 'All' || themeFilter !== 'All' || startDateFilter !== '2026-01-01' || endDateFilter !== '2026-12-31';
+  const isFiltered = priorityFilter !== 'All' || themeFilter !== 'All' || contactFilter !== 'All' || startDateFilter !== '2026-01-01' || endDateFilter !== '2026-12-31';
 
   return (
     <div className="p-8 h-full overflow-y-auto bg-slate-50/50">
@@ -133,7 +155,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
             Roadmap Filters
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             {/* Priority Selection */}
             <div className="space-y-2">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Priority Status</label>
@@ -163,6 +185,18 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
                 className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               >
                 {themes.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+
+            {/* Contact Filter */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">By Contact</label>
+              <select 
+                value={contactFilter}
+                onChange={(e) => setContactFilter(e.target.value)}
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              >
+                {contacts.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
 
@@ -254,7 +288,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
                     <div className="grid grid-cols-1 md:grid-cols-7 divide-y md:divide-y-0 md:divide-x divide-slate-100">
                         {weekDays.map(day => {
                             const dateKey = toDateString(day);
-                            const dayEvents = week.events.filter(e => e.analysis.date === dateKey);
+                            const dayEvents = week.eventsByDate.get(dateKey) || [];
                             const isToday = toDateString(new Date()) === dateKey;
                             const isWeekend = day.getDay() === 0 || day.getDay() === 6;
 
@@ -280,6 +314,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
                                                 title={`${event.analysis.eventName} (${event.analysis.priority} Priority)`}
                                             >
                                                 <div className="font-bold text-slate-900 leading-tight mb-1 line-clamp-2">
+                                                    {event.analysis.time && <span className="text-blue-600 mr-1">{event.analysis.time}</span>}
                                                     {event.analysis.eventName}
                                                 </div>
                                                 <div className="text-[10px] text-slate-500 font-medium truncate">
