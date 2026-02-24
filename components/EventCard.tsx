@@ -83,7 +83,9 @@ export const EventCard: React.FC<EventCardProps> = ({
               <h3 className="font-semibold text-slate-800 line-clamp-1 flex items-center gap-2">
                 {analysis.eventName}
                 {analysis.recurrence?.isRecurring && (
-                  <Repeat size={14} className="text-blue-500 shrink-0" title={`Recurs ${analysis.recurrence.frequency}`} />
+                  <span title={`Recurs ${analysis.recurrence.frequency}`}>
+                    <Repeat size={14} className="text-blue-500 shrink-0" />
+                  </span>
                 )}
               </h3>
               <div className="shrink-0 ml-2">

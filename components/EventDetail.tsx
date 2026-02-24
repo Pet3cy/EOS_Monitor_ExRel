@@ -7,12 +7,8 @@ import {
   UserPlus, Mail, MessageSquare, CheckCircle, Save, Mic, FileAudio, Loader2, Sparkles, Megaphone, Image as ImageIcon, X, Link as LinkIcon, ExternalLink, Briefcase, Trash2, Copy, FileCheck, Users, User, FileJson, FileSpreadsheet, Download, Plus, Search, Edit2, Repeat, Repeat1, CalendarPlus, ChevronDown, Target, Zap, ShieldAlert, ArrowRight, HardDrive
 } from 'lucide-react';
 import { summarizeFollowUp, generateBriefing } from '../services/geminiService';
-import { exportToCSV } from '../utils/exportUtils';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { RelevantPapers } from './RelevantPapers';
-
-
-type EventSection = 'analysis' | 'contact' | 'followUp';
 
 interface EventDetailProps {
   event: EventData;
@@ -61,11 +57,11 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleChange = <K extends EventSection, F extends keyof EventData[K]>(section: K, field: F, value: EventData[K][F]) => {
+  const handleChange = (section: keyof EventData, field: string, value: any) => {
     setLocalEvent(prev => ({
       ...prev,
       [section]: {
-        ...prev[section],
+        ...(prev[section] as any),
         [field]: value
       }
     }));
@@ -159,8 +155,34 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   };
 
   const handleExportCSV = () => {
+    const flattenObject = (obj: any, prefix = ''): Record<string, string> => {
+      return Object.keys(obj).reduce((acc: any, k: string) => {
+        const pre = prefix.length ? prefix + '.' : '';
+        if (typeof obj[k] === 'object' && obj[k] !== null && !Array.isArray(obj[k])) {
+          Object.assign(acc, flattenObject(obj[k], pre + k));
+        } else if (Array.isArray(obj[k])) {
+          acc[pre + k] = obj[k].join('; ');
+        } else {
+          acc[pre + k] = String(obj[k]);
+        }
+        return acc;
+      }, {});
+    };
+
+    const flatEvent = flattenObject(localEvent);
+    const headers = Object.keys(flatEvent);
+    const values = Object.values(flatEvent).map(v => `"${v.replace(/"/g, '""')}"`);
+
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + headers.join(",") + "\n" 
+      + values.join(",");
+
     const fileName = `${localEvent.analysis.eventName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.csv`;
-    exportToCSV(localEvent, fileName);
+    const encodedUri = encodeURI(csvContent);
+    const linkElement = document.createElement("a");
+    linkElement.setAttribute("href", encodedUri);
+    linkElement.setAttribute("download", fileName);
+    linkElement.click();
   };
 
   // --- Calendar Functions ---
@@ -914,7 +936,7 @@ END:VCALENDAR`;
                                             <select 
                                                 className="bg-transparent font-bold text-sm text-slate-700 outline-none"
                                                 value={localEvent.contact.repRole}
-                                                onChange={(e) => handleChange('contact', 'repRole', e.target.value as RepresentativeRole)}
+                                                onChange={(e) => handleChange('contact', 'repRole', e.target.value)}
                                             >
                                                 <option value="Participant">Participant</option>
                                                 <option value="Speaker">Speaker</option>
@@ -970,7 +992,7 @@ END:VCALENDAR`;
                                  <select 
                                     className="p-2 bg-slate-50 border border-slate-200 rounded-lg font-bold text-sm text-slate-700 outline-none min-w-[240px]"
                                     value={localEvent.followUp.status}
-                                    onChange={(e) => handleChange('followUp', 'status', e.target.value as EventData['followUp']['status'])}
+                                    onChange={(e) => handleChange('followUp', 'status', e.target.value)}
                                  >
                                     <option value="To Respond">To Respond</option>
                                     <option value="Responded - On hold for updates">Responded - On hold for updates</option>
