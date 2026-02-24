@@ -17,6 +17,20 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onAnalysisCom
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
   const [mode, setMode] = useState<'text' | 'file'>('text');
+  const [isDriveConnected, setIsDriveConnected] = useState(false);
+
+  useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const res = await fetch('/api/auth/status');
+        const data = await res.json();
+        setIsDriveConnected(data.connected);
+      } catch (err) {
+        console.error('Failed to check status:', err);
+      }
+    };
+    checkStatus();
+  }, []);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -51,21 +65,36 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onAnalysisCom
     }, 600);
 
     try {
-      let input: AnalysisInput = {};
+      let papersContent = '';
+      if (isDriveConnected) {
+        try {
+          const res = await fetch('/api/drive/papers/content');
+          if (res.ok) {
+            const data = await res.json();
+            papersContent = data.content;
+          }
+        } catch (err) {
+          console.error("Failed to fetch papers from Drive", err);
+        }
+      }
+
+      let input: AnalysisInput = { papersContent };
       if (mode === 'file' && selectedFile) {
         if (selectedFile.name.endsWith('.docx')) {
           const result = await mammoth.extractRawText({ arrayBuffer: await selectedFile.arrayBuffer() });
-          input = { text: result.value };
+          input.text = result.value;
         } else if (selectedFile.type === 'application/pdf') {
-          input = { fileData: { mimeType: 'application/pdf', data: await convertFileToBase64(selectedFile) } };
+          input.fileData = { mimeType: 'application/pdf', data: await convertFileToBase64(selectedFile) };
+        } else if (selectedFile.name.endsWith('.eml') || selectedFile.name.endsWith('.txt')) {
+          input.text = await selectedFile.text();
         } else {
-          setError("Unsupported file format. Please use PDF or DOCX.");
+          setError("Unsupported file format. Please use PDF, DOCX, EML, or TXT.");
           setIsAnalyzing(false); 
           clearInterval(interval);
           return;
         }
       } else {
-        input = { text };
+        input.text = text;
       }
 
       const result = await analyzeInvitation(input);
@@ -160,11 +189,11 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onAnalysisCom
             </div>
           ) : (
             <div className="h-64 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center bg-slate-50/30 group hover:border-blue-400 transition-all relative">
-              <input type="file" accept=".pdf,.docx" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
+              <input type="file" accept=".pdf,.docx,.eml,.txt" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
               <div className="p-4 bg-white rounded-full shadow-sm mb-4 group-hover:scale-110 transition-transform">
                 <Upload className="text-blue-600" size={32} />
               </div>
-              <p className="text-sm font-bold text-slate-700">{selectedFile ? selectedFile.name : 'Drop PDF or DOCX invitation'}</p>
+              <p className="text-sm font-bold text-slate-700">{selectedFile ? selectedFile.name : 'Drop PDF, DOCX, EML, or TXT invitation'}</p>
               <p className="text-xs text-slate-400 mt-1">Maximum file size: 10MB</p>
             </div>
           )}
