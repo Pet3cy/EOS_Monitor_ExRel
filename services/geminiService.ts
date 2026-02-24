@@ -1,6 +1,12 @@
-
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { AnalysisResult, Priority } from "../types";
+import { CacheService } from "./cacheService";
+
+// Initialize Cache Services
+// Using sessionStorage via CacheService to persist results across reloads but clear on session end.
+// Separate caches for analysis and briefings to avoid key collisions and manage them independently.
+const sessionCacheService = new CacheService('gemini_analysis_');
+const briefingCacheService = new CacheService('gemini_briefing_');
 
 let ai: GoogleGenAI | null = null;
 
@@ -140,6 +146,14 @@ export interface AnalysisInput {
 }
 
 export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisResult> => {
+  // Check cache first
+  const cacheKey = await sessionCacheService.generateKey(input);
+  const cached = sessionCacheService.get<AnalysisResult>(cacheKey);
+  if (cached) {
+    console.log('[GeminiService] Returning cached analysis result');
+    return cached;
+  }
+
   const parts = [];
   if (input.fileData) {
     parts.push({ inlineData: input.fileData });
@@ -193,14 +207,34 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
   
   const data = JSON.parse(text);
   
-  return {
+  const result = {
     ...data,
     priority: data.priority as Priority,
     linkedActivities: data.linkedActivities || [],
   };
+
+  // Cache the result
+  sessionCacheService.set(cacheKey, result);
+  return result;
 };
 
 export const generateBriefing = async (event: any) => {
+  // Generate cache key based on relevant analysis fields to ensure consistent caching
+  const cacheInput = {
+    eventName: event.analysis.eventName,
+    institution: event.analysis.institution,
+    theme: event.analysis.theme,
+    description: event.analysis.description,
+    linkedActivities: event.analysis.linkedActivities
+  };
+
+  const cacheKey = await briefingCacheService.generateKey(cacheInput);
+  const cached = briefingCacheService.get<string>(cacheKey);
+  if (cached) {
+    console.log('[GeminiService] Returning cached briefing');
+    return cached;
+  }
+
   const prompt = `Create a 1-page executive briefing for a representative attending the following event:
   Event: ${event.analysis.eventName}
   Institution: ${event.analysis.institution}
@@ -223,7 +257,9 @@ export const generateBriefing = async (event: any) => {
     contents: [{ parts: [{ text: prompt }] }],
   });
 
-  return response.text;
+  const result = response.text || '';
+  briefingCacheService.set(cacheKey, result);
+  return result;
 };
 
 export const summarizeFollowUp = async (file: { mimeType: string, data: string }) => {
