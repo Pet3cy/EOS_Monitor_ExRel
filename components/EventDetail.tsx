@@ -22,7 +22,7 @@ type TabType = 'context' | 'logistics' | 'prep' | 'outcomes' | 'raw';
 type ViewMode = 'report' | 'editor';
 
 export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDelete, contacts = [], onViewContact }) => {
-  const [localEvent, setLocalEvent] = useState<EventData>(event);
+  const [localEvent, setLocalEvent] = useState<EventData>(() => JSON.parse(JSON.stringify(event)));
   const [viewMode, setViewMode] = useState<ViewMode>('report');
   const [activeTab, setActiveTab] = useState<TabType>('context');
   const [isEditing, setIsEditing] = useState(false);
@@ -40,12 +40,6 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   // Refs for click outside
   const calendarMenuRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    setLocalEvent(JSON.parse(JSON.stringify(event)));
-    setIsEditing(false);
-    setIsEditingRegLink(false);
-    setIsEditingProgLink(false);
-  }, [event]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
