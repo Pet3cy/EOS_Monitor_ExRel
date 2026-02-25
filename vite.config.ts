@@ -17,7 +17,11 @@ export default defineConfig(({ mode }) => {
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),
+          'mammoth': 'mammoth/mammoth.browser.js' // Explicit alias for mammoth to avoid Node dependency issues
         }
+      },
+      build: {
+        outDir: 'Frontend/build' // Explicitly set output directory to match Render expectations
       }
     };
 });
