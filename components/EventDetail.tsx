@@ -7,6 +7,7 @@ import {
   UserPlus, Mail, MessageSquare, CheckCircle, Save, Mic, FileAudio, Loader2, Sparkles, Megaphone, Image as ImageIcon, X, Link as LinkIcon, ExternalLink, Briefcase, Trash2, Copy, FileCheck, Users, User, FileJson, FileSpreadsheet, Download, Plus, Search, Edit2, Repeat, Repeat1, CalendarPlus, ChevronDown, Target, Zap, ShieldAlert, ArrowRight, HardDrive
 } from 'lucide-react';
 import { summarizeFollowUp, generateBriefing } from '../services/geminiService';
+import { generateCSVContent } from '../services/csvService';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { RelevantPapers } from './RelevantPapers';
 
@@ -155,27 +156,8 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   };
 
   const handleExportCSV = () => {
-    const flattenObject = (obj: any, prefix = ''): Record<string, string> => {
-      return Object.keys(obj).reduce((acc: any, k: string) => {
-        const pre = prefix.length ? prefix + '.' : '';
-        if (typeof obj[k] === 'object' && obj[k] !== null && !Array.isArray(obj[k])) {
-          Object.assign(acc, flattenObject(obj[k], pre + k));
-        } else if (Array.isArray(obj[k])) {
-          acc[pre + k] = obj[k].join('; ');
-        } else {
-          acc[pre + k] = String(obj[k]);
-        }
-        return acc;
-      }, {});
-    };
-
-    const flatEvent = flattenObject(localEvent);
-    const headers = Object.keys(flatEvent);
-    const values = Object.values(flatEvent).map(v => `"${v.replace(/"/g, '""')}"`);
-
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + headers.join(",") + "\n" 
-      + values.join(",");
+    const csvString = generateCSVContent(localEvent);
+    const csvContent = "data:text/csv;charset=utf-8," + csvString;
 
     const fileName = `${localEvent.analysis.eventName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.csv`;
     const encodedUri = encodeURI(csvContent);
