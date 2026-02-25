@@ -249,7 +249,7 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    app.use(express.static("dist"));
+    app.use(express.static("Frontend/build"));
   }
 
   app.listen(PORT, "0.0.0.0", () => {
