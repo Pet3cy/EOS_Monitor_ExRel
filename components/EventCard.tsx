@@ -7,15 +7,15 @@ import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
 interface EventCardProps {
   event: EventData;
-  onClick: () => void;
-  onDelete: () => void;
+  onClick: (id: string) => void;
+  onDelete: (event: EventData) => void;
   isSelected: boolean;
   showCheckbox?: boolean;
   isChecked?: boolean;
-  onToggleSelect?: () => void;
+  onToggleSelect?: (id: string) => void;
 }
 
-export const EventCard: React.FC<EventCardProps> = ({ 
+export const EventCard: React.FC<EventCardProps> = React.memo(({
   event, 
   onClick, 
   onDelete, 
@@ -45,13 +45,13 @@ export const EventCard: React.FC<EventCardProps> = ({
 
   const handleCheckboxClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (onToggleSelect) onToggleSelect();
+    if (onToggleSelect) onToggleSelect(event.id);
   };
 
   return (
     <>
       <div 
-        onClick={onClick}
+        onClick={() => onClick(event.id)}
         className={`p-4 mb-3 rounded-lg border cursor-pointer transition-all hover:shadow-md group/card relative ${
           isSelected ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'border-slate-200 bg-white'
         }`}
@@ -124,10 +124,10 @@ export const EventCard: React.FC<EventCardProps> = ({
       <ConfirmDeleteModal 
         isOpen={showConfirm}
         onClose={() => setShowConfirm(false)}
-        onConfirm={onDelete}
+        onConfirm={() => onDelete(event)}
         title="Delete Invitation?"
         message={`Are you sure you want to delete "${analysis.eventName}"? All extracted analysis and assigned tasks will be lost.`}
       />
     </>
   );
-};
+});

@@ -13,7 +13,7 @@ import { RelevantPapers } from './RelevantPapers';
 interface EventDetailProps {
   event: EventData;
   onUpdate: (updatedEvent: EventData) => void;
-  onDelete: () => void;
+  onDelete: (event: EventData) => void;
   contacts?: Contact[];
   onViewContact?: (contactId: string) => void;
 }
@@ -1032,7 +1032,7 @@ END:VCALENDAR`;
         <ConfirmDeleteModal 
             isOpen={showDeleteConfirm}
             onClose={() => setShowDeleteConfirm(false)}
-            onConfirm={onDelete}
+            onConfirm={() => onDelete(event)}
             title="Delete Event?"
             message="Are you sure you want to remove this event and all associated data? This action cannot be undone."
         />
