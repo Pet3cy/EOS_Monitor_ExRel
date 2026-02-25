@@ -1,8 +1,17 @@
+import { CacheService } from "./cacheService";
 
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { AnalysisResult, Priority } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+let aiInstance: GoogleGenAI | null = null;
+
+export const getAiClient = () => {
+  if (!aiInstance) {
+    aiInstance = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  }
+  return aiInstance;
+};
+
 
 const OBESSU_DATA_CONTEXT = `
 ORGANIZATIONAL STRUCTURE & PORTFOLIOS (2026):
@@ -170,7 +179,7 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
     "programmeLink": "string"
   }`;
 
-  const response = await ai.models.generateContent({
+  const response = await getAiClient().models.generateContent({
     model: "gemma-2-27b-it",
     contents: { parts },
     config: {
@@ -194,6 +203,23 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
 };
 
 export const generateBriefing = async (event: any) => {
+  const cacheKeyData = {
+    eventName: event.analysis.eventName,
+    institution: event.analysis.institution,
+    theme: event.analysis.theme,
+    description: event.analysis.description,
+    linkedActivities: event.analysis.linkedActivities,
+    venue: event.analysis.venue,
+    date: event.analysis.date
+  };
+
+  const cacheKey = await CacheService.generateHash(JSON.stringify(cacheKeyData));
+  const cachedBriefing = CacheService.get<string>(cacheKey);
+
+  if (cachedBriefing) {
+    return cachedBriefing;
+  }
+
   const prompt = `Create a 1-page executive briefing for a representative attending the following event:
   Event: ${event.analysis.eventName}
   Institution: ${event.analysis.institution}
@@ -210,16 +236,19 @@ export const generateBriefing = async (event: any) => {
   3. Key Stakeholders likely present
   4. Suggested opening statement points.`;
 
-  const response = await ai.models.generateContent({
+  const response = await getAiClient().models.generateContent({
     model: "gemma-2-27b-it",
     contents: [{ parts: [{ text: prompt }] }],
   });
 
-  return response.text;
+  const briefing = response.text;
+  CacheService.set(cacheKey, briefing);
+
+  return briefing;
 };
 
 export const summarizeFollowUp = async (file: { mimeType: string, data: string }) => {
-  const response = await ai.models.generateContent({
+  const response = await getAiClient().models.generateContent({
     model: "gemma-2-27b-it",
     contents: {
       parts: [
