@@ -19,6 +19,9 @@ export default defineConfig(({ mode }) => {
           '@': path.resolve(__dirname, '.'),
           'mammoth': 'mammoth/mammoth.browser.js',
         }
-      }
+      },
+      build: {
+        outDir: 'Frontend/build',
+      },
     };
 });
