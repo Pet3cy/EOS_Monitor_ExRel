@@ -1,6 +1,6 @@
-
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { AnalysisResult, Priority } from "../types";
+import { CacheService } from "./cacheService";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -129,7 +129,25 @@ export interface AnalysisInput {
   papersContent?: string;
 }
 
+// Initialize cache services
+// Use session storage for security (cleared on tab close)
+const sessionCacheService = new CacheService<AnalysisResult>('analysis_session');
+const briefingCacheService = new CacheService<string>('briefing_session');
+
 export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisResult> => {
+  // Check session storage cache first
+  try {
+    const cacheKey = await sessionCacheService.generateHash(input);
+    const cachedResult = sessionCacheService.get(cacheKey);
+
+    if (cachedResult) {
+      console.log('Using cached analysis result');
+      return cachedResult;
+    }
+  } catch (e) {
+    console.warn('Cache lookup failed:', e);
+  }
+
   const parts = [];
   if (input.fileData) {
     parts.push({ inlineData: input.fileData });
@@ -182,18 +200,51 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
 
   let text = response.text || "{}";
   // Clean potential markdown formatting
-  text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+  text = text.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '').trim();
   
   const data = JSON.parse(text);
   
-  return {
+  const result = {
     ...data,
     priority: data.priority as Priority,
     linkedActivities: data.linkedActivities || [],
   };
+
+  // Cache the result
+  try {
+    const cacheKey = await sessionCacheService.generateHash(input);
+    sessionCacheService.set(cacheKey, result);
+  } catch (e) {
+    console.warn('Failed to cache analysis result:', e);
+  }
+
+  return result;
 };
 
 export const generateBriefing = async (event: any) => {
+  // Check cache for briefing
+  try {
+    // Hash relevant fields to create a unique key
+    const cacheData = {
+      eventName: event.analysis.eventName,
+      institution: event.analysis.institution,
+      theme: event.analysis.theme,
+      description: event.analysis.description,
+      linkedActivities: event.analysis.linkedActivities,
+      date: event.analysis.date,
+      venue: event.analysis.venue
+    };
+    const cacheKey = await briefingCacheService.generateHash(cacheData);
+    const cachedResult = briefingCacheService.get(cacheKey);
+
+    if (cachedResult) {
+      console.log('Using cached briefing');
+      return cachedResult;
+    }
+  } catch (e) {
+    console.warn('Briefing cache lookup failed:', e);
+  }
+
   const prompt = `Create a 1-page executive briefing for a representative attending the following event:
   Event: ${event.analysis.eventName}
   Institution: ${event.analysis.institution}
@@ -215,7 +266,26 @@ export const generateBriefing = async (event: any) => {
     contents: [{ parts: [{ text: prompt }] }],
   });
 
-  return response.text;
+  const result = response.text;
+
+  // Cache the generated briefing
+  try {
+    const cacheData = {
+      eventName: event.analysis.eventName,
+      institution: event.analysis.institution,
+      theme: event.analysis.theme,
+      description: event.analysis.description,
+      linkedActivities: event.analysis.linkedActivities,
+      date: event.analysis.date,
+      venue: event.analysis.venue
+    };
+    const cacheKey = await briefingCacheService.generateHash(cacheData);
+    briefingCacheService.set(cacheKey, result);
+  } catch (e) {
+    console.warn('Failed to cache briefing:', e);
+  }
+
+  return result;
 };
 
 export const summarizeFollowUp = async (file: { mimeType: string, data: string }) => {
