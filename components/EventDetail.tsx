@@ -671,7 +671,7 @@ END:VCALENDAR`;
                                         <input 
                                             className="w-full p-3 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-blue-500/20 outline-none"
                                             value={localEvent.analysis.date}
-                                            onChange={(e) => handleChange('analysis', 'date', e.target.value as RepresentativeRole)}
+                                            onChange={(e) => handleChange('analysis', 'date', e.target.value)}
                                         />
                                     </div>
                                     <div className="space-y-1">
