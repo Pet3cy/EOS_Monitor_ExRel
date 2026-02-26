@@ -1032,7 +1032,7 @@ END:VCALENDAR`;
         <ConfirmDeleteModal 
             isOpen={showDeleteConfirm}
             onClose={() => setShowDeleteConfirm(false)}
-            onConfirm={() => onDelete(event)}
+            onConfirm={handleConfirmDelete}
             title="Delete Event?"
             message="Are you sure you want to remove this event and all associated data? This action cannot be undone."
         />
