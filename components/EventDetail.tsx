@@ -787,7 +787,7 @@ END:VCALENDAR`;
                                                     <input 
                                                         className="flex-1 p-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20"
                                                         value={localEvent.analysis.registrationLink || ''}
-                                                        onChange={(e) => handleChange('analysis', 'registrationLink', e.target.value as RepresentativeRole)}
+                                                        onChange={(e) => handleChange('analysis', 'registrationLink', e.target.value)}
                                                         onBlur={() => { if(localEvent.analysis.registrationLink) setIsEditingRegLink(false); }}
                                                         placeholder="https://..."
                                                         autoFocus={isEditingRegLink}
