@@ -620,7 +620,7 @@ END:VCALENDAR`;
                                 <textarea 
                                     className="w-full p-4 bg-white border border-slate-200 rounded-xl text-slate-700 leading-relaxed focus:ring-2 focus:ring-blue-500/20 outline-none resize-none h-32"
                                     value={localEvent.analysis.description}
-                                    onChange={(e) => handleChange('analysis', 'description', e.target.value)}
+                                    onChange={(e) => handleChange('analysis', 'description', e.target.value as RepresentativeRole)}
                                 />
                             </Section>
 
@@ -671,7 +671,7 @@ END:VCALENDAR`;
                                         <input 
                                             className="w-full p-3 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-blue-500/20 outline-none"
                                             value={localEvent.analysis.date}
-                                            onChange={(e) => handleChange('analysis', 'date', e.target.value)}
+                                            onChange={(e) => handleChange('analysis', 'date', e.target.value as RepresentativeRole)}
                                         />
                                     </div>
                                     <div className="space-y-1">
@@ -679,7 +679,7 @@ END:VCALENDAR`;
                                         <input 
                                             className="w-full p-3 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-blue-500/20 outline-none"
                                             value={localEvent.analysis.time || ''}
-                                            onChange={(e) => handleChange('analysis', 'time', e.target.value)}
+                                            onChange={(e) => handleChange('analysis', 'time', e.target.value as RepresentativeRole)}
                                             placeholder="e.g. 14:00 CET"
                                         />
                                     </div>
@@ -688,7 +688,7 @@ END:VCALENDAR`;
                                         <input 
                                             className="w-full p-3 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-blue-500/20 outline-none"
                                             value={localEvent.analysis.venue}
-                                            onChange={(e) => handleChange('analysis', 'venue', e.target.value)}
+                                            onChange={(e) => handleChange('analysis', 'venue', e.target.value as RepresentativeRole)}
                                         />
                                     </div>
 
@@ -714,7 +714,7 @@ END:VCALENDAR`;
                                                         <select 
                                                             className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none"
                                                             value={localEvent.analysis.recurrence?.frequency || 'Weekly'}
-                                                            onChange={(e) => handleRecurrenceChange('frequency', e.target.value as 'Daily' | 'Weekly' | 'Monthly' | 'Yearly')}
+                                                            onChange={(e) => handleRecurrenceChange('frequency', e.target.value as RepresentativeRole)}
                                                         >
                                                             <option value="Daily">Daily</option>
                                                             <option value="Weekly">Weekly</option>
@@ -728,7 +728,7 @@ END:VCALENDAR`;
                                                             type="date"
                                                             className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none"
                                                             value={localEvent.analysis.recurrence?.endDate || ''}
-                                                            onChange={(e) => handleRecurrenceChange('endDate', e.target.value)}
+                                                            onChange={(e) => handleRecurrenceChange('endDate', e.target.value as RepresentativeRole)}
                                                         />
                                                     </div>
                                                 </div>
@@ -744,7 +744,7 @@ END:VCALENDAR`;
                                             type="date"
                                             className="w-full p-3 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-blue-500/20 outline-none"
                                             value={localEvent.analysis.finalDeadline}
-                                            onChange={(e) => handleChange('analysis', 'finalDeadline', e.target.value)}
+                                            onChange={(e) => handleChange('analysis', 'finalDeadline', e.target.value as RepresentativeRole)}
                                         />
                                     </div>
                                     
@@ -787,7 +787,7 @@ END:VCALENDAR`;
                                                     <input 
                                                         className="flex-1 p-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20"
                                                         value={localEvent.analysis.registrationLink || ''}
-                                                        onChange={(e) => handleChange('analysis', 'registrationLink', e.target.value)}
+                                                        onChange={(e) => handleChange('analysis', 'registrationLink', e.target.value as RepresentativeRole)}
                                                         onBlur={() => { if(localEvent.analysis.registrationLink) setIsEditingRegLink(false); }}
                                                         placeholder="https://..."
                                                         autoFocus={isEditingRegLink}
@@ -841,7 +841,7 @@ END:VCALENDAR`;
                                                     <input 
                                                         className="flex-1 p-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20"
                                                         value={localEvent.analysis.programmeLink || ''}
-                                                        onChange={(e) => handleChange('analysis', 'programmeLink', e.target.value)}
+                                                        onChange={(e) => handleChange('analysis', 'programmeLink', e.target.value as RepresentativeRole)}
                                                         onBlur={() => { if(localEvent.analysis.programmeLink) setIsEditingProgLink(false); }}
                                                         placeholder="https://..."
                                                         autoFocus={isEditingProgLink}
@@ -892,7 +892,7 @@ END:VCALENDAR`;
                                                             placeholder="Search people..." 
                                                             className="w-full pl-8 pr-3 py-1.5 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 outline-none text-slate-700"
                                                             value={contactSearch}
-                                                            onChange={(e) => setContactSearch(e.target.value)}
+                                                            onChange={(e) => setContactSearch(e.target.value as RepresentativeRole)}
                                                             onClick={(e) => e.stopPropagation()}
                                                         />
                                                     </div>
@@ -959,7 +959,7 @@ END:VCALENDAR`;
                                         className="w-full p-4 bg-white border border-slate-200 rounded-xl text-slate-700 leading-relaxed focus:ring-2 focus:ring-blue-500/20 outline-none h-48 resize-none"
                                         placeholder="Key points to raise, red lines, and strategic objectives..."
                                         value={localEvent.followUp.briefing}
-                                        onChange={(e) => handleChange('followUp', 'briefing', e.target.value)}
+                                        onChange={(e) => handleChange('followUp', 'briefing', e.target.value as RepresentativeRole)}
                                     />
                                     <button 
                                         onClick={handleBriefingGen}
@@ -981,7 +981,7 @@ END:VCALENDAR`;
                                     className="w-full p-4 bg-white border border-slate-200 rounded-xl text-slate-700 leading-relaxed focus:ring-2 focus:ring-blue-500/20 outline-none h-32 resize-none"
                                     placeholder="Summary of outcomes, key contacts made, and follow-up tasks..."
                                     value={localEvent.followUp.postEventNotes}
-                                    onChange={(e) => handleChange('followUp', 'postEventNotes', e.target.value)}
+                                    onChange={(e) => handleChange('followUp', 'postEventNotes', e.target.value as RepresentativeRole)}
                                 />
                             </Section>
                             
