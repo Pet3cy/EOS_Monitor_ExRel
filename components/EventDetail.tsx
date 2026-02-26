@@ -620,7 +620,7 @@ END:VCALENDAR`;
                                 <textarea 
                                     className="w-full p-4 bg-white border border-slate-200 rounded-xl text-slate-700 leading-relaxed focus:ring-2 focus:ring-blue-500/20 outline-none resize-none h-32"
                                     value={localEvent.analysis.description}
-                                    onChange={(e) => handleChange('analysis', 'description', e.target.value as RepresentativeRole)}
+                                    onChange={(e) => handleChange('analysis', 'description', e.target.value)}
                                 />
                             </Section>
 
