@@ -728,7 +728,7 @@ END:VCALENDAR`;
                                                             type="date"
                                                             className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none"
                                                             value={localEvent.analysis.recurrence?.endDate || ''}
-                                                            onChange={(e) => handleRecurrenceChange('endDate', e.target.value as RepresentativeRole)}
+                                                            onChange={(e) => handleRecurrenceChange('endDate', e.target.value)}
                                                         />
                                                     </div>
                                                 </div>
