@@ -1,8 +1,12 @@
-
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { AnalysisResult, Priority } from "../types";
+import { CacheService } from "./cacheService";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+// Initialize Cache Services
+const sessionCacheService = new CacheService<AnalysisResult>('gemini_cache_v2_session_', 50);
+const briefingCacheService = new CacheService<string>('gemini_cache_v2_briefing_', 50);
 
 const OBESSU_DATA_CONTEXT = `
 ORGANIZATIONAL STRUCTURE & PORTFOLIOS (2026):
@@ -130,6 +134,18 @@ export interface AnalysisInput {
 }
 
 export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisResult> => {
+  // Check cache first
+  const cacheKey = await sessionCacheService.generateKey(input);
+  const cachedResult = sessionCacheService.get(cacheKey);
+  if (cachedResult) {
+    // Reconstruct Priority enum if needed, though JSON.parse usually handles strings fine matching enum values
+    return {
+      ...cachedResult,
+      // Ensure priority matches enum if it was stored as string
+      priority: cachedResult.priority as Priority
+    };
+  }
+
   const parts = [];
   if (input.fileData) {
     parts.push({ inlineData: input.fileData });
@@ -186,14 +202,32 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
   
   const data = JSON.parse(text);
   
-  return {
+  const result: AnalysisResult = {
     ...data,
     priority: data.priority as Priority,
     linkedActivities: data.linkedActivities || [],
   };
+
+  // Cache result
+  sessionCacheService.set(cacheKey, result);
+
+  return result;
 };
 
 export const generateBriefing = async (event: any) => {
+  // Generate cache key based on relevant event data
+  const cacheKey = await briefingCacheService.generateKey({
+      eventName: event.analysis.eventName,
+      institution: event.analysis.institution,
+      date: event.analysis.date,
+      theme: event.analysis.theme,
+      description: event.analysis.description,
+      linkedActivities: event.analysis.linkedActivities
+  });
+
+  const cachedBriefing = briefingCacheService.get(cacheKey);
+  if (cachedBriefing) return cachedBriefing;
+
   const prompt = `Create a 1-page executive briefing for a representative attending the following event:
   Event: ${event.analysis.eventName}
   Institution: ${event.analysis.institution}
@@ -215,7 +249,12 @@ export const generateBriefing = async (event: any) => {
     contents: [{ parts: [{ text: prompt }] }],
   });
 
-  return response.text;
+  const resultText = response.text || "";
+
+  // Cache the result
+  briefingCacheService.set(cacheKey, resultText);
+
+  return resultText;
 };
 
 export const summarizeFollowUp = async (file: { mimeType: string, data: string }) => {
