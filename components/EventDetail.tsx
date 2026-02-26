@@ -981,7 +981,7 @@ END:VCALENDAR`;
                                     className="w-full p-4 bg-white border border-slate-200 rounded-xl text-slate-700 leading-relaxed focus:ring-2 focus:ring-blue-500/20 outline-none h-32 resize-none"
                                     placeholder="Summary of outcomes, key contacts made, and follow-up tasks..."
                                     value={localEvent.followUp.postEventNotes}
-                                    onChange={(e) => handleChange('followUp', 'postEventNotes', e.target.value as RepresentativeRole)}
+                                    onChange={(e) => handleChange('followUp', 'postEventNotes', e.target.value)}
                                 />
                             </Section>
                             
