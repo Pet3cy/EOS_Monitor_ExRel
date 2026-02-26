@@ -892,7 +892,7 @@ END:VCALENDAR`;
                                                             placeholder="Search people..." 
                                                             className="w-full pl-8 pr-3 py-1.5 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 outline-none text-slate-700"
                                                             value={contactSearch}
-                                                            onChange={(e) => setContactSearch(e.target.value as RepresentativeRole)}
+                                                            onChange={(e) => setContactSearch(e.target.value)}
                                                             onClick={(e) => e.stopPropagation()}
                                                         />
                                                     </div>
