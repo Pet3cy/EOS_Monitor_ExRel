@@ -129,6 +129,22 @@ export interface AnalysisInput {
   papersContent?: string;
 }
 
+
+export const safeParseJSON = (text: string): any => {
+  const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+  try {
+    const data = JSON.parse(cleanedText);
+    if (!data || typeof data !== 'object') {
+       throw new Error('Response is not a valid JSON object');
+    }
+    return data;
+  } catch (error) {
+    console.error('Failed to parse AI response:', error);
+    console.error('Raw response snippet:', cleanedText.slice(0, 200));
+    throw new Error('Failed to parse AI response as JSON.');
+  }
+};
+
 export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisResult> => {
   const parts = [];
   if (input.fileData) {
@@ -180,11 +196,8 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
     },
   });
 
-  let text = response.text || "{}";
-  // Clean potential markdown formatting
-  text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-  
-  const data = JSON.parse(text);
+  const text = response.text || "{}";
+  const data = safeParseJSON(text);
   
   return {
     ...data,
