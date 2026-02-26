@@ -959,7 +959,7 @@ END:VCALENDAR`;
                                         className="w-full p-4 bg-white border border-slate-200 rounded-xl text-slate-700 leading-relaxed focus:ring-2 focus:ring-blue-500/20 outline-none h-48 resize-none"
                                         placeholder="Key points to raise, red lines, and strategic objectives..."
                                         value={localEvent.followUp.briefing}
-                                        onChange={(e) => handleChange('followUp', 'briefing', e.target.value as RepresentativeRole)}
+                                        onChange={(e) => handleChange('followUp', 'briefing', e.target.value)}
                                     />
                                     <button 
                                         onClick={handleBriefingGen}
