@@ -714,7 +714,7 @@ END:VCALENDAR`;
                                                         <select 
                                                             className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none"
                                                             value={localEvent.analysis.recurrence?.frequency || 'Weekly'}
-                                                            onChange={(e) => handleRecurrenceChange('frequency', e.target.value as RepresentativeRole)}
+                                                            onChange={(e) => handleRecurrenceChange('frequency', e.target.value as 'Daily' | 'Weekly' | 'Monthly' | 'Yearly')}
                                                         >
                                                             <option value="Daily">Daily</option>
                                                             <option value="Weekly">Weekly</option>
