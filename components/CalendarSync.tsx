@@ -18,10 +18,14 @@ export function CalendarSync({ onEventsSynced }: CalendarSyncProps) {
   const checkStatus = async () => {
     try {
       const res = await fetch('/api/auth/status');
+      if (!res.ok) {
+        throw new Error(`Failed to check status: ${res.statusText}`);
+      }
       const data = await res.json();
       setIsConnected(data.connected);
     } catch (err) {
       console.error('Failed to check status:', err);
+      setIsConnected(false);
     }
   };
 
@@ -37,7 +41,14 @@ export function CalendarSync({ onEventsSynced }: CalendarSyncProps) {
     try {
       const res = await fetch('/api/calendar/events');
       if (!res.ok) {
-        throw new Error('Failed to fetch calendar events');
+        let errorMessage = 'Failed to fetch calendar events';
+        try {
+          const errorData = await res.json();
+          if (errorData.error) errorMessage = errorData.error;
+        } catch (e) {
+          // Ignore JSON parse error if response is not JSON
+        }
+        throw new Error(errorMessage);
       }
       const data = await res.json();
       

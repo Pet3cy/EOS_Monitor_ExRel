@@ -92,9 +92,9 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onAnalysisCom
       };
       onAnalysisComplete(newEvent);
       onClose();
-    } catch (err) {
+    } catch (err: any) {
       clearInterval(interval);
-      setError("Analysis failed. Ensure the text contains clear event details.");
+      setError(err.message || "Analysis failed. Ensure the text contains clear event details.");
       setProgress(0);
     } finally {
       setIsAnalyzing(false);

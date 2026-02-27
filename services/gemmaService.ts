@@ -74,40 +74,60 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
 
   const fullPrompt = `${SYSTEM_PROMPT}\n\n${userPrompt}`;
 
-  const response = await fetch(OLLAMA_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: MODEL,
-      prompt: fullPrompt,
-      stream: false,
-      temperature: 0.2,
-      max_tokens: 1024,
-      format: 'json',  // hint to Ollama to generate JSON (supported by many models)
-    }),
-  });
+  try {
+    const response = await fetch(OLLAMA_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: MODEL,
+        prompt: fullPrompt,
+        stream: false,
+        temperature: 0.2,
+        max_tokens: 1024,
+        format: 'json',  // hint to Ollama to generate JSON (supported by many models)
+      }),
+    });
 
-  if (!response.ok) {
-    throw new Error(`Ollama request failed: ${response.statusText}`);
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error(`Ollama Model '${MODEL}' not found. Please pull the model using 'ollama pull ${MODEL}'.`);
+      }
+      throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const rawText = data.response;
+
+    if (!rawText) {
+       throw new Error('Ollama returned an empty response.');
+    }
+
+    // Attempt to extract JSON from the response (Gemma might add extra text)
+    let jsonMatch = rawText.match(/\{.*\}/s);
+    if (!jsonMatch) {
+      throw new Error('Could not parse JSON from model response. The model returned an invalid format. Raw output: ' + rawText.substring(0, 100) + '...');
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonMatch[0]);
+    } catch (e: any) {
+      throw new Error(`Failed to parse JSON from model response: ${e.message}`);
+    }
+
+    // Map to our AnalysisResult type (with enum for priority)
+    return {
+      ...parsed,
+      priority: parsed.priority as Priority,
+      linkedActivities: parsed.linkedActivities || [],
+    };
+  } catch (error: any) {
+    console.error("analyzeInvitation error:", error);
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      throw new Error('Failed to connect to Ollama. Ensure the Ollama server is running locally on port 11434 and CORS is configured.');
+    }
+    throw new Error(error.message || 'An unexpected error occurred during analysis.');
   }
-
-  const data = await response.json();
-  const rawText = data.response;
-
-  // Attempt to extract JSON from the response (Gemma might add extra text)
-  let jsonMatch = rawText.match(/\{.*\}/s);
-  if (!jsonMatch) {
-    throw new Error('Could not parse JSON from model response');
-  }
-
-  const parsed = JSON.parse(jsonMatch[0]);
-
-  // Map to our AnalysisResult type (with enum for priority)
-  return {
-    ...parsed,
-    priority: parsed.priority as Priority,
-    linkedActivities: parsed.linkedActivities || [],
-  };
 };
 
 export const generateBriefing = async (event: any): Promise<string> => {
@@ -151,42 +171,70 @@ Include:
 
 Format as plain text, no JSON.`;
 
-  const response = await fetch(OLLAMA_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: MODEL,
-      prompt: prompt,
-      stream: false,
-      temperature: 0.3,
-      max_tokens: 2048,
-    }),
-  });
+  try {
+    const response = await fetch(OLLAMA_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: MODEL,
+        prompt: prompt,
+        stream: false,
+        temperature: 0.3,
+        max_tokens: 2048,
+      }),
+    });
 
-  if (!response.ok) {
-    throw new Error('Briefing generation failed');
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error(`Ollama Model '${MODEL}' not found. Please pull the model using 'ollama pull ${MODEL}'.`);
+      }
+      throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    if (!data.response) {
+       throw new Error('Ollama returned an empty response.');
+    }
+    return data.response;
+  } catch (error: any) {
+    console.error("generateBriefing error:", error);
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      throw new Error('Failed to connect to Ollama. Ensure the Ollama server is running locally on port 11434 and CORS is configured.');
+    }
+    throw new Error(error.message || 'An unexpected error occurred during briefing generation.');
   }
-
-  const data = await response.json();
-  return data.response;
 };
 
 export const summarizeFollowUp = async (event: any, notes: string): Promise<string> => {
   const prompt = `Summarize the following follow-up notes for the event "${event.analysis.eventName}":\n\n${notes}`;
-  const response = await fetch(OLLAMA_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: MODEL,
-      prompt: prompt,
-      stream: false,
-      temperature: 0.3,
-      max_tokens: 1024,
-    }),
-  });
-  if (!response.ok) {
-    throw new Error('Follow-up summarization failed');
+  try {
+    const response = await fetch(OLLAMA_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: MODEL,
+        prompt: prompt,
+        stream: false,
+        temperature: 0.3,
+        max_tokens: 1024,
+      }),
+    });
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error(`Ollama Model '${MODEL}' not found. Please pull the model using 'ollama pull ${MODEL}'.`);
+      }
+      throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
+    }
+    const data = await response.json();
+    if (!data.response) {
+       throw new Error('Ollama returned an empty response.');
+    }
+    return data.response;
+  } catch (error: any) {
+    console.error("summarizeFollowUp error:", error);
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      throw new Error('Failed to connect to Ollama. Ensure the Ollama server is running locally on port 11434 and CORS is configured.');
+    }
+    throw new Error(error.message || 'An unexpected error occurred during summarization.');
   }
-  const data = await response.json();
-  return data.response;
 };

@@ -6,7 +6,7 @@ import {
   Calendar, MapPin, Building2, AlertCircle, Clock, FileText, 
   UserPlus, Mail, MessageSquare, CheckCircle, Save, Mic, FileAudio, Loader2, Sparkles, Megaphone, Image as ImageIcon, X, Link as LinkIcon, ExternalLink, Briefcase, Trash2, Copy, FileCheck, Users, User, FileJson, FileSpreadsheet, Download, Plus, Search, Edit2, Repeat, Repeat1, CalendarPlus, ChevronDown, Target, Zap, ShieldAlert, ArrowRight
 } from 'lucide-react';
-import { summarizeFollowUp, generateBriefing } from '../services/gemmaService';
+import { generateBriefing } from '../services/gemmaService';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
 interface EventDetailProps {
@@ -87,8 +87,8 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     try {
       const brief = await generateBriefing(localEvent);
       handleChange('followUp', 'briefing', brief);
-    } catch (e) {
-      alert("Failed to generate briefing.");
+    } catch (e: any) {
+      alert(e.message || "Failed to generate briefing.");
     } finally {
       setIsGeneratingBrief(false);
     }
@@ -587,6 +587,42 @@ END:VCALENDAR`;
                                     className="w-full p-4 bg-white border border-slate-200 rounded-xl text-slate-700 leading-relaxed focus:ring-2 focus:ring-blue-500/20 outline-none resize-none h-32"
                                     value={localEvent.analysis.description}
                                     onChange={(e) => handleChange('analysis', 'description', e.target.value)}
+                                />
+                            </Section>
+
+                            <Section title="Tags">
+                                <div className="flex flex-wrap gap-2 mb-2">
+                                    {(localEvent.tags || []).map((tag, idx) => (
+                                        <span key={idx} className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold">
+                                            {tag}
+                                            <button 
+                                                onClick={() => {
+                                                    const newTags = (localEvent.tags || []).filter((_, i) => i !== idx);
+                                                    setLocalEvent(prev => ({ ...prev, tags: newTags }));
+                                                    setIsEditing(true);
+                                                }}
+                                                className="hover:text-blue-900"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        </span>
+                                    ))}
+                                </div>
+                                <input 
+                                    type="text"
+                                    placeholder="Add a tag and press Enter..."
+                                    className="w-full p-3 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-blue-500/20 outline-none"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                                            e.preventDefault();
+                                            const newTag = e.currentTarget.value.trim();
+                                            if (!(localEvent.tags || []).includes(newTag)) {
+                                                setLocalEvent(prev => ({ ...prev, tags: [...(prev.tags || []), newTag] }));
+                                                setIsEditing(true);
+                                            }
+                                            e.currentTarget.value = '';
+                                        }
+                                    }}
                                 />
                             </Section>
 
