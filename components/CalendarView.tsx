@@ -64,6 +64,24 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
         return [];
     }
 
+    // Pre-filter events and index by date for O(1) lookup
+    // Optimization: Reduces complexity from O(Weeks * Events) to O(Events + Weeks)
+    const eventsByDate = new Map<string, EventData[]>();
+
+    for (const event of events) {
+      const matchesPriority = priorityFilter === 'All' || event.analysis.priority === priorityFilter;
+      const matchesTheme = themeFilter === 'All' || event.analysis.theme === themeFilter;
+      const matchesContact = contactFilter === 'All' || event.contact.name === contactFilter;
+
+      if (matchesPriority && matchesTheme && matchesContact) {
+        const dateKey = event.analysis.date;
+        if (!eventsByDate.has(dateKey)) {
+          eventsByDate.set(dateKey, []);
+        }
+        eventsByDate.get(dateKey)!.push(event);
+      }
+    }
+
     for (let i = 0; i < 53; i++) { // Some years have 53 weeks
       const weekStart = new Date(firstMonday);
       weekStart.setDate(firstMonday.getDate() + i * 7);
@@ -77,15 +95,24 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
       // Filter weeks that overlap with the user's selected date range
       if (weekEnd < rangeStart || weekStart > rangeEnd) continue;
 
-      // Find events in this week that match all filters
-      const weekEvents = events.filter(event => {
-        const eventDate = new Date(event.analysis.date);
-        const matchesDate = eventDate >= weekStart && eventDate <= weekEnd;
-        const matchesPriority = priorityFilter === 'All' || event.analysis.priority === priorityFilter;
-        const matchesTheme = themeFilter === 'All' || event.analysis.theme === themeFilter;
-        const matchesContact = contactFilter === 'All' || event.contact.name === contactFilter;
-        return matchesDate && matchesPriority && matchesTheme && matchesContact;
-      });
+      // Find events in this week using the pre-built index
+      const weekEvents: EventData[] = [];
+      const currentDay = new Date(weekStart);
+
+      for (let d = 0; d < 7; d++) {
+        // Generate YYYY-MM-DD key using local time to match how events are stored
+        const year = currentDay.getFullYear();
+        const month = String(currentDay.getMonth() + 1).padStart(2, '0');
+        const day = String(currentDay.getDate()).padStart(2, '0');
+        const dateKey = `${year}-${month}-${day}`;
+
+        const dayEvents = eventsByDate.get(dateKey);
+        if (dayEvents) {
+          weekEvents.push(...dayEvents);
+        }
+
+        currentDay.setDate(currentDay.getDate() + 1);
+      }
 
       // Only show weeks with events if not filtering by range strictly, 
       // but let's show all weeks in range so it looks like a calendar.
