@@ -1,5 +1,5 @@
 export class CacheService {
-  private static memoryCache = new Map<string, unknown>();
+  private static memoryCache = new Map<string, any>();
 
   static get<T>(key: string): T | null {
     if (typeof sessionStorage !== 'undefined') {
@@ -11,10 +11,10 @@ export class CacheService {
         return null;
       }
     }
-    return (this.memoryCache.get(key) as T) || null;
+    return this.memoryCache.get(key) || null;
   }
 
-  static set(key: string, value: unknown): void {
+  static set(key: string, value: any): void {
     if (value === undefined) return;
 
     if (typeof sessionStorage !== 'undefined') {
