@@ -9,8 +9,6 @@ import { Overview } from './components/Overview';
 import { CalendarView } from './components/CalendarView';
 import { ContactsView } from './components/ContactsView';
 
-import { DriveIntegration } from './components/DriveIntegration';
-
 import { CalendarSync } from './components/CalendarSync';
 
 const MOCK_CONTACTS: Contact[] = [
@@ -448,7 +446,6 @@ export default function App() {
                 return [...uniqueNewEvents, ...prev];
               });
             }} />
-            <DriveIntegration />
             <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input 
@@ -530,6 +527,7 @@ export default function App() {
                 events={events} 
                 onUpdateContact={handleUpdateContact} 
                 onDeleteContact={handleDeleteContact}
+                onUpdateEvent={handleUpdateEvent}
                 selectedContactId={selectedContactId}
                 setSelectedContactId={setSelectedContactId}
               />

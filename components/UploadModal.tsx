@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Upload, X, Loader2, FileText, File, Mail, Clipboard, CheckCircle2 } from 'lucide-react';
 import mammoth from 'mammoth';
-import { analyzeInvitation, AnalysisInput } from '../services/geminiService';
+import { analyzeInvitation, AnalysisInput } from '../services/gemmaService';
 import { EventData, Priority } from '../types';
 
 interface UploadModalProps {
@@ -17,20 +17,6 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onAnalysisCom
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
   const [mode, setMode] = useState<'text' | 'file'>('text');
-  const [isDriveConnected, setIsDriveConnected] = useState(false);
-
-  useEffect(() => {
-    const checkStatus = async () => {
-      try {
-        const res = await fetch('/api/auth/status');
-        const data = await res.json();
-        setIsDriveConnected(data.connected);
-      } catch (err) {
-        console.error('Failed to check status:', err);
-      }
-    };
-    checkStatus();
-  }, []);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -65,20 +51,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onAnalysisCom
     }, 600);
 
     try {
-      let papersContent = '';
-      if (isDriveConnected) {
-        try {
-          const res = await fetch('/api/drive/papers/content');
-          if (res.ok) {
-            const data = await res.json();
-            papersContent = data.content;
-          }
-        } catch (err) {
-          console.error("Failed to fetch papers from Drive", err);
-        }
-      }
-
-      let input: AnalysisInput = { papersContent };
+      let input: AnalysisInput = {};
       if (mode === 'file' && selectedFile) {
         if (selectedFile.name.endsWith('.docx')) {
           const result = await mammoth.extractRawText({ arrayBuffer: await selectedFile.arrayBuffer() });

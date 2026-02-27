@@ -14,6 +14,7 @@ interface ContactsViewProps {
   events: EventData[];
   onUpdateContact: (contact: Contact) => void;
   onDeleteContact: (id: string) => void;
+  onUpdateEvent: (event: EventData) => void;
   selectedContactId: string | null;
   setSelectedContactId: (id: string | null) => void;
 }
@@ -23,6 +24,7 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
   events, 
   onUpdateContact, 
   onDeleteContact,
+  onUpdateEvent,
   selectedContactId,
   setSelectedContactId
 }) => {
@@ -312,14 +314,31 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
                                 </div>
                             </div>
                             <div className="mt-4 sm:mt-0 shrink-0">
-                                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide border shadow-sm ${
+                                <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide border shadow-sm ${
                                   event.contact.repRole === 'Speaker' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' :
                                   event.contact.repRole === 'Activity Host' ? 'bg-purple-50 text-purple-700 border-purple-100' :
                                   'bg-blue-50 text-blue-700 border-blue-100'
                                 }`}>
                                    {event.contact.repRole === 'Speaker' && <Activity size={12}/>}
-                                   {event.contact.repRole}
-                                </span>
+                                   <select 
+                                      className="bg-transparent outline-none cursor-pointer appearance-none"
+                                      value={event.contact.repRole}
+                                      onChange={(e) => {
+                                        onUpdateEvent({
+                                          ...event,
+                                          contact: {
+                                            ...event.contact,
+                                            repRole: e.target.value as any
+                                          }
+                                        });
+                                      }}
+                                   >
+                                      <option value="Participant">Participant</option>
+                                      <option value="Speaker">Speaker</option>
+                                      <option value="Activity Host">Activity Host</option>
+                                      <option value="Other">Other</option>
+                                   </select>
+                                </div>
                             </div>
                        </div>
                     </div>

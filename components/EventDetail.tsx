@@ -4,11 +4,10 @@ import { EventData, Priority, RepresentativeRole, Contact } from '../types';
 import { PriorityBadge } from './PriorityBadge';
 import { 
   Calendar, MapPin, Building2, AlertCircle, Clock, FileText, 
-  UserPlus, Mail, MessageSquare, CheckCircle, Save, Mic, FileAudio, Loader2, Sparkles, Megaphone, Image as ImageIcon, X, Link as LinkIcon, ExternalLink, Briefcase, Trash2, Copy, FileCheck, Users, User, FileJson, FileSpreadsheet, Download, Plus, Search, Edit2, Repeat, Repeat1, CalendarPlus, ChevronDown, Target, Zap, ShieldAlert, ArrowRight, HardDrive
+  UserPlus, Mail, MessageSquare, CheckCircle, Save, Mic, FileAudio, Loader2, Sparkles, Megaphone, Image as ImageIcon, X, Link as LinkIcon, ExternalLink, Briefcase, Trash2, Copy, FileCheck, Users, User, FileJson, FileSpreadsheet, Download, Plus, Search, Edit2, Repeat, Repeat1, CalendarPlus, ChevronDown, Target, Zap, ShieldAlert, ArrowRight
 } from 'lucide-react';
-import { summarizeFollowUp, generateBriefing } from '../services/geminiService';
+import { summarizeFollowUp, generateBriefing } from '../services/gemmaService';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
-import { RelevantPapers } from './RelevantPapers';
 
 interface EventDetailProps {
   event: EventData;
@@ -36,6 +35,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   // States for link editing
   const [isEditingRegLink, setIsEditingRegLink] = useState(false);
   const [isEditingProgLink, setIsEditingProgLink] = useState(false);
+  const [newActivity, setNewActivity] = useState('');
 
   // Refs for click outside
   const calendarMenuRef = useRef<HTMLDivElement>(null);
@@ -128,30 +128,6 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', fileName);
     linkElement.click();
-  };
-
-  const handleSaveToDrive = async () => {
-    const dataStr = JSON.stringify(localEvent, null, 2);
-    const fileName = `${localEvent.analysis.eventName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`;
-    
-    try {
-      const res = await fetch('/api/drive/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          folderId: '1k8QPBJrdBFxNtjhi4h3KPV3aL68_0UUQ',
-          fileName,
-          content: dataStr,
-          mimeType: 'application/json'
-        })
-      });
-      
-      if (!res.ok) throw new Error('Upload failed');
-      alert('Successfully saved to Drive Database!');
-    } catch (err) {
-      console.error(err);
-      alert('Failed to save to Drive. Please ensure you are connected.');
-    }
   };
 
   const handleExportCSV = () => {
@@ -266,7 +242,7 @@ END:VCALENDAR`;
 
   const splitBriefing = (text: string) => {
     // Simple logic to extract potential "red lines" if the AI generated them
-    // This assumes the AI output format in geminiService
+    // This assumes the AI output format in gemmaService
     const parts = text.split(/Red Lines|RED LINES|Red lines/);
     if (parts.length > 1) {
         return {
@@ -316,7 +292,6 @@ END:VCALENDAR`;
                  {/* Shared Actions */}
                  <div className="flex items-center gap-1">
                     <button onClick={handleExportJSON} className="p-2 text-slate-400 hover:text-emerald-400 rounded-lg transition-colors" title="Export JSON"><FileJson size={16}/></button>
-                    <button onClick={handleSaveToDrive} className="p-2 text-slate-400 hover:text-emerald-400 rounded-lg transition-colors" title="Save to Drive Database"><HardDrive size={16}/></button>
                     <div className="relative" ref={calendarMenuRef}>
                         <button onClick={() => setShowCalendarMenu(!showCalendarMenu)} className="p-2 text-slate-400 hover:text-emerald-400 rounded-lg transition-colors" title="Calendar">
                             <CalendarPlus size={16}/>
@@ -483,14 +458,6 @@ END:VCALENDAR`;
                                             <span key={i} className="px-3 py-1 bg-slate-800 rounded-full text-xs font-bold text-slate-300 border border-slate-700">{act}</span>
                                         ))}
                                     </div>
-                                    <RelevantPapers 
-                                        folderId="1obdX4rkD2A0Cn_ayk3dtJqR96ASiGl3j" 
-                                        keywords={[
-                                            localEvent.analysis.theme, 
-                                            ...localEvent.analysis.eventName.split(' '),
-                                            ...localEvent.analysis.linkedActivities
-                                        ].filter(Boolean)}
-                                    />
                                 </div>
                             </div>
                          </div>
@@ -645,16 +612,59 @@ END:VCALENDAR`;
                                     </div>
                                 </Section>
                                 <Section title="Related Activities">
-                                     <div className="bg-white p-4 border border-slate-200 rounded-xl h-full">
+                                     <div className="bg-white p-4 border border-slate-200 rounded-xl h-full space-y-4">
                                         {localEvent.analysis.linkedActivities.length > 0 ? (
                                             <ul className="space-y-2">
                                                 {localEvent.analysis.linkedActivities.map((act, i) => (
-                                                    <li key={i} className="flex items-center gap-2 text-sm text-blue-700 font-medium">
-                                                        <ExternalLink size={14} /> {act}
+                                                    <li key={i} className="flex items-center justify-between gap-2 text-sm text-blue-700 font-medium group">
+                                                        <div className="flex items-center gap-2 truncate">
+                                                            <ExternalLink size={14} className="shrink-0" /> 
+                                                            <span className="truncate">{act}</span>
+                                                        </div>
+                                                        <button 
+                                                            onClick={() => {
+                                                                const updated = localEvent.analysis.linkedActivities.filter((_, index) => index !== i);
+                                                                handleChange('analysis', 'linkedActivities', updated);
+                                                            }}
+                                                            className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
                                                     </li>
                                                 ))}
                                             </ul>
                                         ) : <p className="text-slate-400 text-sm">No linked internal activities found.</p>}
+                                        
+                                        <div className="pt-3 border-t border-slate-100">
+                                            <div className="flex gap-2">
+                                                <input 
+                                                    type="text"
+                                                    placeholder="Add activity or position..."
+                                                    className="flex-1 text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500/20"
+                                                    value={newActivity}
+                                                    onChange={(e) => setNewActivity(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' && newActivity.trim()) {
+                                                            const updated = [...localEvent.analysis.linkedActivities, newActivity.trim()];
+                                                            handleChange('analysis', 'linkedActivities', updated);
+                                                            setNewActivity('');
+                                                        }
+                                                    }}
+                                                />
+                                                <button 
+                                                    onClick={() => {
+                                                        if (newActivity.trim()) {
+                                                            const updated = [...localEvent.analysis.linkedActivities, newActivity.trim()];
+                                                            handleChange('analysis', 'linkedActivities', updated);
+                                                            setNewActivity('');
+                                                        }
+                                                    }}
+                                                    className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                                >
+                                                    <Plus size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
                                      </div>
                                 </Section>
                             </div>
