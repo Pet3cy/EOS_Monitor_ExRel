@@ -6,6 +6,15 @@ interface CalendarSyncProps {
   onEventsSynced: (events: EventData[]) => void;
 }
 
+export const CALENDAR_OWNER_MAP: Record<string, string> = {
+  'panagiotis@obessu.org': 'Panagiotis Chatzimichail',
+  'panagiotischatzimichail@gmail.com': 'Panagiotis Chatzimichail',
+  'amira@obessu.org': 'Amira Bakr',
+  'daniele@obessu.org': 'Daniele Sabato',
+  'francesca@obessu.org': 'Francesca Osima',
+  'rui@obessu.org': 'Rui Teixeira',
+};
+
 export function CalendarSync({ onEventsSynced }: CalendarSyncProps) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,18 +62,7 @@ export function CalendarSync({ onEventsSynced }: CalendarSyncProps) {
       const data = await res.json();
       
       const newEvents: EventData[] = data.events.map((event: any) => {
-        let contactName = '';
-        if (event.sourceCalendar === 'panagiotis@obessu.org' || event.sourceCalendar === 'panagiotischatzimichail@gmail.com') {
-          contactName = 'Panagiotis Chatzimichail';
-        } else if (event.sourceCalendar === 'amira@obessu.org') {
-          contactName = 'Amira Bakr';
-        } else if (event.sourceCalendar === 'daniele@obessu.org') {
-          contactName = 'Daniele Sabato';
-        } else if (event.sourceCalendar === 'francesca@obessu.org') {
-          contactName = 'Francesca Osima';
-        } else if (event.sourceCalendar === 'rui@obessu.org') {
-          contactName = 'Rui Teixeira';
-        }
+        const contactName = CALENDAR_OWNER_MAP[event.sourceCalendar] ?? '';
 
         return {
           id: `cal-${event.id}`,
@@ -118,7 +116,15 @@ export function CalendarSync({ onEventsSynced }: CalendarSyncProps) {
     }
   };
 
-  if (!isConnected) return null;
+  if (!isConnected) return (
+    <button 
+      disabled
+      title="Connect Google Drive/Calendar first to enable sync"
+      className="flex items-center gap-2 border border-slate-200 px-4 py-2 rounded-full text-sm font-medium text-slate-400 cursor-not-allowed"
+    >
+      <CalendarIcon size={16} /> Sync Calendars
+    </button>
+  );
 
   return (
     <div className="flex items-center gap-2">

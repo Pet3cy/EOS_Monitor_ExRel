@@ -470,7 +470,7 @@ export default function App() {
               setEvents(prev => {
                 const existingIds = new Set(prev.map(e => e.id));
                 const uniqueNewEvents = newEvents.filter(e => !existingIds.has(e.id));
-                return [...uniqueNewEvents, ...prev];
+                return [...prev, ...uniqueNewEvents];
               });
             }} />
             <div className="relative">

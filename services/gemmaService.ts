@@ -1,33 +1,11 @@
+/// <reference types="vite/client" />
 // src/services/gemmaService.ts
 import { AnalysisResult, Priority } from '../types';
+import { GoogleGenAI, Type } from '@google/genai';
 
-const OLLAMA_URL = 'http://localhost:11434/api/generate';
-const MODEL = 'gemma2:2b'; // Change to your preferred Gemma model
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY });
 
-// System prompt that includes OBESSU context and instructs JSON output
-const SYSTEM_PROMPT = `You are a senior IT & Operations Specialist for OBESSU (Organising Bureau of European School Student Unions). Your task is to analyze event invitations and return a JSON object with the following fields:
-
-- sender: string (name of the sender)
-- senderEmail: string (email, if available)
-- subject: string (email subject, if available)
-- institution: string (organizing body)
-- eventName: string
-- theme: string (map to OBESSU's strategic themes: VET, Mental Health, Digital Rights, Democracy, Climate Justice)
-- description: string (concise summary)
-- priority: "High" | "Medium" | "Low" | "Irrelevant"
-- priorityScore: number (0-100)
-- priorityReasoning: string (1-2 sentences)
-- date: string (YYYY-MM-DD)
-- venue: string
-- initialDeadline: string (YYYY-MM-DD, registration deadline if any)
-- finalDeadline: string (YYYY-MM-DD, final deadline to confirm)
-- linkedActivities: string[] (list of related OBESSU projects/documents)
-- registrationLink: string (URL if present)
-- programmeLink: string (URL if present)
-
-Use the following organizational context to determine relevance and assign priorities:
-
-ORGANIZATIONAL STRUCTURE & PORTFOLIOS (2026):
+const OBESSU_CONTEXT = `ORGANIZATIONAL STRUCTURE & PORTFOLIOS (2026):
 BOARD MEMBERS:
 - Alessandro Di Miceli: Vocational Education & Training (VET), Apprenticeships, Quality Internships.
 - Elodie Böhling: Democracy, Student Rights, Civic Space, Participation.
@@ -48,9 +26,28 @@ STRATEGIC THEMES 2026:
 2. Inclusive Schools & Mental Health.
 3. Digital Rights in Education (AI, Data Privacy).
 4. Democratic School Governance.
-5. Climate Justice in Education.
+5. Climate Justice in Education.`;
 
-Return ONLY a valid JSON object, no additional text or markdown.`;
+// System prompt that includes OBESSU context and instructs JSON output
+const SYSTEM_PROMPT = `You are a senior IT & Operations Specialist for OBESSU (Organising Bureau of European School Student Unions). Your task is to analyze event invitations and return a JSON object.
+
+Use the following organizational context to determine relevance and assign priorities:
+
+${OBESSU_CONTEXT}`;
+
+function extractJSON(rawText: string): any {
+  try { return JSON.parse(rawText.trim()); } catch {}
+  
+  const stripped = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+  try { return JSON.parse(stripped); } catch {}
+  
+  const match = rawText.match(/\{[\s\S]*\}/);
+  if (match) {
+    try { return JSON.parse(match[0]); } catch {}
+  }
+  
+  throw new Error('Could not extract valid JSON from model response. Raw: ' + rawText.substring(0, 200));
+}
 
 export interface AnalysisInput {
   text?: string;
@@ -61,56 +58,70 @@ export interface AnalysisInput {
 }
 
 export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisResult> => {
-  // Build the user prompt from input
-  let userPrompt = '';
+  let contents: any;
+
   if (input.fileData) {
-    // For file data, we include a note (actual file processing is done before calling this)
-    userPrompt = `Analyze this document as an event invitation. If it's an email, extract headers. Document type: ${input.fileData.mimeType}\n\n[Base64 data omitted, but treat it as the full content]`;
+    contents = {
+      parts: [
+        {
+          inlineData: {
+            mimeType: input.fileData.mimeType,
+            data: input.fileData.data,
+          },
+        },
+        {
+          text: "Analyze this document as an event invitation. If it's an email, extract headers.",
+        },
+      ],
+    };
   } else if (input.text) {
-    userPrompt = `Analyze the following invitation (check for email headers):\n\n${input.text}`;
+    contents = `Analyze the following invitation (check for email headers):\n\n${input.text}`;
   } else {
     throw new Error('No input provided');
   }
 
-  const fullPrompt = `${SYSTEM_PROMPT}\n\n${userPrompt}`;
-
   try {
-    const response = await fetch(OLLAMA_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: MODEL,
-        prompt: fullPrompt,
-        stream: false,
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.1-pro-preview',
+      contents: contents,
+      config: {
+        systemInstruction: SYSTEM_PROMPT,
         temperature: 0.2,
-        max_tokens: 1024,
-        format: 'json',  // hint to Ollama to generate JSON (supported by many models)
-      }),
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            sender: { type: Type.STRING, description: "name of the sender" },
+            senderEmail: { type: Type.STRING, description: "email, if available" },
+            subject: { type: Type.STRING, description: "email subject, if available" },
+            institution: { type: Type.STRING, description: "organizing body" },
+            eventName: { type: Type.STRING },
+            theme: { type: Type.STRING, description: "map to OBESSU's strategic themes: VET, Mental Health, Digital Rights, Democracy, Climate Justice" },
+            description: { type: Type.STRING, description: "concise summary" },
+            priority: { type: Type.STRING, description: "'High', 'Medium', 'Low', or 'Irrelevant'" },
+            priorityScore: { type: Type.NUMBER, description: "0-100" },
+            priorityReasoning: { type: Type.STRING, description: "1-2 sentences" },
+            date: { type: Type.STRING, description: "YYYY-MM-DD" },
+            venue: { type: Type.STRING },
+            initialDeadline: { type: Type.STRING, description: "YYYY-MM-DD, registration deadline if any" },
+            finalDeadline: { type: Type.STRING, description: "YYYY-MM-DD, final deadline to confirm" },
+            linkedActivities: { type: Type.ARRAY, items: { type: Type.STRING }, description: "list of related OBESSU projects/documents" },
+            registrationLink: { type: Type.STRING, description: "URL if present" },
+            programmeLink: { type: Type.STRING, description: "URL if present" },
+          },
+          required: ["sender", "institution", "eventName", "theme", "description", "priority", "priorityScore", "priorityReasoning", "date", "venue", "initialDeadline", "finalDeadline", "linkedActivities"],
+        },
+      },
     });
 
-    if (!response.ok) {
-      if (response.status === 404) {
-        throw new Error(`Ollama Model '${MODEL}' not found. Please pull the model using 'ollama pull ${MODEL}'.`);
-      }
-      throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    const rawText = data.response;
-
+    const rawText = response.text;
     if (!rawText) {
-       throw new Error('Ollama returned an empty response.');
-    }
-
-    // Attempt to extract JSON from the response (Gemma might add extra text)
-    let jsonMatch = rawText.match(/\{.*\}/s);
-    if (!jsonMatch) {
-      throw new Error('Could not parse JSON from model response. The model returned an invalid format. Raw output: ' + rawText.substring(0, 100) + '...');
+       throw new Error('Gemini returned an empty response.');
     }
 
     let parsed;
     try {
-      parsed = JSON.parse(jsonMatch[0]);
+      parsed = extractJSON(rawText);
     } catch (e: any) {
       throw new Error(`Failed to parse JSON from model response: ${e.message}`);
     }
@@ -123,9 +134,6 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
     };
   } catch (error: any) {
     console.error("analyzeInvitation error:", error);
-    if (error.name === 'TypeError' && error.message.includes('fetch')) {
-      throw new Error('Failed to connect to Ollama. Ensure the Ollama server is running locally on port 11434 and CORS is configured.');
-    }
     throw new Error(error.message || 'An unexpected error occurred during analysis.');
   }
 };
@@ -138,30 +146,7 @@ Theme: ${event.analysis.theme}
 Context: ${event.analysis.description}
 Linked Activities: ${event.analysis.linkedActivities.join(', ')}
 
-Use the OBESSU context below to tailor the briefing:
-
-ORGANIZATIONAL STRUCTURE & PORTFOLIOS (2026):
-BOARD MEMBERS:
-- Alessandro Di Miceli: Vocational Education & Training (VET), Apprenticeships, Quality Internships.
-- Elodie Böhling: Democracy, Student Rights, Civic Space, Participation.
-- Ívar Máni Hrannarsson: Social Affairs, Mental Health, Inclusion, Student Well-being.
-- Kacper Bogalecki: Organisational Development, Capacity Building, Internal Governance.
-- Lauren Bond: Education Policy, EU Advocacy, Research.
-
-SECRETARIAT:
-- Rui Teixeira (Secretary General): External Representation, High-level Management.
-- Raquel Moreno Beneit (Comms): Digital Presence, Campaigns.
-- Panagiotis Chatzimichail (Head of External Affairs): Partnerships, LLLP, Erasmus+.
-- Amira Bakr (Policy Assistant): Policy Monitoring, Outreach.
-- Francesca Osima (Head of Projects): Operations, Grant Management.
-- Daniele Sabato (Coordinator): VET Strategy, Policy Implementation.
-
-STRATEGIC THEMES 2026:
-1. VET & Apprenticeships (Quality, Rights, Pay).
-2. Inclusive Schools & Mental Health.
-3. Digital Rights in Education (AI, Data Privacy).
-4. Democratic School Governance.
-5. Climate Justice in Education.
+${OBESSU_CONTEXT}
 
 Include:
 1. Key Objectives for OBESSU
@@ -172,69 +157,46 @@ Include:
 Format as plain text, no JSON.`;
 
   try {
-    const response = await fetch(OLLAMA_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: MODEL,
-        prompt: prompt,
-        stream: false,
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.1-pro-preview',
+      contents: prompt,
+      config: {
+        systemInstruction: SYSTEM_PROMPT,
         temperature: 0.3,
-        max_tokens: 2048,
-      }),
+      },
     });
 
-    if (!response.ok) {
-      if (response.status === 404) {
-        throw new Error(`Ollama Model '${MODEL}' not found. Please pull the model using 'ollama pull ${MODEL}'.`);
-      }
-      throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
+    if (!response.text) {
+       throw new Error('Gemini returned an empty response.');
     }
-
-    const data = await response.json();
-    if (!data.response) {
-       throw new Error('Ollama returned an empty response.');
-    }
-    return data.response;
+    return response.text;
   } catch (error: any) {
     console.error("generateBriefing error:", error);
-    if (error.name === 'TypeError' && error.message.includes('fetch')) {
-      throw new Error('Failed to connect to Ollama. Ensure the Ollama server is running locally on port 11434 and CORS is configured.');
-    }
     throw new Error(error.message || 'An unexpected error occurred during briefing generation.');
   }
 };
 
 export const summarizeFollowUp = async (event: any, notes: string): Promise<string> => {
-  const prompt = `Summarize the following follow-up notes for the event "${event.analysis.eventName}":\n\n${notes}`;
+  const prompt = `Summarize the following follow-up notes for the event "${event.analysis.eventName}":\n\n${notes}
+
+${OBESSU_CONTEXT}
+
+Provide a concise summary of outcomes, key contacts made, and follow-up tasks relevant to OBESSU's strategic themes.`;
   try {
-    const response = await fetch(OLLAMA_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: MODEL,
-        prompt: prompt,
-        stream: false,
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: prompt,
+      config: {
         temperature: 0.3,
-        max_tokens: 1024,
-      }),
+      },
     });
-    if (!response.ok) {
-      if (response.status === 404) {
-        throw new Error(`Ollama Model '${MODEL}' not found. Please pull the model using 'ollama pull ${MODEL}'.`);
-      }
-      throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
+
+    if (!response.text) {
+       throw new Error('Gemini returned an empty response.');
     }
-    const data = await response.json();
-    if (!data.response) {
-       throw new Error('Ollama returned an empty response.');
-    }
-    return data.response;
+    return response.text;
   } catch (error: any) {
     console.error("summarizeFollowUp error:", error);
-    if (error.name === 'TypeError' && error.message.includes('fetch')) {
-      throw new Error('Failed to connect to Ollama. Ensure the Ollama server is running locally on port 11434 and CORS is configured.');
-    }
     throw new Error(error.message || 'An unexpected error occurred during summarization.');
   }
 };

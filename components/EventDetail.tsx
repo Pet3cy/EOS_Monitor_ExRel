@@ -3,8 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { EventData, Priority, RepresentativeRole, Contact } from '../types';
 import { PriorityBadge } from './PriorityBadge';
 import { 
-  Calendar, MapPin, Building2, AlertCircle, Clock, FileText, 
-  UserPlus, Mail, MessageSquare, CheckCircle, Save, Mic, FileAudio, Loader2, Sparkles, Megaphone, Image as ImageIcon, X, Link as LinkIcon, ExternalLink, Briefcase, Trash2, Copy, FileCheck, Users, User, FileJson, FileSpreadsheet, Download, Plus, Search, Edit2, Repeat, Repeat1, CalendarPlus, ChevronDown, Target, Zap, ShieldAlert, ArrowRight
+  Calendar, MapPin, Building2, AlertCircle, FileText,
+  Mail, CheckCircle, Save, Loader2, Sparkles, X, ExternalLink, Briefcase, Trash2, Users, User, FileJson, Plus, Search, Edit2, CalendarPlus, Target, ShieldAlert, ArrowRight
 } from 'lucide-react';
 import { generateBriefing } from '../services/gemmaService';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
@@ -25,7 +25,6 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   const [viewMode, setViewMode] = useState<ViewMode>('report');
   const [activeTab, setActiveTab] = useState<TabType>('context');
   const [isEditing, setIsEditing] = useState(false);
-  const [isSummarizing, setIsSummarizing] = useState(false);
   const [isGeneratingBrief, setIsGeneratingBrief] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
@@ -149,16 +148,16 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     const headers = Object.keys(flatEvent);
     const values = Object.values(flatEvent).map(v => `"${v.replace(/"/g, '""')}"`);
 
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + headers.join(",") + "\n" 
-      + values.join(",");
+    const csvContent = headers.join(",") + "\n" + values.join(",");
 
     const fileName = `${localEvent.analysis.eventName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.csv`;
-    const encodedUri = encodeURI(csvContent);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const linkElement = document.createElement("a");
-    linkElement.setAttribute("href", encodedUri);
+    linkElement.setAttribute("href", url);
     linkElement.setAttribute("download", fileName);
     linkElement.click();
+    URL.revokeObjectURL(url);
   };
 
   // --- Calendar Functions ---
@@ -210,19 +209,44 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   const handleDownloadICS = () => {
     const { start, end } = getEventDates();
     const { eventName, description, venue } = localEvent.analysis;
-    const icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//OBESSU//Event Analyzer//EN
-BEGIN:VEVENT
-UID:${crypto.randomUUID()}
-DTSTAMP:${formatDateForGoogle(new Date())}
-DTSTART:${formatDateForGoogle(start)}
-DTEND:${formatDateForGoogle(end)}
-SUMMARY:${eventName}
-DESCRIPTION:${description.replace(/\n/g, '\\n')}
-LOCATION:${venue}
-END:VEVENT
-END:VCALENDAR`;
+    
+    const escapeICS = (str: string) => 
+      str
+        .replace(/\\/g, '\\\\')
+        .replace(/;/g, '\\;')
+        .replace(/,/g, '\\,')
+        .replace(/\n/g, '\\n');
+
+    const foldLine = (line: string) => {
+      if (line.length <= 75) return line;
+      const chunks = [];
+      chunks.push(line.substring(0, 75));
+      let i = 75;
+      while (i < line.length) {
+        chunks.push(' ' + line.substring(i, i + 74));
+        i += 74;
+      }
+      return chunks.join('\r\n');
+    };
+
+    const icsLines = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//OBESSU//Event Analyzer//EN',
+      'BEGIN:VEVENT',
+      `UID:${crypto.randomUUID()}`,
+      `DTSTAMP:${formatDateForGoogle(new Date())}`,
+      `DTSTART:${formatDateForGoogle(start)}`,
+      `DTEND:${formatDateForGoogle(end)}`,
+      `SUMMARY:${escapeICS(eventName)}`,
+      `DESCRIPTION:${escapeICS(description)}`,
+      `LOCATION:${escapeICS(venue)}`,
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ];
+
+    const icsContent = icsLines.map(foldLine).join('\r\n');
+    
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
     const link = document.createElement('a');
     link.href = window.URL.createObjectURL(blob);

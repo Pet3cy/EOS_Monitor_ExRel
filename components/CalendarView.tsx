@@ -21,8 +21,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
   const [priorityFilter, setPriorityFilter] = useState<Priority | 'All'>('All');
   const [themeFilter, setThemeFilter] = useState<string>('All');
   const [contactFilter, setContactFilter] = useState<string>('All');
-  const [startDateFilter, setStartDateFilter] = useState<string>('2026-01-01');
-  const [endDateFilter, setEndDateFilter] = useState<string>('2026-12-31');
+  const currentYear = new Date().getFullYear();
+  const [startDateFilter, setStartDateFilter] = useState<string>(`${currentYear}-01-01`);
+  const [endDateFilter, setEndDateFilter] = useState<string>(`${currentYear}-12-31`);
   const [calendarView, setCalendarView] = useState<'Week' | 'Month' | 'Trimester' | 'Semester' | 'Year'>('Week');
 
   // Get unique themes for the filter
@@ -43,16 +44,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
     return `${year}-${month}-${day}`;
   };
 
-  // Generate and filter weeks for 2026
+  // Generate and filter weeks
   const filteredWeeks = useMemo(() => {
     if (calendarView !== 'Week') return [];
     const weeksArr = [];
-    const yearStart = new Date(2026, 0, 1);
-    
-    // Find first Monday of the year (ISO week standard often uses Monday)
-    const day = yearStart.getDay();
-    const diff = yearStart.getDate() - day + (day === 0 ? -6 : 1);
-    const firstMonday = new Date(yearStart.setDate(diff));
 
     const rangeStart = new Date(startDateFilter);
     const rangeEnd = new Date(endDateFilter);
@@ -62,15 +57,17 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
         return [];
     }
 
-    for (let i = 0; i < 53; i++) { // Some years have 53 weeks
-      const weekStart = new Date(firstMonday);
-      weekStart.setDate(firstMonday.getDate() + i * 7);
+    const yearStart = new Date(rangeStart.getFullYear(), 0, 1);
+    const dayOfWeek = yearStart.getDay();
+    const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const firstMondayTime = new Date(yearStart.getFullYear(), 0, 1 + daysToMonday).getTime();
+
+    for (let i = 0; i < 53 * (rangeEnd.getFullYear() - rangeStart.getFullYear() + 1); i++) {
+      const weekStart = new Date(firstMondayTime + i * 7 * 24 * 60 * 60 * 1000);
+      const weekEnd = new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000);
       
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6);
-      
-      // Stop if we've passed 2026 entirely
-      if (weekStart.getFullYear() > 2026) break;
+      // Stop if we've passed the end year
+      if (weekStart.getFullYear() > rangeEnd.getFullYear()) break;
       
       // Filter weeks that overlap with the user's selected date range
       if (weekEnd < rangeStart || weekStart > rangeEnd) continue;
@@ -89,7 +86,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
       if (!hasMatches && (priorityFilter !== 'All' || themeFilter !== 'All' || contactFilter !== 'All')) continue;
 
       weeksArr.push({
-        number: i + 1,
+        number: (i % 53) + 1,
         start: weekStart,
         end: weekEnd,
         events: weekEvents
