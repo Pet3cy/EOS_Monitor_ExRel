@@ -261,19 +261,18 @@ export default function App() {
     setEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e));
   };
 
-  const handleDeleteEvent = (id: string) => {
-    const eventToDelete = events.find(e => e.id === id);
-    if (eventToDelete) {
-        setDeletedEventsHistory({ events: [eventToDelete], timestamp: Date.now() });
-        setEvents(prev => prev.filter(e => e.id !== id));
-        if (selectedEventId === id) setSelectedEventId(null);
-        setSelectedEventIds(prev => {
-            const next = new Set(prev);
-            next.delete(id);
-            return next;
-        });
-    }
-  };
+  // ⚡ Bolt: Wrapped list item callbacks in useCallback to maintain referential equality,
+  // preventing EventCard components from re-rendering unless their own props change.
+  const handleDeleteEvent = React.useCallback((eventToDelete: EventData) => {
+    setDeletedEventsHistory({ events: [eventToDelete], timestamp: Date.now() });
+    setEvents(prev => prev.filter(e => e.id !== eventToDelete.id));
+    setSelectedEventId(prev => prev === eventToDelete.id ? null : prev);
+    setSelectedEventIds(prev => {
+        const next = new Set(prev);
+        next.delete(eventToDelete.id);
+        return next;
+    });
+  }, []);
 
   const handleUpdateContact = (updatedContact: Contact) => {
     setContacts(prev => {
@@ -377,14 +376,18 @@ export default function App() {
   }, [events, searchTerm, statusFilter, viewMode, sortField, sortOrder]);
 
   // Bulk Actions
-  const handleToggleSelect = (id: string) => {
+  const handleToggleSelect = React.useCallback((id: string) => {
     setSelectedEventIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  };
+  }, []);
+
+  const handleCardClick = React.useCallback((id: string) => {
+    setSelectedEventId(id);
+  }, []);
 
   const handleBulkDelete = () => {
     const eventsToDelete = events.filter(e => selectedEventIds.has(e.id));
@@ -695,9 +698,9 @@ export default function App() {
                         isSelected={selectedEventId === event.id}
                         showCheckbox={true}
                         isChecked={selectedEventIds.has(event.id)}
-                        onToggleSelect={() => handleToggleSelect(event.id)}
-                        onClick={() => setSelectedEventId(event.id)}
-                        onDelete={() => handleDeleteEvent(event.id)}
+                        onToggleSelect={handleToggleSelect}
+                        onClick={handleCardClick}
+                        onDelete={handleDeleteEvent}
                         />
                     ))
                     )}
@@ -707,9 +710,10 @@ export default function App() {
                 <section className="flex-1 p-6 bg-slate-50/50 overflow-hidden">
                 {selectedEvent && filteredEvents.some(e => e.id === selectedEvent.id) ? (
                     <EventDetail 
+                        key={selectedEvent.id}
                         event={selectedEvent} 
                         onUpdate={handleUpdateEvent}
-                        onDelete={() => handleDeleteEvent(selectedEvent.id)}
+                        onDelete={() => handleDeleteEvent(selectedEvent)}
                         contacts={contacts}
                         onViewContact={handleViewContactProfile}
                     />
