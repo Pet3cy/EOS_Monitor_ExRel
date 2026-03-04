@@ -36,11 +36,21 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
   
   // Local buffer for the notes field to allow smooth typing without global re-renders
   const [notesBuffer, setNotesBuffer] = useState('');
+  const prevContactIdRef = React.useRef<string | null>(null);
 
   const selectedContact = contacts.find(c => c.id === selectedContactId);
 
   // Sync notes buffer when selected contact changes
   useEffect(() => {
+    // Save previous contact's notes before switching:
+    if (prevContactIdRef.current && prevContactIdRef.current !== selectedContactId) {
+      const prev = contacts.find(c => c.id === prevContactIdRef.current);
+      if (prev && notesBuffer !== prev.notes) {
+        onUpdateContact({ ...prev, notes: notesBuffer });
+      }
+    }
+    prevContactIdRef.current = selectedContactId;
+
     if (selectedContact) {
       setNotesBuffer(selectedContact.notes || '');
     }

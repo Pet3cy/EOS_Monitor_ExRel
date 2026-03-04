@@ -23,7 +23,7 @@ export const EventCard: React.FC<EventCardProps> = memo(({
   showCheckbox,
   isChecked,
   onToggleSelect
-}) => {
+}: EventCardProps) => {
   const { analysis } = event;
   const [showConfirm, setShowConfirm] = useState(false);
 
