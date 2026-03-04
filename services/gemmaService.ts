@@ -3,7 +3,7 @@
 import { AnalysisResult, Priority } from '../types';
 import { GoogleGenAI, Type } from '@google/genai';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY });
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || import.meta.env?.VITE_GEMINI_API_KEY || 'dummy_key' });
 
 const OBESSU_CONTEXT = `ORGANIZATIONAL STRUCTURE & PORTFOLIOS (2026):
 BOARD MEMBERS:
