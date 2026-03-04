@@ -5,15 +5,9 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
-      build: {
-        outDir: 'Frontend/build',
-      },
       server: {
         port: 3000,
         host: '0.0.0.0',
-      },
-      build: {
-        outDir: 'Frontend/build',
       },
       plugins: [react()],
       build: {
@@ -28,8 +22,5 @@ export default defineConfig(({ mode }) => {
           '@': path.resolve(__dirname, '.'),
         }
       },
-      build: {
-        outDir: 'Frontend/build'
-      }
     };
 });
