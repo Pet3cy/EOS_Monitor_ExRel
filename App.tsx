@@ -257,28 +257,29 @@ export default function App() {
     setSelectedEventId(newEvent.id);
   };
 
-  const handleUpdateEvent = (updatedEvent: EventData) => {
+  // ⚡ Bolt: Memoize event update handler to prevent EventCard re-renders
+  const handleUpdateEvent = useCallback((updatedEvent: EventData) => {
     setEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e));
-  };
+  }, []);
 
-  const handleDeleteEvent = useCallback((eventToDelete: EventData) => {
-    const id = eventToDelete.id;
-    setDeletedEventsHistory({ events: [eventToDelete], timestamp: Date.now() });
-    setEvents(prev => prev.filter(e => e.id !== id));
-    setSelectedEventId(prevId => prevId === id ? null : prevId);
+  // ⚡ Bolt: Memoize delete handler to prevent EventCard re-renders.
+  // Using functional state updates avoids dependency on `events` array.
+  const handleDeleteEvent = useCallback((id: string) => {
+    setEvents(prev => {
+        const eventToDelete = prev.find(e => e.id === id);
+        if (eventToDelete) {
+            // Note: Side-effect in state updater to keep `events` out of dependency array
+            // and maintain stable reference for child components.
+            setDeletedEventsHistory({ events: [eventToDelete], timestamp: Date.now() });
+            return prev.filter(e => e.id !== id);
+        }
+        return prev;
+    });
+    setSelectedEventId(prev => prev === id ? null : prev);
     setSelectedEventIds(prev => {
         if (!prev.has(id)) return prev;
         const next = new Set(prev);
         next.delete(id);
-  // ⚡ Bolt: Wrapped list item callbacks in useCallback to maintain referential equality,
-  // preventing EventCard components from re-rendering unless their own props change.
-  const handleDeleteEvent = React.useCallback((eventToDelete: EventData) => {
-    setDeletedEventsHistory({ events: [eventToDelete], timestamp: Date.now() });
-    setEvents(prev => prev.filter(e => e.id !== eventToDelete.id));
-    setSelectedEventId(prev => prev === eventToDelete.id ? null : prev);
-    setSelectedEventIds(prev => {
-        const next = new Set(prev);
-        next.delete(eventToDelete.id);
         return next;
     });
   }, []);
@@ -386,8 +387,8 @@ export default function App() {
   }, [events, searchTerm, statusFilter, viewMode, sortField, sortOrder]);
 
   // Bulk Actions
+  // ⚡ Bolt: Memoize selection handlers to prevent EventCard re-renders
   const handleToggleSelect = useCallback((id: string) => {
-  const handleToggleSelect = React.useCallback((id: string) => {
     setSelectedEventIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -397,7 +398,6 @@ export default function App() {
   }, []);
 
   const handleSelectEvent = useCallback((id: string) => {
-  const handleCardClick = React.useCallback((id: string) => {
     setSelectedEventId(id);
   }, []);
 
@@ -712,7 +712,6 @@ export default function App() {
                         isChecked={selectedEventIds.has(event.id)}
                         onToggleSelect={handleToggleSelect}
                         onClick={handleSelectEvent}
-                        onClick={handleCardClick}
                         onDelete={handleDeleteEvent}
                         />
                     ))

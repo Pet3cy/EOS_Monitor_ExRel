@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { EventData } from '../types';
 import { PriorityBadge } from './PriorityBadge';
 import { Calendar, MapPin, Building2, User, Trash2, Repeat } from 'lucide-react';
@@ -8,14 +8,14 @@ import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 interface EventCardProps {
   event: EventData;
   onClick: (id: string) => void;
-  onDelete: (event: EventData) => void;
+  onDelete: (id: string) => void;
   isSelected: boolean;
   showCheckbox?: boolean;
   isChecked?: boolean;
   onToggleSelect?: (id: string) => void;
 }
 
-export const EventCard = React.memo(({
+export const EventCard: React.FC<EventCardProps> = memo(({
   event, 
   onClick, 
   onDelete, 
@@ -124,7 +124,7 @@ export const EventCard = React.memo(({
       <ConfirmDeleteModal 
         isOpen={showConfirm}
         onClose={() => setShowConfirm(false)}
-        onConfirm={() => onDelete(event)}
+        onConfirm={() => onDelete(event.id)}
         title="Delete Invitation?"
         message={`Are you sure you want to delete "${analysis.eventName}"? All extracted analysis and assigned tasks will be lost.`}
       />
