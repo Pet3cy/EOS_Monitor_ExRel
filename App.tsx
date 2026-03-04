@@ -261,7 +261,7 @@ export default function App() {
     setEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e));
   };
 
-  const handleDeleteEvent = (id: string) => {
+  const handleDeleteEvent = React.useCallback((id: string) => {
     const eventToDelete = events.find(e => e.id === id);
     if (eventToDelete) {
         setDeletedEventsHistory({ events: [eventToDelete], timestamp: Date.now() });
@@ -273,7 +273,7 @@ export default function App() {
             return next;
         });
     }
-  };
+  }, [events, selectedEventId]);
 
   const handleUpdateContact = (updatedContact: Contact) => {
     setContacts(prev => {
@@ -338,10 +338,11 @@ export default function App() {
   };
 
   const filteredEvents = useMemo(() => {
+    const searchLower = searchTerm.toLowerCase();
     let result = events.filter(e => {
       const matchesSearch = 
-        e.analysis.eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        e.analysis.institution.toLowerCase().includes(searchTerm.toLowerCase());
+        e.analysis.eventName.toLowerCase().includes(searchLower) ||
+        e.analysis.institution.toLowerCase().includes(searchLower);
       
       if (!matchesSearch) return false;
 
@@ -377,14 +378,18 @@ export default function App() {
   }, [events, searchTerm, statusFilter, viewMode, sortField, sortOrder]);
 
   // Bulk Actions
-  const handleToggleSelect = (id: string) => {
+  const handleToggleSelect = React.useCallback((id: string) => {
     setSelectedEventIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  };
+  }, []);
+
+  const handleCardClick = React.useCallback((id: string) => {
+    setSelectedEventId(id);
+  }, []);
 
   const handleBulkDelete = () => {
     const eventsToDelete = events.filter(e => selectedEventIds.has(e.id));
@@ -695,9 +700,9 @@ export default function App() {
                         isSelected={selectedEventId === event.id}
                         showCheckbox={true}
                         isChecked={selectedEventIds.has(event.id)}
-                        onToggleSelect={() => handleToggleSelect(event.id)}
-                        onClick={() => setSelectedEventId(event.id)}
-                        onDelete={() => handleDeleteEvent(event.id)}
+                        onToggleSelect={handleToggleSelect}
+                        onClick={handleCardClick}
+                        onDelete={handleDeleteEvent}
                         />
                     ))
                     )}
