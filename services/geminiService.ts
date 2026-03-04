@@ -214,7 +214,7 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
   return result;
 };
 
-export const generateBriefing = async (event: EventData) => {
+export const generateBriefing = async (event: any) => {
   // Generate cache key based on relevant event data
   const cacheKey = await briefingCacheService.generateKey({
       eventName: event.analysis.eventName,

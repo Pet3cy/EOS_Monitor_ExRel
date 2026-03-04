@@ -158,15 +158,15 @@ export class CacheService<T> {
   }
 
   clear() {
-    if (this.isStorageAvailable()) {
-      // Use the list of keys we know about to remove items efficiently.
-      this.keys.forEach(key => {
-        sessionStorage.removeItem(`${this.prefix}${key}`);
-      });
-      // Also remove the list of keys itself.
-      sessionStorage.removeItem(`${this.prefix}keys`);
-    }
     this.memoryCache.clear();
     this.keys = [];
+    if (this.isStorageAvailable()) {
+      // Clear only items with our prefix
+      Object.keys(sessionStorage).forEach(key => {
+        if (key.startsWith(this.prefix)) {
+          sessionStorage.removeItem(key);
+        }
+      });
+    }
   }
 }
