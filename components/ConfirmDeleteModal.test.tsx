@@ -14,10 +14,10 @@ describe('ConfirmDeleteModal', () => {
 
   it('renders correctly when isOpen is true', () => {
     render(<ConfirmDeleteModal {...defaultProps} />);
-    expect(screen.getByText('Confirm Delete')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Confirm Delete' })).toBeInTheDocument();
     expect(screen.getByText('Are you sure?')).toBeInTheDocument();
-    expect(screen.getByText('Delete Permanently')).toBeInTheDocument();
-    expect(screen.getByText('Cancel')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete Permanently' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
   });
 
   it('does not render when isOpen is false', () => {
