@@ -232,7 +232,7 @@ async function startServer() {
       const timeMin = new Date('2026-01-01T00:00:00Z').toISOString();
       let allEvents: any[] = [];
 
-      for (const calendarId of calendarIds) {
+      const eventPromises = calendarIds.map(async (calendarId) => {
         try {
           const response = await calendar.events.list({
             calendarId: calendarId,
@@ -243,12 +243,16 @@ async function startServer() {
           });
           
           if (response.data.items) {
-            allEvents.push(...response.data.items.map(item => ({ ...item, sourceCalendar: calendarId })));
+            return response.data.items.map(item => ({ ...item, sourceCalendar: calendarId }));
           }
         } catch (err) {
           console.error(`Failed to fetch events for calendar ${calendarId}`, err);
         }
-      }
+        return [];
+      });
+
+      const results = await Promise.all(eventPromises);
+      allEvents = results.flat();
 
       res.json({ events: allEvents });
     } catch (error: any) {
