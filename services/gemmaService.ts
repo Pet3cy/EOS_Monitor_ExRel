@@ -43,7 +43,7 @@ Use the following organizational context to determine relevance and assign prior
 
 ${OBESSU_CONTEXT}`;
 
-export function extractJSON(rawText: string): any {
+export function extractJSON(rawText: string): unknown {
   try { return JSON.parse(rawText.trim()); } catch {}
   
   const stripped = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
