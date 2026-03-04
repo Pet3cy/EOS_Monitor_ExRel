@@ -197,7 +197,7 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
   });
 
   const text = response.text || "{}";
-  const data = safeParseJSON(text);
+  const data = safeParseJSON(text) as Partial<AnalysisResult>;
   
   return {
     ...data,
