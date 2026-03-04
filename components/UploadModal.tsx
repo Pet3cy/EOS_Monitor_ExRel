@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { Upload, X, Loader2, FileText, File, Mail, Clipboard, CheckCircle2 } from 'lucide-react';
+import { Upload, X, Loader2, FileText, File, Mail, Clipboard, CheckCircle2, AlertCircle } from 'lucide-react';
 import mammoth from 'mammoth';
-import { analyzeInvitation, AnalysisInput } from '../services/geminiService';
+import { analyzeInvitation, AnalysisInput } from '../services/gemmaService';
 import { EventData, Priority } from '../types';
 
 interface UploadModalProps {
@@ -17,24 +17,16 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onAnalysisCom
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
   const [mode, setMode] = useState<'text' | 'file'>('text');
-  const [isDriveConnected, setIsDriveConnected] = useState(false);
-
-  useEffect(() => {
-    const checkStatus = async () => {
-      try {
-        const res = await fetch('/api/auth/status');
-        const data = await res.json();
-        setIsDriveConnected(data.connected);
-      } catch (err) {
-        console.error('Failed to check status:', err);
-      }
-    };
-    checkStatus();
-  }, []);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    
+    if (file.size > 10 * 1024 * 1024) {
+      setError('File is too large. Maximum size is 10MB.');
+      return;
+    }
+    
     setSelectedFile(file);
     setError('');
   };
@@ -65,20 +57,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onAnalysisCom
     }, 600);
 
     try {
-      let papersContent = '';
-      if (isDriveConnected) {
-        try {
-          const res = await fetch('/api/drive/papers/content');
-          if (res.ok) {
-            const data = await res.json();
-            papersContent = data.content;
-          }
-        } catch (err) {
-          console.error("Failed to fetch papers from Drive", err);
-        }
-      }
-
-      let input: AnalysisInput = { papersContent };
+      let input: AnalysisInput = {};
       if (mode === 'file' && selectedFile) {
         if (selectedFile.name.endsWith('.docx')) {
           const result = await mammoth.extractRawText({ arrayBuffer: await selectedFile.arrayBuffer() });
@@ -119,9 +98,9 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onAnalysisCom
       };
       onAnalysisComplete(newEvent);
       onClose();
-    } catch (err) {
+    } catch (err: any) {
       clearInterval(interval);
-      setError("Analysis failed. Ensure the text contains clear event details.");
+      setError(err.message || "Analysis failed. Ensure the text contains clear event details.");
       setProgress(0);
     } finally {
       setIsAnalyzing(false);
@@ -160,7 +139,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onAnalysisCom
         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
           <div>
             <h2 className="text-xl font-bold text-slate-800">Process Invitation</h2>
-            <p className="text-sm text-slate-500">Powered by Gemma-2-27b-it • Optimized for Email Parsing</p>
+            <p className="text-sm text-slate-500">Powered by Gemini 3.1 Pro • Optimized for Email Parsing</p>
           </div>
           <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-all"><X size={20} /></button>
         </div>
@@ -215,10 +194,4 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onAnalysisCom
   );
 };
 
-const AlertCircle = ({ size, className }: { size: number, className?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <circle cx="12" cy="12" r="10" />
-    <line x1="12" y1="8" x2="12" y2="12" />
-    <line x1="12" y1="16" x2="12.01" y2="16" />
-  </svg>
-);
+

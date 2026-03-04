@@ -116,7 +116,7 @@ export const Overview: React.FC<OverviewProps> = ({ events, onRenameStakeholder 
 
         {activeTab === 'staff' ? (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden ring-1 ring-slate-950/5">
-            <StaffOverview />
+            <StaffOverview events={events} />
           </div>
         ) : (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden ring-1 ring-slate-950/5">
