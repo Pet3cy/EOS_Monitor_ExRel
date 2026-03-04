@@ -57,14 +57,30 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
         return [];
     }
 
-    const yearStart = new Date(rangeStart.getFullYear(), 0, 1);
-    const dayOfWeek = yearStart.getDay();
-    const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    const firstMondayTime = new Date(yearStart.getFullYear(), 0, 1 + daysToMonday).getTime();
+    // Pre-filter events and index by date for O(1) lookup
+    // Optimization: Reduces complexity from O(Weeks * Events) to O(Events + Weeks)
+    const eventsByDate = new Map<string, EventData[]>();
 
-    for (let i = 0; i < 53 * (rangeEnd.getFullYear() - rangeStart.getFullYear() + 1); i++) {
-      const weekStart = new Date(firstMondayTime + i * 7 * 24 * 60 * 60 * 1000);
-      const weekEnd = new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000);
+    for (const event of events) {
+      const matchesPriority = priorityFilter === 'All' || event.analysis.priority === priorityFilter;
+      const matchesTheme = themeFilter === 'All' || event.analysis.theme === themeFilter;
+      const matchesContact = contactFilter === 'All' || event.contact.name === contactFilter;
+
+      if (matchesPriority && matchesTheme && matchesContact) {
+        const dateKey = event.analysis.date;
+        if (!eventsByDate.has(dateKey)) {
+          eventsByDate.set(dateKey, []);
+        }
+        eventsByDate.get(dateKey)!.push(event);
+      }
+    }
+
+    for (let i = 0; i < 53; i++) { // Some years have 53 weeks
+      const weekStart = new Date(firstMonday);
+      weekStart.setDate(firstMonday.getDate() + i * 7);
+      
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
       
       // Stop if we've passed the end year
       if (weekStart.getFullYear() > rangeEnd.getFullYear()) break;
@@ -72,15 +88,24 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
       // Filter weeks that overlap with the user's selected date range
       if (weekEnd < rangeStart || weekStart > rangeEnd) continue;
 
-      // Find events in this week that match all filters
-      const weekEvents = events.filter(event => {
-        const eventDate = new Date(event.analysis.date);
-        const matchesDate = eventDate >= weekStart && eventDate <= weekEnd;
-        const matchesPriority = priorityFilter === 'All' || event.analysis.priority === priorityFilter;
-        const matchesTheme = themeFilter === 'All' || event.analysis.theme === themeFilter;
-        const matchesContact = contactFilter === 'All' || event.contact.name === contactFilter;
-        return matchesDate && matchesPriority && matchesTheme && matchesContact;
-      });
+      // Find events in this week using the pre-built index
+      const weekEvents: EventData[] = [];
+      const currentDay = new Date(weekStart);
+
+      for (let d = 0; d < 7; d++) {
+        // Generate YYYY-MM-DD key using local time to match how events are stored
+        const year = currentDay.getFullYear();
+        const month = String(currentDay.getMonth() + 1).padStart(2, '0');
+        const day = String(currentDay.getDate()).padStart(2, '0');
+        const dateKey = `${year}-${month}-${day}`;
+
+        const dayEvents = eventsByDate.get(dateKey);
+        if (dayEvents) {
+          weekEvents.push(...dayEvents);
+        }
+
+        currentDay.setDate(currentDay.getDate() + 1);
+      }
 
       const hasMatches = weekEvents.length > 0;
       if (!hasMatches && (priorityFilter !== 'All' || themeFilter !== 'All' || contactFilter !== 'All')) continue;
