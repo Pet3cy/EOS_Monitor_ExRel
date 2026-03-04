@@ -15,8 +15,7 @@ interface EventCardProps {
   onToggleSelect?: (id: string) => void;
 }
 
-// ⚡ Bolt: Wrapped in React.memo to prevent re-rendering when parent state changes (e.g. search term, selection)
-export const EventCard = React.memo(function EventCard({
+export const EventCard = React.memo(({
   event, 
   onClick, 
   onDelete, 
@@ -24,7 +23,7 @@ export const EventCard = React.memo(function EventCard({
   showCheckbox,
   isChecked,
   onToggleSelect
-}: EventCardProps) {
+}: EventCardProps) => {
   const { analysis } = event;
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -49,18 +48,10 @@ export const EventCard = React.memo(function EventCard({
     if (onToggleSelect) onToggleSelect(event.id);
   };
 
-  const handleClick = () => {
-    onClick(event.id);
-  };
-
-  const handleConfirmDelete = () => {
-    onDelete(event);
-  };
-
   return (
     <>
       <div 
-        onClick={handleClick}
+        onClick={() => onClick(event.id)}
         className={`p-4 mb-3 rounded-lg border cursor-pointer transition-all hover:shadow-md group/card relative ${
           isSelected ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'border-slate-200 bg-white'
         }`}
@@ -133,7 +124,7 @@ export const EventCard = React.memo(function EventCard({
       <ConfirmDeleteModal 
         isOpen={showConfirm}
         onClose={() => setShowConfirm(false)}
-        onConfirm={handleConfirmDelete}
+        onConfirm={() => onDelete(event)}
         title="Delete Invitation?"
         message={`Are you sure you want to delete "${analysis.eventName}"? All extracted analysis and assigned tasks will be lost.`}
       />

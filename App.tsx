@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Plus, Search, Layout, Filter, CalendarClock, History, PieChart, Users, Calendar as CalendarIcon, CheckSquare, Trash2, CheckCircle2, ArrowUpDown, Undo2, X } from 'lucide-react';
 import { EventData, Priority, Contact } from './types';
 import { EventCard } from './components/EventCard';
@@ -261,6 +261,15 @@ export default function App() {
     setEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e));
   };
 
+  const handleDeleteEvent = useCallback((eventToDelete: EventData) => {
+    const id = eventToDelete.id;
+    setDeletedEventsHistory({ events: [eventToDelete], timestamp: Date.now() });
+    setEvents(prev => prev.filter(e => e.id !== id));
+    setSelectedEventId(prevId => prevId === id ? null : prevId);
+    setSelectedEventIds(prev => {
+        if (!prev.has(id)) return prev;
+        const next = new Set(prev);
+        next.delete(id);
   // ⚡ Bolt: Wrapped list item callbacks in useCallback to maintain referential equality,
   // preventing EventCard components from re-rendering unless their own props change.
   const handleDeleteEvent = React.useCallback((eventToDelete: EventData) => {
@@ -377,6 +386,7 @@ export default function App() {
   }, [events, searchTerm, statusFilter, viewMode, sortField, sortOrder]);
 
   // Bulk Actions
+  const handleToggleSelect = useCallback((id: string) => {
   const handleToggleSelect = React.useCallback((id: string) => {
     setSelectedEventIds(prev => {
       const next = new Set(prev);
@@ -386,6 +396,7 @@ export default function App() {
     });
   }, []);
 
+  const handleSelectEvent = useCallback((id: string) => {
   const handleCardClick = React.useCallback((id: string) => {
     setSelectedEventId(id);
   }, []);
@@ -700,6 +711,7 @@ export default function App() {
                         showCheckbox={true}
                         isChecked={selectedEventIds.has(event.id)}
                         onToggleSelect={handleToggleSelect}
+                        onClick={handleSelectEvent}
                         onClick={handleCardClick}
                         onDelete={handleDeleteEvent}
                         />
