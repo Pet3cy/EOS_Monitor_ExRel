@@ -1,14 +1,13 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { EventData, Priority, RepresentativeRole, Contact } from '../types';
 import { PriorityBadge } from './PriorityBadge';
 import { 
-  Calendar, MapPin, Building2, AlertCircle, Clock, FileText, 
-  UserPlus, Mail, MessageSquare, CheckCircle, Save, Mic, FileAudio, Loader2, Sparkles, Megaphone, Image as ImageIcon, X, Link as LinkIcon, ExternalLink, Briefcase, Trash2, Copy, FileCheck, Users, User, FileJson, FileSpreadsheet, Download, Plus, Search, Edit2, Repeat, Repeat1, CalendarPlus, ChevronDown, Target, Zap, ShieldAlert, ArrowRight, HardDrive
+  Calendar, MapPin, Building2, AlertCircle, FileText,
+  Mail, CheckCircle, Save, Loader2, Sparkles, X, ExternalLink, Briefcase, Trash2, Users, User, FileJson, Plus, Search, Edit2, CalendarPlus, Target, ShieldAlert, ArrowRight
 } from 'lucide-react';
-import { summarizeFollowUp, generateBriefing } from '../services/geminiService';
+import { generateBriefing } from '../services/gemmaService';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
-import { RelevantPapers } from './RelevantPapers';
 
 interface EventDetailProps {
   event: EventData;
@@ -26,7 +25,6 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   const [viewMode, setViewMode] = useState<ViewMode>('report');
   const [activeTab, setActiveTab] = useState<TabType>('context');
   const [isEditing, setIsEditing] = useState(false);
-  const [isSummarizing, setIsSummarizing] = useState(false);
   const [isGeneratingBrief, setIsGeneratingBrief] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
@@ -36,6 +34,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   // States for link editing
   const [isEditingRegLink, setIsEditingRegLink] = useState(false);
   const [isEditingProgLink, setIsEditingProgLink] = useState(false);
+  const [newActivity, setNewActivity] = useState('');
 
   // Refs for click outside
   const calendarMenuRef = useRef<HTMLDivElement>(null);
@@ -87,8 +86,8 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     try {
       const brief = await generateBriefing(localEvent);
       handleChange('followUp', 'briefing', brief);
-    } catch (e) {
-      alert("Failed to generate briefing.");
+    } catch (e: any) {
+      alert(e.message || "Failed to generate briefing.");
     } finally {
       setIsGeneratingBrief(false);
     }
@@ -111,11 +110,14 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     setContactSearch('');
   };
 
-  const filteredContacts = contacts.filter(c => 
-    c.name.toLowerCase().includes(contactSearch.toLowerCase()) ||
-    c.email.toLowerCase().includes(contactSearch.toLowerCase()) ||
-    c.organization.toLowerCase().includes(contactSearch.toLowerCase())
-  );
+  const filteredContacts = useMemo(() => {
+    const lowerSearch = contactSearch.toLowerCase();
+    return contacts.filter(c =>
+      c.name.toLowerCase().includes(lowerSearch) ||
+      c.email.toLowerCase().includes(lowerSearch) ||
+      c.organization.toLowerCase().includes(lowerSearch)
+    );
+  }, [contacts, contactSearch]);
 
   // --- Export Functions ---
 
@@ -128,30 +130,6 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', fileName);
     linkElement.click();
-  };
-
-  const handleSaveToDrive = async () => {
-    const dataStr = JSON.stringify(localEvent, null, 2);
-    const fileName = `${localEvent.analysis.eventName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`;
-    
-    try {
-      const res = await fetch('/api/drive/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          folderId: '1k8QPBJrdBFxNtjhi4h3KPV3aL68_0UUQ',
-          fileName,
-          content: dataStr,
-          mimeType: 'application/json'
-        })
-      });
-      
-      if (!res.ok) throw new Error('Upload failed');
-      alert('Successfully saved to Drive Database!');
-    } catch (err) {
-      console.error(err);
-      alert('Failed to save to Drive. Please ensure you are connected.');
-    }
   };
 
   const handleExportCSV = () => {
@@ -173,16 +151,16 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     const headers = Object.keys(flatEvent);
     const values = Object.values(flatEvent).map(v => `"${v.replace(/"/g, '""')}"`);
 
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + headers.join(",") + "\n" 
-      + values.join(",");
+    const csvContent = headers.join(",") + "\n" + values.join(",");
 
     const fileName = `${localEvent.analysis.eventName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.csv`;
-    const encodedUri = encodeURI(csvContent);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const linkElement = document.createElement("a");
-    linkElement.setAttribute("href", encodedUri);
+    linkElement.setAttribute("href", url);
     linkElement.setAttribute("download", fileName);
     linkElement.click();
+    URL.revokeObjectURL(url);
   };
 
   // --- Calendar Functions ---
@@ -234,19 +212,44 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   const handleDownloadICS = () => {
     const { start, end } = getEventDates();
     const { eventName, description, venue } = localEvent.analysis;
-    const icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//OBESSU//Event Analyzer//EN
-BEGIN:VEVENT
-UID:${crypto.randomUUID()}
-DTSTAMP:${formatDateForGoogle(new Date())}
-DTSTART:${formatDateForGoogle(start)}
-DTEND:${formatDateForGoogle(end)}
-SUMMARY:${eventName}
-DESCRIPTION:${description.replace(/\n/g, '\\n')}
-LOCATION:${venue}
-END:VEVENT
-END:VCALENDAR`;
+    
+    const escapeICS = (str: string) => 
+      str
+        .replace(/\\/g, '\\\\')
+        .replace(/;/g, '\\;')
+        .replace(/,/g, '\\,')
+        .replace(/\n/g, '\\n');
+
+    const foldLine = (line: string) => {
+      if (line.length <= 75) return line;
+      const chunks = [];
+      chunks.push(line.substring(0, 75));
+      let i = 75;
+      while (i < line.length) {
+        chunks.push(' ' + line.substring(i, i + 74));
+        i += 74;
+      }
+      return chunks.join('\r\n');
+    };
+
+    const icsLines = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//OBESSU//Event Analyzer//EN',
+      'BEGIN:VEVENT',
+      `UID:${crypto.randomUUID()}`,
+      `DTSTAMP:${formatDateForGoogle(new Date())}`,
+      `DTSTART:${formatDateForGoogle(start)}`,
+      `DTEND:${formatDateForGoogle(end)}`,
+      `SUMMARY:${escapeICS(eventName)}`,
+      `DESCRIPTION:${escapeICS(description)}`,
+      `LOCATION:${escapeICS(venue)}`,
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ];
+
+    const icsContent = icsLines.map(foldLine).join('\r\n');
+    
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
     const link = document.createElement('a');
     link.href = window.URL.createObjectURL(blob);
@@ -266,7 +269,7 @@ END:VCALENDAR`;
 
   const splitBriefing = (text: string) => {
     // Simple logic to extract potential "red lines" if the AI generated them
-    // This assumes the AI output format in geminiService
+    // This assumes the AI output format in gemmaService
     const parts = text.split(/Red Lines|RED LINES|Red lines/);
     if (parts.length > 1) {
         return {
@@ -316,7 +319,6 @@ END:VCALENDAR`;
                  {/* Shared Actions */}
                  <div className="flex items-center gap-1">
                     <button onClick={handleExportJSON} className="p-2 text-slate-400 hover:text-emerald-400 rounded-lg transition-colors" title="Export JSON"><FileJson size={16}/></button>
-                    <button onClick={handleSaveToDrive} className="p-2 text-slate-400 hover:text-emerald-400 rounded-lg transition-colors" title="Save to Drive Database"><HardDrive size={16}/></button>
                     <div className="relative" ref={calendarMenuRef}>
                         <button onClick={() => setShowCalendarMenu(!showCalendarMenu)} className="p-2 text-slate-400 hover:text-emerald-400 rounded-lg transition-colors" title="Calendar">
                             <CalendarPlus size={16}/>
@@ -483,14 +485,6 @@ END:VCALENDAR`;
                                             <span key={i} className="px-3 py-1 bg-slate-800 rounded-full text-xs font-bold text-slate-300 border border-slate-700">{act}</span>
                                         ))}
                                     </div>
-                                    <RelevantPapers 
-                                        folderId="1obdX4rkD2A0Cn_ayk3dtJqR96ASiGl3j" 
-                                        keywords={[
-                                            localEvent.analysis.theme, 
-                                            ...localEvent.analysis.eventName.split(' '),
-                                            ...localEvent.analysis.linkedActivities
-                                        ].filter(Boolean)}
-                                    />
                                 </div>
                             </div>
                          </div>
@@ -623,6 +617,42 @@ END:VCALENDAR`;
                                 />
                             </Section>
 
+                            <Section title="Tags">
+                                <div className="flex flex-wrap gap-2 mb-2">
+                                    {(localEvent.tags || []).map((tag, idx) => (
+                                        <span key={idx} className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold">
+                                            {tag}
+                                            <button 
+                                                onClick={() => {
+                                                    const newTags = (localEvent.tags || []).filter((_, i) => i !== idx);
+                                                    setLocalEvent(prev => ({ ...prev, tags: newTags }));
+                                                    setIsEditing(true);
+                                                }}
+                                                className="hover:text-blue-900"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        </span>
+                                    ))}
+                                </div>
+                                <input 
+                                    type="text"
+                                    placeholder="Add a tag and press Enter..."
+                                    className="w-full p-3 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-blue-500/20 outline-none"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                                            e.preventDefault();
+                                            const newTag = e.currentTarget.value.trim();
+                                            if (!(localEvent.tags || []).includes(newTag)) {
+                                                setLocalEvent(prev => ({ ...prev, tags: [...(prev.tags || []), newTag] }));
+                                                setIsEditing(true);
+                                            }
+                                            e.currentTarget.value = '';
+                                        }
+                                    }}
+                                />
+                            </Section>
+
                             {localEvent.analysis.threadSummary && (
                                 <Section title="Thread Summary (AI Generated)">
                                     <div className="w-full p-4 bg-blue-50 border border-blue-100 rounded-xl text-blue-900 leading-relaxed text-sm italic">
@@ -645,16 +675,59 @@ END:VCALENDAR`;
                                     </div>
                                 </Section>
                                 <Section title="Related Activities">
-                                     <div className="bg-white p-4 border border-slate-200 rounded-xl h-full">
+                                     <div className="bg-white p-4 border border-slate-200 rounded-xl h-full space-y-4">
                                         {localEvent.analysis.linkedActivities.length > 0 ? (
                                             <ul className="space-y-2">
                                                 {localEvent.analysis.linkedActivities.map((act, i) => (
-                                                    <li key={i} className="flex items-center gap-2 text-sm text-blue-700 font-medium">
-                                                        <ExternalLink size={14} /> {act}
+                                                    <li key={i} className="flex items-center justify-between gap-2 text-sm text-blue-700 font-medium group">
+                                                        <div className="flex items-center gap-2 truncate">
+                                                            <ExternalLink size={14} className="shrink-0" /> 
+                                                            <span className="truncate">{act}</span>
+                                                        </div>
+                                                        <button 
+                                                            onClick={() => {
+                                                                const updated = localEvent.analysis.linkedActivities.filter((_, index) => index !== i);
+                                                                handleChange('analysis', 'linkedActivities', updated);
+                                                            }}
+                                                            className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
                                                     </li>
                                                 ))}
                                             </ul>
                                         ) : <p className="text-slate-400 text-sm">No linked internal activities found.</p>}
+                                        
+                                        <div className="pt-3 border-t border-slate-100">
+                                            <div className="flex gap-2">
+                                                <input 
+                                                    type="text"
+                                                    placeholder="Add activity or position..."
+                                                    className="flex-1 text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500/20"
+                                                    value={newActivity}
+                                                    onChange={(e) => setNewActivity(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' && newActivity.trim()) {
+                                                            const updated = [...localEvent.analysis.linkedActivities, newActivity.trim()];
+                                                            handleChange('analysis', 'linkedActivities', updated);
+                                                            setNewActivity('');
+                                                        }
+                                                    }}
+                                                />
+                                                <button 
+                                                    onClick={() => {
+                                                        if (newActivity.trim()) {
+                                                            const updated = [...localEvent.analysis.linkedActivities, newActivity.trim()];
+                                                            handleChange('analysis', 'linkedActivities', updated);
+                                                            setNewActivity('');
+                                                        }
+                                                    }}
+                                                    className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                                >
+                                                    <Plus size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
                                      </div>
                                 </Section>
                             </div>
