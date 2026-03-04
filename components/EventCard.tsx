@@ -8,14 +8,15 @@ import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 interface EventCardProps {
   event: EventData;
   onClick: (id: string) => void;
-  onDelete: (id: string) => void;
+  onDelete: (event: EventData) => void;
   isSelected: boolean;
   showCheckbox?: boolean;
   isChecked?: boolean;
   onToggleSelect?: (id: string) => void;
 }
 
-export const EventCard: React.FC<EventCardProps> = React.memo(({
+// ⚡ Bolt: Wrapped in React.memo to prevent re-rendering when parent state changes (e.g. search term, selection)
+export const EventCard = React.memo(function EventCard({
   event, 
   onClick, 
   onDelete, 
@@ -23,7 +24,7 @@ export const EventCard: React.FC<EventCardProps> = React.memo(({
   showCheckbox,
   isChecked,
   onToggleSelect
-}) => {
+}: EventCardProps) {
   const { analysis } = event;
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -48,19 +49,18 @@ export const EventCard: React.FC<EventCardProps> = React.memo(({
     if (onToggleSelect) onToggleSelect(event.id);
   };
 
-  const handleCardClick = () => {
+  const handleClick = () => {
     onClick(event.id);
   };
 
   const handleConfirmDelete = () => {
-    onDelete(event.id);
-    setShowConfirm(false);
+    onDelete(event);
   };
 
   return (
     <>
       <div 
-        onClick={handleCardClick}
+        onClick={handleClick}
         className={`p-4 mb-3 rounded-lg border cursor-pointer transition-all hover:shadow-md group/card relative ${
           isSelected ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'border-slate-200 bg-white'
         }`}
