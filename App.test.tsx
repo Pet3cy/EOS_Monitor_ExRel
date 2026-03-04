@@ -5,10 +5,10 @@ import { Priority } from './types';
 
 // Mock child components
 vi.mock('./components/EventCard', () => ({
-  EventCard: ({ event, onSelect, onDelete, isSelected }: any) => (
+  EventCard: ({ event, onClick, onDelete, isSelected }: any) => (
     <div data-testid={`event-card-${event.id}`}>
-      <button onClick={() => onSelect(event.id)}>Select {event.analysis.eventName}</button>
-      <button onClick={() => onDelete(event.id)}>Delete {event.analysis.eventName}</button>
+      <button onClick={() => onClick()}>Select {event.analysis.eventName}</button>
+      <button onClick={() => onDelete()}>Delete {event.analysis.eventName}</button>
       <span>{isSelected ? 'Selected' : 'Not Selected'}</span>
     </div>
   ),
@@ -115,102 +115,9 @@ vi.mock('./components/ContactsView', () => ({
   ),
 }));
 
-vi.mock('./data/mockData', () => ({
-  MOCK_EVENTS: [
-    {
-      id: 'event-1',
-      createdAt: Date.now(),
-      originalText: 'Test event 1',
-      analysis: {
-        sender: 'Sender 1',
-        institution: 'Institution 1',
-        eventName: 'Event 1',
-        theme: 'Theme A',
-        description: 'Description 1',
-        priority: Priority.High,
-        priorityScore: 85,
-        priorityReasoning: 'High relevance',
-        date: '2026-06-15',
-        venue: 'Venue 1',
-        initialDeadline: '',
-        finalDeadline: '',
-        linkedActivities: [],
-      },
-      contact: {
-        name: '',
-        email: '',
-        role: '',
-        organization: '',
-        polContact: '',
-        repRole: 'Participant',
-        notes: '',
-      },
-      followUp: {
-        briefing: '',
-        postEventNotes: '',
-        status: 'To Respond',
-        prepResources: '',
-        commsPack: {
-          remarks: '',
-          representative: '',
-          datePlace: '',
-          additionalInfo: '',
-        },
-      },
-    },
-    {
-      id: 'event-2',
-      createdAt: Date.now(),
-      originalText: 'Test event 2',
-      analysis: {
-        sender: 'Sender 2',
-        institution: 'Institution 2',
-        eventName: 'Event 2',
-        theme: 'Theme B',
-        description: 'Description 2',
-        priority: Priority.Medium,
-        priorityScore: 60,
-        priorityReasoning: 'Medium relevance',
-        date: '2026-07-20',
-        venue: 'Venue 2',
-        initialDeadline: '',
-        finalDeadline: '',
-        linkedActivities: [],
-      },
-      contact: {
-        name: '',
-        email: '',
-        role: '',
-        organization: '',
-        polContact: '',
-        repRole: 'Participant',
-        notes: '',
-      },
-      followUp: {
-        briefing: '',
-        postEventNotes: '',
-        status: 'Completed - No follow up',
-        prepResources: '',
-        commsPack: {
-          remarks: '',
-          representative: '',
-          datePlace: '',
-          additionalInfo: '',
-        },
-      },
-    },
-  ],
-  MOCK_CONTACTS: [
-    {
-      id: 'contact-1',
-      name: 'Contact 1',
-      email: 'contact1@example.com',
-      role: 'Manager',
-      organization: 'Org 1',
-      notes: '',
-    },
-  ],
-}));
+// App.tsx defines MOCK_EVENTS and MOCK_CONTACTS inline (not imported).
+// The App has 5 events: e1-e5, all with active statuses (none completed/archived).
+// It also has 11 contacts: c20-c30.
 
 describe('App', () => {
   beforeEach(() => {
@@ -221,7 +128,7 @@ describe('App', () => {
     it('should render app header with title', () => {
       render(<App />);
 
-      expect(screen.getByText('OBESSU Event Flow')).toBeInTheDocument();
+      expect(screen.getByText('EventFlow AI')).toBeInTheDocument();
     });
 
     it('should render search input', () => {
@@ -261,7 +168,7 @@ describe('App', () => {
       const upcomingTab = screen.getByText('Upcoming');
       fireEvent.click(upcomingTab);
 
-      expect(screen.getByText('Active List (1)')).toBeInTheDocument();
+      expect(screen.getByText('Active List (5)')).toBeInTheDocument();
     });
 
     it('should switch to past view when clicked', () => {
@@ -270,7 +177,7 @@ describe('App', () => {
       const pastTab = screen.getByText('Past');
       fireEvent.click(pastTab);
 
-      expect(screen.getByText('Archived List (1)')).toBeInTheDocument();
+      expect(screen.getByText('Archived List (0)')).toBeInTheDocument();
     });
 
     it('should switch to contacts view when clicked', () => {
@@ -300,10 +207,10 @@ describe('App', () => {
       fireEvent.click(screen.getByText('Upcoming'));
 
       const searchInput = screen.getByPlaceholderText('Search events...');
-      fireEvent.change(searchInput, { target: { value: 'Event 1' } });
+      fireEvent.change(searchInput, { target: { value: 'Solidar' } });
 
-      expect(screen.getByText('Select Event 1')).toBeInTheDocument();
-      expect(screen.queryByText('Select Event 2')).not.toBeInTheDocument();
+      expect(screen.getByText('Select Solidar Webinar: Advocacy Campaigning')).toBeInTheDocument();
+      expect(screen.queryByText(/Select R2P/)).not.toBeInTheDocument();
     });
 
     it('should filter events by institution', () => {
@@ -312,10 +219,10 @@ describe('App', () => {
       fireEvent.click(screen.getByText('Upcoming'));
 
       const searchInput = screen.getByPlaceholderText('Search events...');
-      fireEvent.change(searchInput, { target: { value: 'Institution 1' } });
+      fireEvent.change(searchInput, { target: { value: 'Solidar' } });
 
-      expect(screen.getByText('Select Event 1')).toBeInTheDocument();
-      expect(screen.queryByText('Select Event 2')).not.toBeInTheDocument();
+      expect(screen.getByText('Select Solidar Webinar: Advocacy Campaigning')).toBeInTheDocument();
+      expect(screen.queryByText(/Select R2P/)).not.toBeInTheDocument();
     });
 
     it('should be case-insensitive', () => {
@@ -324,9 +231,9 @@ describe('App', () => {
       fireEvent.click(screen.getByText('Upcoming'));
 
       const searchInput = screen.getByPlaceholderText('Search events...');
-      fireEvent.change(searchInput, { target: { value: 'EVENT 1' } });
+      fireEvent.change(searchInput, { target: { value: 'SOLIDAR' } });
 
-      expect(screen.getByText('Select Event 1')).toBeInTheDocument();
+      expect(screen.getByText('Select Solidar Webinar: Advocacy Campaigning')).toBeInTheDocument();
     });
 
     it('should show all events when search is cleared', () => {
@@ -335,10 +242,10 @@ describe('App', () => {
       fireEvent.click(screen.getByText('Upcoming'));
 
       const searchInput = screen.getByPlaceholderText('Search events...');
-      fireEvent.change(searchInput, { target: { value: 'Event 1' } });
+      fireEvent.change(searchInput, { target: { value: 'Solidar' } });
       fireEvent.change(searchInput, { target: { value: '' } });
 
-      expect(screen.getByText('Active List (1)')).toBeInTheDocument();
+      expect(screen.getByText('Active List (5)')).toBeInTheDocument();
     });
   });
 
@@ -348,9 +255,9 @@ describe('App', () => {
 
       fireEvent.click(screen.getByText('Upcoming'));
 
-      // Only event-1 has 'To Respond' status (not completed)
-      expect(screen.getByText('Active List (1)')).toBeInTheDocument();
-      expect(screen.getByText('Select Event 1')).toBeInTheDocument();
+      // All 5 events have active statuses (none completed/archived)
+      expect(screen.getByText('Active List (5)')).toBeInTheDocument();
+      expect(screen.getByText('Select Solidar Webinar: Advocacy Campaigning')).toBeInTheDocument();
     });
 
     it('should show only past events in past view', () => {
@@ -358,9 +265,8 @@ describe('App', () => {
 
       fireEvent.click(screen.getByText('Past'));
 
-      // Only event-2 has 'Completed' status
-      expect(screen.getByText('Archived List (1)')).toBeInTheDocument();
-      expect(screen.getByText('Select Event 2')).toBeInTheDocument();
+      // No events have completed/archived status
+      expect(screen.getByText('Archived List (0)')).toBeInTheDocument();
     });
   });
 
@@ -407,7 +313,7 @@ describe('App', () => {
       fireEvent.click(screen.getByText('Complete Analysis'));
 
       // Should automatically switch to upcoming view
-      expect(screen.getByText('Active List (2)')).toBeInTheDocument();
+      expect(screen.getByText('Active List (6)')).toBeInTheDocument();
     });
 
     it('should select newly added event', () => {
@@ -437,19 +343,19 @@ describe('App', () => {
       render(<App />);
 
       fireEvent.click(screen.getByText('Upcoming'));
-      fireEvent.click(screen.getByText('Select Event 1'));
+      fireEvent.click(screen.getByText('Select Solidar Webinar: Advocacy Campaigning'));
 
       expect(screen.getByTestId('event-detail')).toBeInTheDocument();
-      expect(screen.getByText('Event 1')).toBeInTheDocument();
+      expect(screen.getByText('Solidar Webinar: Advocacy Campaigning')).toBeInTheDocument();
     });
 
     it('should mark selected event card as selected', () => {
       render(<App />);
 
       fireEvent.click(screen.getByText('Upcoming'));
-      fireEvent.click(screen.getByText('Select Event 1'));
+      fireEvent.click(screen.getByText('Select Solidar Webinar: Advocacy Campaigning'));
 
-      const eventCard = screen.getByTestId('event-card-event-1');
+      const eventCard = screen.getByTestId('event-card-e1');
       expect(eventCard).toHaveTextContent('Selected');
     });
   });
@@ -459,7 +365,7 @@ describe('App', () => {
       render(<App />);
 
       fireEvent.click(screen.getByText('Upcoming'));
-      fireEvent.click(screen.getByText('Select Event 1'));
+      fireEvent.click(screen.getByText('Select Solidar Webinar: Advocacy Campaigning'));
       fireEvent.click(screen.getByText('Update Event'));
 
       expect(screen.getByText('Updated Event')).toBeInTheDocument();
@@ -469,17 +375,17 @@ describe('App', () => {
       render(<App />);
 
       fireEvent.click(screen.getByText('Upcoming'));
-      fireEvent.click(screen.getByText('Delete Event 1'));
+      fireEvent.click(screen.getByText('Delete Solidar Webinar: Advocacy Campaigning'));
 
-      expect(screen.queryByText('Select Event 1')).not.toBeInTheDocument();
-      expect(screen.getByText('Active List (0)')).toBeInTheDocument();
+      expect(screen.queryByText('Select Solidar Webinar: Advocacy Campaigning')).not.toBeInTheDocument();
+      expect(screen.getByText('Active List (4)')).toBeInTheDocument();
     });
 
     it('should clear selection when deleting selected event', () => {
       render(<App />);
 
       fireEvent.click(screen.getByText('Upcoming'));
-      fireEvent.click(screen.getByText('Select Event 1'));
+      fireEvent.click(screen.getByText('Select Solidar Webinar: Advocacy Campaigning'));
       fireEvent.click(screen.getByText('Delete Event'));
 
       expect(screen.getByText('Select an event to view details')).toBeInTheDocument();
@@ -493,13 +399,13 @@ describe('App', () => {
       fireEvent.click(screen.getByText('Complete Analysis'));
 
       fireEvent.click(screen.getByText('Upcoming'));
-      fireEvent.click(screen.getByText('Select Event 1'));
+      fireEvent.click(screen.getByText('Select Solidar Webinar: Advocacy Campaigning'));
 
       // Delete the new event (not the selected one)
       fireEvent.click(screen.getByText('Delete New Event'));
 
-      // Event 1 should still be selected
-      expect(screen.getByText('Event 1')).toBeInTheDocument();
+      // Solidar event should still be selected
+      expect(screen.getByText('Solidar Webinar: Advocacy Campaigning')).toBeInTheDocument();
     });
   });
 
