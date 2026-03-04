@@ -20,6 +20,25 @@ interface EventDetailProps {
 type TabType = 'context' | 'logistics' | 'prep' | 'outcomes' | 'raw';
 type ViewMode = 'report' | 'editor';
 
+const escapeICS = (str: string) =>
+  str
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\n/g, '\\n');
+
+const foldLine = (line: string) => {
+  if (line.length <= 75) return line;
+  const chunks = [];
+  chunks.push(line.substring(0, 75));
+  let i = 75;
+  while (i < line.length) {
+    chunks.push(' ' + line.substring(i, i + 74));
+    i += 74;
+  }
+  return chunks.join('\r\n');
+};
+
 export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDelete, contacts = [], onViewContact }) => {
   const [localEvent, setLocalEvent] = useState<EventData>(event);
   const [viewMode, setViewMode] = useState<ViewMode>('report');
@@ -212,26 +231,6 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   const handleDownloadICS = () => {
     const { start, end } = getEventDates();
     const { eventName, description, venue } = localEvent.analysis;
-    
-    const escapeICS = (str: string) => 
-      str
-        .replace(/\\/g, '\\\\')
-        .replace(/;/g, '\\;')
-        .replace(/,/g, '\\,')
-        .replace(/\n/g, '\\n');
-
-    const foldLine = (line: string) => {
-      if (line.length <= 75) return line;
-      const chunks = [];
-      chunks.push(line.substring(0, 75));
-      let i = 75;
-      while (i < line.length) {
-        chunks.push(' ' + line.substring(i, i + 74));
-        i += 74;
-      }
-      return chunks.join('\r\n');
-    };
-
     const icsLines = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
