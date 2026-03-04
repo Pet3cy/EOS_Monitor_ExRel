@@ -270,6 +270,15 @@ export default function App() {
         if (!prev.has(id)) return prev;
         const next = new Set(prev);
         next.delete(id);
+  // ⚡ Bolt: Wrapped list item callbacks in useCallback to maintain referential equality,
+  // preventing EventCard components from re-rendering unless their own props change.
+  const handleDeleteEvent = React.useCallback((eventToDelete: EventData) => {
+    setDeletedEventsHistory({ events: [eventToDelete], timestamp: Date.now() });
+    setEvents(prev => prev.filter(e => e.id !== eventToDelete.id));
+    setSelectedEventId(prev => prev === eventToDelete.id ? null : prev);
+    setSelectedEventIds(prev => {
+        const next = new Set(prev);
+        next.delete(eventToDelete.id);
         return next;
     });
   }, []);
@@ -337,10 +346,11 @@ export default function App() {
   };
 
   const filteredEvents = useMemo(() => {
+    const searchLower = searchTerm.toLowerCase();
     let result = events.filter(e => {
       const matchesSearch = 
-        e.analysis.eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        e.analysis.institution.toLowerCase().includes(searchTerm.toLowerCase());
+        e.analysis.eventName.toLowerCase().includes(searchLower) ||
+        e.analysis.institution.toLowerCase().includes(searchLower);
       
       if (!matchesSearch) return false;
 
@@ -377,6 +387,7 @@ export default function App() {
 
   // Bulk Actions
   const handleToggleSelect = useCallback((id: string) => {
+  const handleToggleSelect = React.useCallback((id: string) => {
     setSelectedEventIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -386,6 +397,7 @@ export default function App() {
   }, []);
 
   const handleSelectEvent = useCallback((id: string) => {
+  const handleCardClick = React.useCallback((id: string) => {
     setSelectedEventId(id);
   }, []);
 
@@ -473,7 +485,7 @@ export default function App() {
               setEvents(prev => {
                 const existingIds = new Set(prev.map(e => e.id));
                 const uniqueNewEvents = newEvents.filter(e => !existingIds.has(e.id));
-                return [...uniqueNewEvents, ...prev];
+                return [...prev, ...uniqueNewEvents];
               });
             }} />
             <div className="relative">
@@ -700,6 +712,7 @@ export default function App() {
                         isChecked={selectedEventIds.has(event.id)}
                         onToggleSelect={handleToggleSelect}
                         onClick={handleSelectEvent}
+                        onClick={handleCardClick}
                         onDelete={handleDeleteEvent}
                         />
                     ))
@@ -710,6 +723,7 @@ export default function App() {
                 <section className="flex-1 p-6 bg-slate-50/50 overflow-hidden">
                 {selectedEvent && filteredEvents.some(e => e.id === selectedEvent.id) ? (
                     <EventDetail 
+                        key={selectedEvent.id}
                         event={selectedEvent} 
                         onUpdate={handleUpdateEvent}
                         onDelete={() => handleDeleteEvent(selectedEvent)}

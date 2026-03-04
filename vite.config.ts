@@ -13,6 +13,9 @@ export default defineConfig(({ mode }) => {
         outDir: 'Frontend/build',
       },
       plugins: [react()],
+      build: {
+        outDir: 'Frontend/build'
+      },
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
@@ -21,6 +24,9 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
+      },
+      build: {
+        outDir: 'Frontend/build'
       }
     };
 });
