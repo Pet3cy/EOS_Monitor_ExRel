@@ -76,8 +76,6 @@ async function startServer() {
   });
 
   app.get(["/auth/callback", "/auth/callback/"], async (req, res) => {
-    const { code } = req.query;
-    const safeCode = typeof code === 'string' ? code.replace(/[^a-zA-Z0-9/_\-\.=]/g, '') : '';
     const origin = process.env.APP_URL || 'http://localhost:3000';
     
     res.send(`
@@ -85,8 +83,10 @@ async function startServer() {
         <body>
           <script>
             if (window.opener) {
+              const urlParams = new URLSearchParams(window.location.search);
+              const authCode = urlParams.get('code');
               window.opener.postMessage(
-                { type: 'OAUTH_AUTH_SUCCESS', code: ${JSON.stringify(safeCode)} },
+                { type: 'OAUTH_AUTH_SUCCESS', code: authCode },
                 ${JSON.stringify(origin)}
               );
               window.close();
