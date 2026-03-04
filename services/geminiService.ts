@@ -130,7 +130,7 @@ export interface AnalysisInput {
 }
 
 
-export const safeParseJSON = (text: string): unknown => {
+export const safeParseJSON = (text: string): any => {
   const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
   try {
     const data = JSON.parse(cleanedText);
@@ -197,7 +197,7 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
   });
 
   const text = response.text || "{}";
-  const data = safeParseJSON(text) as Partial<AnalysisResult>;
+  const data = safeParseJSON(text);
   
   return {
     ...data,
