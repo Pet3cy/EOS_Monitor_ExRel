@@ -3,7 +3,15 @@
 import { AnalysisResult, Priority } from '../types';
 import { GoogleGenAI, Type } from '@google/genai';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY });
+const resolvedApiKey =
+  import.meta.env?.VITE_GEMINI_API_KEY ||
+  process.env?.GEMINI_API_KEY;
+
+if (!resolvedApiKey) {
+  throw new Error('Missing Gemini API key. Set VITE_GEMINI_API_KEY or GEMINI_API_KEY environment variable.');
+}
+
+const ai = new GoogleGenAI({ apiKey: resolvedApiKey });
 
 const OBESSU_CONTEXT = `ORGANIZATIONAL STRUCTURE & PORTFOLIOS (2026):
 BOARD MEMBERS:
