@@ -130,7 +130,7 @@ export interface AnalysisInput {
 }
 
 
-export const safeParseJSON = (text: string): any => {
+export const safeParseJSON = (text: string): unknown => {
   const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
   try {
     const data = JSON.parse(cleanedText);
