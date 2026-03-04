@@ -261,19 +261,25 @@ export default function App() {
     setEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e));
   };
 
+  const eventsRef = useRef(events);
+  useEffect(() => {
+    eventsRef.current = events;
+  }, [events]);
+
   const handleDeleteEvent = React.useCallback((id: string) => {
-    const eventToDelete = events.find(e => e.id === id);
+    const currentEvents = eventsRef.current;
+    const eventToDelete = currentEvents.find(e => e.id === id);
     if (eventToDelete) {
         setDeletedEventsHistory({ events: [eventToDelete], timestamp: Date.now() });
         setEvents(prev => prev.filter(e => e.id !== id));
-        if (selectedEventId === id) setSelectedEventId(null);
+        setSelectedEventId(prevSelectedId => prevSelectedId === id ? null : prevSelectedId);
         setSelectedEventIds(prev => {
             const next = new Set(prev);
             next.delete(id);
             return next;
         });
     }
-  }, [events, selectedEventId]);
+  }, []);
 
   const handleUpdateContact = (updatedContact: Contact) => {
     setContacts(prev => {
