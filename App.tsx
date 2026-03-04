@@ -337,10 +337,11 @@ export default function App() {
   };
 
   const filteredEvents = useMemo(() => {
+    const searchLower = searchTerm.toLowerCase();
     let result = events.filter(e => {
       const matchesSearch = 
-        e.analysis.eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        e.analysis.institution.toLowerCase().includes(searchTerm.toLowerCase());
+        e.analysis.eventName.toLowerCase().includes(searchLower) ||
+        e.analysis.institution.toLowerCase().includes(searchLower);
       
       if (!matchesSearch) return false;
 
