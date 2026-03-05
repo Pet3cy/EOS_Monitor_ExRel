@@ -196,7 +196,7 @@ describe('EventCard', () => {
       render(<EventCard {...defaultProps} event={event} />);
 
       const statusElement = screen.getByText('Not Relevant');
-      expect(statusElement).toHaveClass('text-gray-400');
+      expect(statusElement).toHaveClass('text-slate-400');
     });
 
     it('should apply blue color for To Respond status', () => {
