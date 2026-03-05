@@ -496,9 +496,11 @@ describe('App', () => {
       fireEvent.click(screen.getByText('Upcoming'));
       fireEvent.click(screen.getByText('Select Event 1'));
 
+      fireEvent.click(screen.getByText('Select Solidar Webinar: Advocacy Campaigning'));
+
       // Search for the selected event
       const searchInput = screen.getByPlaceholderText('Search events...');
-      fireEvent.change(searchInput, { target: { value: 'Event 1' } });
+      fireEvent.change(searchInput, { target: { value: 'Solidar' } });
 
       // Detail should still be visible
       expect(screen.getByTestId('event-detail')).toBeInTheDocument();
