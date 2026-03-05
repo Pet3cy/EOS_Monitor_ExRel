@@ -138,10 +138,10 @@ describe('analyzeInvitation', () => {
       });
   });
 
-  it('should throw error when API_KEY is missing', async () => {
-    delete process.env.API_KEY;
-    const input = { text: 'Unique Test Input For API Key Check' }; // Unique input to bypass cache
-    await expect(analyzeInvitation(input)).rejects.toThrow('API_KEY environment variable is missing');
+  it('should handle API errors gracefully', async () => {
+    generateContentMock.mockRejectedValue(new Error('API request failed'));
+    const input = { text: 'Unique Test Input For API Error Check' };
+    await expect(analyzeInvitation(input)).rejects.toThrow('API request failed');
   });
 
   it('should handle combined text and fileData input by prioritizing fileData', async () => {
@@ -232,7 +232,7 @@ describe('analyzeInvitation', () => {
     expect(Array.isArray(result.linkedActivities)).toBe(true);
   });
 
-  it('should cache results to avoid duplicate API calls', async () => {
+  it('should make separate API calls for identical inputs (no caching)', async () => {
     const mockResponseData = {
       sender: 'Cached Sender',
       priority: 'High',
@@ -249,10 +249,9 @@ describe('analyzeInvitation', () => {
       text: JSON.stringify(mockResponseData),
     });
 
-    const input = { text: 'This should be cached test input unique identifier 12345' };
+    const input = { text: 'This should not be cached test input unique identifier 12345' };
 
     // First call
-    const result1 = await analyzeInvitation(input);
     const result1 = await analyzeInvitation(input);
     expect(generateContentMock).toHaveBeenCalledTimes(1);
 

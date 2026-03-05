@@ -80,7 +80,12 @@ describe('EventDetail', () => {
     onDelete: vi.fn(),
     contacts: mockContacts,
     onViewContact: vi.fn(),
-    onAddContact: vi.fn(),
+  };
+
+  // Helper to switch to editor mode (component defaults to 'report' mode)
+  const switchToEditor = () => {
+    const editorButton = screen.getByText('Editor');
+    fireEvent.click(editorButton);
   };
 
   beforeEach(() => {
@@ -103,8 +108,9 @@ describe('EventDetail', () => {
       expect(screen.getByText('High Priority')).toBeInTheDocument();
     });
 
-    it('should render all tabs', () => {
+    it('should render all tabs in editor mode', () => {
       render(<EventDetail {...defaultProps} />);
+      switchToEditor();
 
       expect(screen.getByText('Context & Analysis')).toBeInTheDocument();
       expect(screen.getByText('Logistics & Links')).toBeInTheDocument();

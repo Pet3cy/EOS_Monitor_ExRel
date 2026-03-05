@@ -38,7 +38,7 @@ describe('UploadModal', () => {
       render(<UploadModal {...defaultProps} />);
 
       expect(screen.getByText('Process Invitation')).toBeInTheDocument();
-      expect(screen.getByText('AI-powered extraction for IT & Secretariat')).toBeInTheDocument();
+      expect(screen.getByText('Powered by Gemma-2-27b-it • Optimized for Email Parsing')).toBeInTheDocument();
     });
 
     it('should render mode toggle buttons', () => {
