@@ -483,7 +483,7 @@ describe('App', () => {
 
       fireEvent.click(screen.getByText('Upcoming'));
       fireEvent.click(screen.getByText('Select Event 1'));
-
+      fireEvent.click(screen.getByText('Select Solidar Webinar: Advocacy Campaigning'));
       // Switch to past view where Event 1 is not shown
       fireEvent.click(screen.getByText('Past'));
 
