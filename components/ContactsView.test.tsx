@@ -47,8 +47,8 @@ describe('ContactsView Filtering', () => {
       />
     );
 
-    const searchInputs = screen.getAllByPlaceholderText('Search people...');
-    searchInputs.forEach(input => fireEvent.change(input, { target: { value: 'TechCorp' } }));
+    const searchInput = screen.getByPlaceholderText('Search people...');
+    fireEvent.change(searchInput, { target: { value: 'TechCorp' } });
 
     expect(screen.getAllByText('Alice Smith')[0]).toBeInTheDocument();
     expect(screen.getAllByText('Charlie Brown')[0]).toBeInTheDocument();
