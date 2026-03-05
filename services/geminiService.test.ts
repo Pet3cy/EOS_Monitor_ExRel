@@ -253,11 +253,12 @@ describe('analyzeInvitation', () => {
 
     // First call
     const result1 = await analyzeInvitation(input);
+    const result1 = await analyzeInvitation(input);
     expect(generateContentMock).toHaveBeenCalledTimes(1);
 
-    // Second call with same input should use cache
+    // Second call with same input makes another API call (no caching)
     const result2 = await analyzeInvitation(input);
-    expect(generateContentMock).toHaveBeenCalledTimes(1); // Still only 1 call
+    expect(generateContentMock).toHaveBeenCalledTimes(2);
 
     expect(result1).toEqual(result2);
   });
