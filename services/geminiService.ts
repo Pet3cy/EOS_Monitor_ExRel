@@ -21,6 +21,22 @@ const CACHE_PREFIX = 'gemini_cache_v2_';
 const MAX_CACHE_SIZE = 50;
 const MEMORY_CACHE = new Map<string, AnalysisResult>();
 
+// Purge any legacy sessionStorage entries from before in-memory-only caching
+if (typeof sessionStorage !== 'undefined') {
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      if (key?.startsWith(CACHE_PREFIX)) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(k => sessionStorage.removeItem(k));
+  } catch {
+    // Ignore errors during cleanup
+  }
+}
+
 const generateCacheKey = async (input: AnalysisInput): Promise<string> => {
   const content = input.fileData
     ? `${input.fileData.mimeType}:${input.fileData.data}`
