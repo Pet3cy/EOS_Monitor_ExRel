@@ -363,8 +363,7 @@ describe('EventDetail', () => {
 
       render(<EventDetail {...defaultProps} />);
 
-      const jsonButton = screen.getByTitle('Export as JSON');
-      fireEvent.click(jsonButton);
+      const jsonButton = screen.getByTitle('Export JSON');
 
       expect(createElementSpy).toHaveBeenCalledWith('a');
     });
