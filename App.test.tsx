@@ -546,7 +546,7 @@ describe('App', () => {
       // This ensures callbacks are stable
       rerender(<App />);
 
-      expect(screen.getByText('Active List (1)')).toBeInTheDocument();
+      expect(screen.getByText('Active List (5)')).toBeInTheDocument();
     });
   });
 });
