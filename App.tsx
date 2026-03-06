@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Plus, Search, Layout, Filter, CalendarClock, History, PieChart, Users, Calendar as CalendarIcon, CheckSquare, Trash2, CheckCircle2, ArrowUpDown, Undo2, X } from 'lucide-react';
+import { Plus, Search, Layout, Filter, CalendarClock, History, PieChart, Users, Calendar as CalendarIcon, CheckSquare, Trash2, CheckCircle2, ArrowUpDown, Undo2, X, Mail } from 'lucide-react';
 import { EventData, Priority, Contact } from './types';
 import { EventCard } from './components/EventCard';
 import { EventDetail } from './components/EventDetail';
@@ -340,10 +340,11 @@ export default function App() {
   };
 
   const filteredEvents = useMemo(() => {
+    const lowerSearchTerm = searchTerm.toLowerCase();
     let result = events.filter(e => {
       const matchesSearch = 
-        e.analysis.eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        e.analysis.institution.toLowerCase().includes(searchTerm.toLowerCase());
+        e.analysis.eventName.toLowerCase().includes(lowerSearchTerm) ||
+        e.analysis.institution.toLowerCase().includes(lowerSearchTerm);
       
       if (!matchesSearch) return false;
 

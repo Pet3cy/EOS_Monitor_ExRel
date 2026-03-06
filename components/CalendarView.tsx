@@ -57,6 +57,21 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
         return [];
     }
 
+    // Pre-filter events and parse their dates once to improve performance
+    const preFilteredEvents = events.reduce((acc, event) => {
+      const matchesPriority = priorityFilter === 'All' || event.analysis.priority === priorityFilter;
+      const matchesTheme = themeFilter === 'All' || event.analysis.theme === themeFilter;
+      const matchesContact = contactFilter === 'All' || event.contact.name === contactFilter;
+
+      if (matchesPriority && matchesTheme && matchesContact) {
+        acc.push({
+          event,
+          time: new Date(event.analysis.date).getTime()
+        });
+      }
+      return acc;
+    }, [] as Array<{event: EventData, time: number}>);
+
     const yearStart = new Date(rangeStart.getFullYear(), 0, 1);
     const dayOfWeek = yearStart.getDay();
     const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
@@ -72,15 +87,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
       // Filter weeks that overlap with the user's selected date range
       if (weekEnd < rangeStart || weekStart > rangeEnd) continue;
 
-      // Find events in this week that match all filters
-      const weekEvents = events.filter(event => {
-        const eventDate = new Date(event.analysis.date);
-        const matchesDate = eventDate >= weekStart && eventDate <= weekEnd;
-        const matchesPriority = priorityFilter === 'All' || event.analysis.priority === priorityFilter;
-        const matchesTheme = themeFilter === 'All' || event.analysis.theme === themeFilter;
-        const matchesContact = contactFilter === 'All' || event.contact.name === contactFilter;
-        return matchesDate && matchesPriority && matchesTheme && matchesContact;
-      });
+      // Find events in this week
+      const weekStartMs = weekStart.getTime();
+      const weekEndMs = weekEnd.getTime();
+      const weekEvents = preFilteredEvents
+        .filter(item => item.time >= weekStartMs && item.time <= weekEndMs)
+        .map(item => item.event);
 
       const hasMatches = weekEvents.length > 0;
       if (!hasMatches && (priorityFilter !== 'All' || themeFilter !== 'All' || contactFilter !== 'All')) continue;
