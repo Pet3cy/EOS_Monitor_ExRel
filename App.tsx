@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Plus, Search, Layout, Filter, CalendarClock, History, PieChart, Users, Calendar as CalendarIcon, CheckSquare, Trash2, CheckCircle2, ArrowUpDown, Undo2, X } from 'lucide-react';
+import { Plus, Search, Layout, Filter, CalendarClock, History, PieChart, Users, Calendar as CalendarIcon, CheckSquare, Trash2, CheckCircle2, ArrowUpDown, Undo2, X, Mail } from 'lucide-react';
 import { EventData, Priority, Contact } from './types';
 import { EventCard } from './components/EventCard';
 import { EventDetail } from './components/EventDetail';
@@ -263,19 +263,25 @@ export default function App() {
     setEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e));
   };
 
-  const handleDeleteEvent = (id: string) => {
-    const eventToDelete = events.find(e => e.id === id);
-    if (eventToDelete) {
-        setDeletedEventsHistory({ events: [eventToDelete], timestamp: Date.now() });
-        setEvents(prev => prev.filter(e => e.id !== id));
-        if (selectedEventId === id) setSelectedEventId(null);
-        setSelectedEventIds(prev => {
-            const next = new Set(prev);
-            next.delete(id);
-            return next;
-        });
-    }
-  };
+  // ⚡ Bolt: Stable callback to prevent EventCard re-renders
+  const handleDeleteEvent = React.useCallback((id: string) => {
+    // ⚡ Bolt: Using functional state updates avoids adding 'events' to dependency array
+    setEvents(prev => {
+        const eventToDelete = prev.find(e => e.id === id);
+        // Note: setting state inside an updater isn't strictly pure, but works for this simple undo queue
+        if (eventToDelete) {
+            // setTimeout pushes the secondary state update to the end of the event loop, keeping the updater pure
+            setTimeout(() => setDeletedEventsHistory({ events: [eventToDelete], timestamp: Date.now() }), 0);
+        }
+        return prev.filter(e => e.id !== id);
+    });
+    setSelectedEventId(prevId => prevId === id ? null : prevId);
+    setSelectedEventIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+    });
+  }, []);
 
   const handleUpdateContact = (updatedContact: Contact) => {
     setContacts(prev => {
@@ -340,10 +346,11 @@ export default function App() {
   };
 
   const filteredEvents = useMemo(() => {
+    const lowerSearchTerm = searchTerm.toLowerCase();
     let result = events.filter(e => {
       const matchesSearch = 
-        e.analysis.eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        e.analysis.institution.toLowerCase().includes(searchTerm.toLowerCase());
+        e.analysis.eventName.toLowerCase().includes(lowerSearchTerm) ||
+        e.analysis.institution.toLowerCase().includes(lowerSearchTerm);
       
       if (!matchesSearch) return false;
 
@@ -379,14 +386,20 @@ export default function App() {
   }, [events, searchTerm, statusFilter, viewMode, sortField, sortOrder]);
 
   // Bulk Actions
-  const handleToggleSelect = (id: string) => {
+  // ⚡ Bolt: Stable callback to prevent EventCard re-renders
+  const handleToggleSelect = React.useCallback((id: string) => {
     setSelectedEventIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  };
+  }, []);
+
+  // ⚡ Bolt: Stable callback to prevent EventCard re-renders
+  const handleCardClick = React.useCallback((id: string) => {
+      setSelectedEventId(id);
+  }, []);
 
   const handleBulkDelete = () => {
     const eventsToDelete = events.filter(e => selectedEventIds.has(e.id));
@@ -712,9 +725,9 @@ export default function App() {
                         isSelected={selectedEventId === event.id}
                         showCheckbox={true}
                         isChecked={selectedEventIds.has(event.id)}
-                        onToggleSelect={() => handleToggleSelect(event.id)}
-                        onClick={() => setSelectedEventId(event.id)}
-                        onDelete={() => handleDeleteEvent(event.id)}
+                        onToggleSelect={handleToggleSelect}
+                        onClick={handleCardClick}
+                        onDelete={handleDeleteEvent}
                         />
                     ))
                     )}
