@@ -204,7 +204,7 @@ describe('EventCard', () => {
       followUp: { ...mockEvent.followUp, status: 'Not Relevant' as const }
     };
     render(<EventCard {...defaultProps} event={eventWithNotRelevantStatus} />);
-    const statusElement = screen.getByText('Not Relevant');
+    expect(statusElement).toHaveClass('text-slate-400');
     expect(statusElement).toHaveClass('text-gray-400');
   });
 
