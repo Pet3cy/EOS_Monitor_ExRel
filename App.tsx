@@ -264,17 +264,10 @@ export default function App() {
   };
 
   // ⚡ Bolt: Stable callback to prevent EventCard re-renders
-  const handleDeleteEvent = React.useCallback((id: string) => {
-    // ⚡ Bolt: Using functional state updates avoids adding 'events' to dependency array
-    setEvents(prev => {
-        const eventToDelete = prev.find(e => e.id === id);
-        // Note: setting state inside an updater isn't strictly pure, but works for this simple undo queue
-        if (eventToDelete) {
-            // setTimeout pushes the secondary state update to the end of the event loop, keeping the updater pure
-            setTimeout(() => setDeletedEventsHistory({ events: [eventToDelete], timestamp: Date.now() }), 0);
-        }
-        return prev.filter(e => e.id !== id);
-    });
+  const handleDeleteEvent = React.useCallback((eventToDelete: EventData) => {
+    const id = eventToDelete.id;
+    setDeletedEventsHistory({ events: [eventToDelete], timestamp: Date.now() });
+    setEvents(prev => prev.filter(e => e.id !== id));
     setSelectedEventId(prevId => prevId === id ? null : prevId);
     setSelectedEventIds(prev => {
         const next = new Set(prev);
@@ -383,7 +376,7 @@ export default function App() {
     });
 
     return result;
-  }, [events, searchTerm, statusFilter, viewMode, sortField, sortOrder]);
+  }, [events, searchTerm, statusFilter, repRoleFilter, showPastEvents, viewMode, sortField, sortOrder]);
 
   // Bulk Actions
   // ⚡ Bolt: Stable callback to prevent EventCard re-renders
@@ -739,7 +732,7 @@ export default function App() {
                     <EventDetail 
                         event={selectedEvent} 
                         onUpdate={handleUpdateEvent}
-                        onDelete={() => handleDeleteEvent(selectedEvent.id)}
+                        onDelete={() => handleDeleteEvent(selectedEvent)}
                         contacts={contacts}
                         onViewContact={handleViewContactProfile}
                     />

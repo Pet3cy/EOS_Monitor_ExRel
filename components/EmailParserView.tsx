@@ -113,8 +113,8 @@ export const EmailParserView: React.FC<EmailParserViewProps> = ({ onEventsExtrac
                   event={event} 
                   isSelected={false}
                   onClick={() => {}}
-                  onDelete={() => {
-                    setExtractedEvents(prev => prev.filter(e => e.id !== event.id));
+                  onDelete={(deletedEvent) => {
+                    setExtractedEvents(prev => prev.filter(e => e.id !== deletedEvent.id));
                   }}
                 />
               ))
