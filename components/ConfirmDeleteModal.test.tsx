@@ -159,7 +159,6 @@ describe('ConfirmDeleteModal', () => {
 
   it('prevents body scroll when modal is open', () => {
     render(<ConfirmDeleteModal {...defaultProps} />);
-    const backdrop = document.querySelector('.fixed.inset-0');
-    expect(backdrop).toBeInTheDocument();
+    expect(document.body).toHaveStyle({ overflow: 'hidden' });
   });
 });
