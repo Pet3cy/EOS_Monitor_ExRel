@@ -151,7 +151,7 @@ describe('EventCard', () => {
     render(<EventCard {...defaultProps} />);
     const deleteButton = screen.getByTitle('Delete Event');
     fireEvent.click(deleteButton);
-    expect(defaultProps.onSelect).not.toHaveBeenCalled();
+    expect(defaultProps.onClick).not.toHaveBeenCalled();
   });
 
   it('calls onDelete when confirmation is accepted', () => {
