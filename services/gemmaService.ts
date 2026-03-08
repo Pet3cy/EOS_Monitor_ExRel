@@ -2,6 +2,7 @@
 // src/services/gemmaService.ts
 import { AnalysisResult, Priority } from '../types';
 import { GoogleGenAI, Type } from '@google/genai';
+import { extractJSON } from './jsonUtils';
 
 const resolvedApiKey =
   import.meta.env?.VITE_GEMINI_API_KEY ||
@@ -43,19 +44,8 @@ Use the following organizational context to determine relevance and assign prior
 
 ${OBESSU_CONTEXT}`;
 
-export function extractJSON(rawText: string): unknown {
-  try { return JSON.parse(rawText.trim()); } catch {}
-  
-  const stripped = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-  try { return JSON.parse(stripped); } catch {}
-  
-  const match = rawText.match(/\{[\s\S]*\}/);
-  if (match) {
-    try { return JSON.parse(match[0]); } catch {}
-  }
-  
-  throw new Error('Could not extract valid JSON from model response. Raw: ' + rawText.substring(0, 200));
-}
+// Re-export for backward compatibility
+export { extractJSON } from './jsonUtils';
 
 export interface AnalysisInput {
   text?: string;

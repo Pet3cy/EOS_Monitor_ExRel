@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractJSON } from './gemmaService.ts';
+import { extractJSON } from './jsonUtils';
 
 describe('extractJSON', () => {
   it('should extract plain JSON', () => {
