@@ -384,7 +384,7 @@ export default function App() {
     });
 
     return result;
-  }, [events, searchTerm, statusFilter, viewMode, sortField, sortOrder]);
+  }, [events, searchTerm, statusFilter, repRoleFilter, showPastEvents, viewMode, sortField, sortOrder]);
 
   // Bulk Actions
   // ⚡ Bolt: Memoize selection handlers to prevent EventCard re-renders
@@ -725,7 +725,7 @@ export default function App() {
                         key={selectedEvent.id}
                         event={selectedEvent} 
                         onUpdate={handleUpdateEvent}
-                        onDelete={() => handleDeleteEvent(selectedEvent)}
+                        onDelete={() => handleDeleteEvent(selectedEvent.id)}
                         contacts={contacts}
                         onViewContact={handleViewContactProfile}
                     />
