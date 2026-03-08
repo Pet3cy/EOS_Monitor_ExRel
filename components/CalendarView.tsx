@@ -75,6 +75,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
       }
     }
 
+    // Calculate first Monday of the year for week numbering
+    const yearStart = new Date(rangeStart.getFullYear(), 0, 1);
+    const dayOfWeek = yearStart.getDay();
+    const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const firstMonday = new Date(yearStart.getFullYear(), 0, 1 + daysToMonday);
+
     for (let i = 0; i < 53; i++) { // Some years have 53 weeks
       const weekStart = new Date(firstMonday);
       weekStart.setDate(firstMonday.getDate() + i * 7);
