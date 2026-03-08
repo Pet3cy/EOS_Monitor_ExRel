@@ -52,10 +52,6 @@ vi.mock('./components/ContactsView', () => ({
   ContactsView: () => <div data-testid="contacts-view">Contacts View</div>
 }));
 
-vi.mock('./components/CalendarSync', () => ({
-  CalendarSync: ({ onEventsSynced }: any) => <div data-testid="calendar-sync">Calendar Sync</div>
-}));
-
 describe('App', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -63,7 +59,7 @@ describe('App', () => {
 
   it('renders app header', () => {
     render(<App />);
-    expect(screen.getByText('EventFlow AI')).toBeInTheDocument();
+    expect(screen.getByText('OBESSU Event Flow')).toBeInTheDocument();
   });
 
   it('renders search input', () => {
