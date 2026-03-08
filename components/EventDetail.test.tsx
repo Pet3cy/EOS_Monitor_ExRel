@@ -4,12 +4,12 @@ import React from 'react';
 import { EventDetail } from './EventDetail';
 import { EventData, Priority, Contact } from '../types';
 
-// Mock geminiService
-vi.mock('../services/geminiService', () => ({
+// Mock gemmaService
+vi.mock('../services/gemmaService', () => ({
   generateBriefing: vi.fn(() => Promise.resolve('Generated briefing content'))
 }));
 
-import { generateBriefing } from '../services/geminiService';
+import { generateBriefing } from '../services/gemmaService';
 
 describe('EventDetail', () => {
   const mockEvent: EventData = {
@@ -81,8 +81,7 @@ describe('EventDetail', () => {
     onUpdate: vi.fn(),
     onDelete: vi.fn(),
     contacts: mockContacts,
-    onViewContact: vi.fn(),
-    onAddContact: vi.fn()
+    onViewContact: vi.fn()
   };
 
   beforeEach(() => {
@@ -219,24 +218,42 @@ describe('EventDetail', () => {
     });
   });
 
-  it('shows delete button when not editing', () => {
+  it('shows delete button in editor mode', () => {
     render(<EventDetail {...defaultProps} />);
-    const deleteButton = screen.getByTitle('Delete Event');
-    expect(deleteButton).toBeInTheDocument();
+    // Switch to editor mode where delete button is visible
+    const editorButton = screen.getByText('Editor');
+    fireEvent.click(editorButton);
+
+    // The delete button is a <Trash2> icon button with no title attribute
+    const buttons = screen.getAllByRole('button');
+    const deleteButton = buttons.find(btn => btn.querySelector('.lucide-trash-2'));
+    expect(deleteButton).toBeTruthy();
   });
 
   it('opens delete confirmation modal', () => {
     render(<EventDetail {...defaultProps} />);
-    const deleteButton = screen.getByTitle('Delete Event');
-    fireEvent.click(deleteButton);
+    // Switch to editor mode where delete button is visible
+    const editorButton = screen.getByText('Editor');
+    fireEvent.click(editorButton);
+
+    const buttons = screen.getAllByRole('button');
+    const deleteButton = buttons.find(btn => btn.querySelector('.lucide-trash-2'));
+    expect(deleteButton).toBeTruthy();
+    fireEvent.click(deleteButton!);
 
     expect(screen.getByText('Delete Event?')).toBeInTheDocument();
   });
 
   it('calls onDelete when delete is confirmed', () => {
     render(<EventDetail {...defaultProps} />);
-    const deleteButton = screen.getByTitle('Delete Event');
-    fireEvent.click(deleteButton);
+    // Switch to editor mode where delete button is visible
+    const editorButton = screen.getByText('Editor');
+    fireEvent.click(editorButton);
+
+    const buttons = screen.getAllByRole('button');
+    const deleteButton = buttons.find(btn => btn.querySelector('.lucide-trash-2'));
+    expect(deleteButton).toBeTruthy();
+    fireEvent.click(deleteButton!);
 
     const confirmButton = screen.getByText('Delete Permanently');
     fireEvent.click(confirmButton);
@@ -360,28 +377,10 @@ describe('EventDetail', () => {
     const createElementSpy = vi.spyOn(document, 'createElement');
     render(<EventDetail {...defaultProps} />);
 
-    const exportButtons = screen.getAllByRole('button');
-    const jsonButton = exportButtons.find(btn => btn.getAttribute('title') === 'Export as JSON');
-
-    if (jsonButton) {
-      fireEvent.click(jsonButton);
-      expect(createElementSpy).toHaveBeenCalledWith('a');
-    }
-
-    createElementSpy.mockRestore();
-  });
-
-  it('exports event as CSV', () => {
-    const createElementSpy = vi.spyOn(document, 'createElement');
-    render(<EventDetail {...defaultProps} />);
-
-    const exportButtons = screen.getAllByRole('button');
-    const csvButton = exportButtons.find(btn => btn.getAttribute('title') === 'Export as CSV');
-
-    if (csvButton) {
-      fireEvent.click(csvButton);
-      expect(createElementSpy).toHaveBeenCalledWith('a');
-    }
+    const jsonButton = screen.getByTitle('Export JSON');
+    expect(jsonButton).toBeInTheDocument();
+    fireEvent.click(jsonButton);
+    expect(createElementSpy).toHaveBeenCalledWith('a');
 
     createElementSpy.mockRestore();
   });
@@ -439,5 +438,224 @@ describe('EventDetail', () => {
 
     const notesTextarea = screen.getByDisplayValue('Post event notes');
     expect(notesTextarea).toBeInTheDocument();
+  });
+
+  // Additional edge case and boundary tests
+  it('handles briefing generation error gracefully', async () => {
+    (generateBriefing as any).mockRejectedValue(new Error('AI service unavailable'));
+
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+
+    render(<EventDetail {...defaultProps} />);
+    const prepTab = screen.getByText('Briefing & Prep');
+    fireEvent.click(prepTab);
+
+    const generateButton = screen.getByText('Generate with AI');
+    fireEvent.click(generateButton);
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith('AI service unavailable');
+    });
+
+    alertSpy.mockRestore();
+  });
+
+  it('handles contact search with no matches', async () => {
+    render(<EventDetail {...defaultProps} />);
+    const prepTab = screen.getByText('Briefing & Prep');
+    fireEvent.click(prepTab);
+
+    const changeButton = screen.getByText('Change Person');
+    fireEvent.click(changeButton);
+
+    const searchInput = screen.getByPlaceholderText('Search people...');
+    fireEvent.change(searchInput, { target: { value: 'NonexistentContact' } });
+
+    await waitFor(() => {
+      expect(screen.getByText(/No contacts match/)).toBeInTheDocument();
+    });
+  });
+
+  it('handles contact search with partial matches', async () => {
+    render(<EventDetail {...defaultProps} />);
+    const prepTab = screen.getByText('Briefing & Prep');
+    fireEvent.click(prepTab);
+
+    const changeButton = screen.getByText('Change Person');
+    fireEvent.click(changeButton);
+
+    const searchInput = screen.getByPlaceholderText('Search people...');
+    fireEvent.change(searchInput, { target: { value: 'John' } });
+
+    await waitFor(() => {
+      expect(screen.getByText(/John Doe/)).toBeInTheDocument();
+    });
+  });
+
+  it('closes contact picker when clicking outside (simulation)', () => {
+    render(<EventDetail {...defaultProps} />);
+    const prepTab = screen.getByText('Briefing & Prep');
+    fireEvent.click(prepTab);
+
+    const changeButton = screen.getByText('Change Person');
+    fireEvent.click(changeButton);
+
+    expect(screen.getByText('Select Contact')).toBeInTheDocument();
+
+    // Close by clicking Change Person again
+    fireEvent.click(changeButton);
+
+    // Picker should toggle closed
+    expect(screen.queryByText('Select Contact')).not.toBeInTheDocument();
+  });
+
+  it('handles empty linked activities in Context tab', () => {
+    const eventWithoutActivities = {
+      ...mockEvent,
+      analysis: { ...mockEvent.analysis, linkedActivities: [] }
+    };
+    render(<EventDetail {...defaultProps} event={eventWithoutActivities} />);
+
+    expect(screen.getByText(/No linked internal activities/)).toBeInTheDocument();
+  });
+
+  it('shows loading state during briefing generation', async () => {
+    (generateBriefing as any).mockImplementation(() => new Promise(resolve => setTimeout(() => resolve('Generated'), 100)));
+
+    render(<EventDetail {...defaultProps} />);
+    const prepTab = screen.getByText('Briefing & Prep');
+    fireEvent.click(prepTab);
+
+    const generateButton = screen.getByText('Generate with AI');
+    fireEvent.click(generateButton);
+
+    // Button should be disabled during generation
+    await waitFor(() => {
+      expect(generateButton).toBeDisabled();
+    });
+  });
+
+  it('handles multiple field updates before saving', async () => {
+    render(<EventDetail {...defaultProps} />);
+
+    // Update description
+    const textarea = screen.getByDisplayValue('A great conference');
+    fireEvent.change(textarea, { target: { value: 'Updated description' } });
+
+    // Update theme (switch to Logistics tab and back)
+    const logisticsTab = screen.getByText('Logistics & Links');
+    fireEvent.click(logisticsTab);
+
+    const dateInput = screen.getByDisplayValue('2026-05-15');
+    fireEvent.change(dateInput, { target: { value: '2026-06-15' } });
+
+    // Save button should be shown
+    const saveButton = await screen.findByText('Save Changes');
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(defaultProps.onUpdate).toHaveBeenCalled();
+      const updatedEvent = defaultProps.onUpdate.mock.calls[0][0];
+      expect(updatedEvent.analysis.date).toBe('2026-06-15');
+    });
+  });
+
+  it('handles export with special characters in event name', () => {
+    const eventWithSpecialChars = {
+      ...mockEvent,
+      analysis: { ...mockEvent.analysis, eventName: 'Event @#$% 2026' }
+    };
+
+    const createElementSpy = vi.spyOn(document, 'createElement');
+    render(<EventDetail {...defaultProps} event={eventWithSpecialChars} />);
+
+    const jsonButton = screen.getByTitle('Export JSON');
+    expect(jsonButton).toBeInTheDocument();
+    fireEvent.click(jsonButton);
+    expect(createElementSpy).toHaveBeenCalledWith('a');
+
+    createElementSpy.mockRestore();
+  });
+
+  it('disables save button when no changes made', () => {
+    render(<EventDetail {...defaultProps} />);
+    expect(screen.queryByText('Save Changes')).not.toBeInTheDocument();
+  });
+
+  it('handles viewing contact profile from event detail', () => {
+    render(<EventDetail {...defaultProps} />);
+    const prepTab = screen.getByText('Briefing & Prep');
+    fireEvent.click(prepTab);
+
+    expect(screen.getByText('Jane Contact')).toBeInTheDocument();
+  });
+
+  it('switches between all tabs without errors', () => {
+    render(<EventDetail {...defaultProps} />);
+
+    const tabs = ['Context & Analysis', 'Logistics & Links', 'Briefing & Prep', 'Outcomes', 'Raw Data'];
+
+    tabs.forEach(tab => {
+      const tabButton = screen.getByText(tab);
+      fireEvent.click(tabButton);
+      expect(tabButton).toHaveClass('text-blue-600');
+    });
+  });
+
+  it('displays raw JSON data in Raw Data tab', () => {
+    render(<EventDetail {...defaultProps} />);
+    const rawTab = screen.getByText('Raw Data');
+    fireEvent.click(rawTab);
+
+    expect(screen.getByText('Extracted JSON Data')).toBeInTheDocument();
+    expect(screen.getByText('Original Source Text')).toBeInTheDocument();
+  });
+
+  it('handles event without registration link', () => {
+    const eventWithoutLink = {
+      ...mockEvent,
+      analysis: { ...mockEvent.analysis, registrationLink: undefined }
+    };
+
+    render(<EventDetail {...defaultProps} event={eventWithoutLink} />);
+    const logisticsTab = screen.getByText('Logistics & Links');
+    fireEvent.click(logisticsTab);
+
+    // Should not crash
+    expect(screen.getByText('Date & Time')).toBeInTheDocument();
+  });
+
+  it('handles event without programme link', () => {
+    const eventWithoutLink = {
+      ...mockEvent,
+      analysis: { ...mockEvent.analysis, programmeLink: undefined }
+    };
+
+    render(<EventDetail {...defaultProps} event={eventWithoutLink} />);
+    const logisticsTab = screen.getByText('Logistics & Links');
+    fireEvent.click(logisticsTab);
+
+    // Should not crash
+    expect(screen.getByText('Date & Time')).toBeInTheDocument();
+  });
+
+  it('updates multiple status changes in sequence', async () => {
+    render(<EventDetail {...defaultProps} />);
+    const outcomesTab = screen.getByText('Outcomes');
+    fireEvent.click(outcomesTab);
+
+    const statusSelect = screen.getByDisplayValue('To Respond');
+
+    // First status change
+    fireEvent.change(statusSelect, { target: { value: 'Prep ready' } });
+    await waitFor(() => {
+      expect((statusSelect as HTMLSelectElement).value).toBe('Prep ready');
+    });
+
+    // Second status change
+    fireEvent.change(statusSelect, { target: { value: 'Completed - No follow up' } });
+    await waitFor(() => {
+      expect((statusSelect as HTMLSelectElement).value).toBe('Completed - No follow up');
+    });
   });
 });

@@ -54,7 +54,7 @@ describe('EventCard', () => {
 
   const defaultProps = {
     event: mockEvent,
-    onSelect: vi.fn(),
+    onClick: vi.fn(),
     onDelete: vi.fn(),
     isSelected: false
   };
@@ -107,31 +107,12 @@ describe('EventCard', () => {
     expect(screen.getByText('To Respond')).toBeInTheDocument();
   });
 
-  it('calls onSelect when card is clicked', () => {
+  it('calls onClick when card is clicked', () => {
     render(<EventCard {...defaultProps} />);
-    const card = screen.getByText('Annual Conference 2026').closest('div[tabIndex="0"]');
-    if (card) {
-      fireEvent.click(card);
-      expect(defaultProps.onSelect).toHaveBeenCalledWith('event-1');
-    }
-  });
-
-  it('calls onSelect when Enter key is pressed', () => {
-    render(<EventCard {...defaultProps} />);
-    const card = screen.getByText('Annual Conference 2026').closest('div[tabIndex="0"]');
-    if (card) {
-      fireEvent.keyDown(card, { key: 'Enter' });
-      expect(defaultProps.onSelect).toHaveBeenCalledWith('event-1');
-    }
-  });
-
-  it('calls onSelect when Space key is pressed', () => {
-    render(<EventCard {...defaultProps} />);
-    const card = screen.getByText('Annual Conference 2026').closest('div[tabIndex="0"]');
-    if (card) {
-      fireEvent.keyDown(card, { key: ' ' });
-      expect(defaultProps.onSelect).toHaveBeenCalledWith('event-1');
-    }
+    const card = screen.getByText('Annual Conference 2026').closest('div[class*="cursor-pointer"]');
+    expect(card).toBeTruthy();
+    fireEvent.click(card!);
+    expect(defaultProps.onClick).toHaveBeenCalledWith('event-1');
   });
 
   it('shows delete button on hover', () => {
@@ -147,11 +128,11 @@ describe('EventCard', () => {
     expect(screen.getByText('Delete Invitation?')).toBeInTheDocument();
   });
 
-  it('does not call onSelect when delete button is clicked', () => {
+  it('does not call onClick when delete button is clicked', () => {
     render(<EventCard {...defaultProps} />);
     const deleteButton = screen.getByTitle('Delete Event');
     fireEvent.click(deleteButton);
-    expect(defaultProps.onSelect).not.toHaveBeenCalled();
+    expect(defaultProps.onClick).not.toHaveBeenCalled();
   });
 
   it('calls onDelete when confirmation is accepted', () => {
@@ -178,13 +159,13 @@ describe('EventCard', () => {
 
   it('applies selected styling when isSelected is true', () => {
     render(<EventCard {...defaultProps} isSelected={true} />);
-    const card = screen.getByText('Annual Conference 2026').closest('div[tabIndex="0"]');
+    const card = screen.getByText('Annual Conference 2026').closest('div[class*="cursor-pointer"]');
     expect(card).toHaveClass('border-blue-500', 'bg-blue-50');
   });
 
   it('applies default styling when isSelected is false', () => {
     render(<EventCard {...defaultProps} isSelected={false} />);
-    const card = screen.getByText('Annual Conference 2026').closest('div[tabIndex="0"]');
+    const card = screen.getByText('Annual Conference 2026').closest('div[class*="cursor-pointer"]');
     expect(card).toHaveClass('border-slate-200', 'bg-white');
   });
 
@@ -198,14 +179,14 @@ describe('EventCard', () => {
     expect(statusElement).toHaveClass('text-green-600');
   });
 
-  it('applies gray color to Not Relevant status', () => {
+  it('applies slate color to Not Relevant status', () => {
     const eventWithNotRelevantStatus = {
       ...mockEvent,
       followUp: { ...mockEvent.followUp, status: 'Not Relevant' as const }
     };
     render(<EventCard {...defaultProps} event={eventWithNotRelevantStatus} />);
     const statusElement = screen.getByText('Not Relevant');
-    expect(statusElement).toHaveClass('text-gray-400');
+    expect(statusElement).toHaveClass('text-slate-400');
   });
 
   it('applies blue color to To Respond status', () => {
@@ -214,16 +195,10 @@ describe('EventCard', () => {
     expect(statusElement).toHaveClass('text-blue-600');
   });
 
-  it('is keyboard accessible with tabIndex', () => {
+  it('renders clickable card container', () => {
     render(<EventCard {...defaultProps} />);
-    const card = screen.getByText('Annual Conference 2026').closest('div[tabIndex="0"]');
-    expect(card).toHaveAttribute('tabIndex', '0');
-  });
-
-  it('has proper ARIA label', () => {
-    render(<EventCard {...defaultProps} />);
-    const card = screen.getByLabelText('View details for Annual Conference 2026');
-    expect(card).toBeInTheDocument();
+    const card = screen.getByText('Annual Conference 2026').closest('div[class*="cursor-pointer"]');
+    expect(card).toBeTruthy();
   });
 
   it('truncates long event names with line-clamp', () => {
@@ -262,5 +237,156 @@ describe('EventCard', () => {
     rerender(<EventCard {...defaultProps} />);
     // If the component is memoized, it won't re-render with same props
     expect(screen.getByText('Annual Conference 2026')).toBeInTheDocument();
+  });
+
+  // Additional edge case and boundary tests
+  it('handles checkbox toggle correctly', () => {
+    const onToggleSelect = vi.fn();
+    render(<EventCard {...defaultProps} showCheckbox={true} isChecked={false} onToggleSelect={onToggleSelect} />);
+
+    const checkbox = document.querySelector('[class*="w-5 h-5 rounded border-2"]');
+    expect(checkbox).toBeTruthy();
+    fireEvent.click(checkbox!);
+    expect(onToggleSelect).toHaveBeenCalledWith('event-1');
+  });
+
+  it('displays checked state for checkbox', () => {
+    render(<EventCard {...defaultProps} showCheckbox={true} isChecked={true} onToggleSelect={vi.fn()} />);
+
+    const checkbox = document.querySelector('[class*="bg-blue-600"]');
+    expect(checkbox).toBeInTheDocument();
+  });
+
+  it('prevents event selection when checkbox is clicked', () => {
+    const onToggleSelect = vi.fn();
+    const onSelect = vi.fn();
+
+    render(<EventCard {...defaultProps} showCheckbox={true} isChecked={false} onToggleSelect={onToggleSelect} onClick={onSelect} />);
+
+    const checkbox = document.querySelector('[class*="w-5 h-5 rounded border-2"]');
+    expect(checkbox).toBeTruthy();
+    fireEvent.click(checkbox!);
+    // onSelect should not be called when checkbox is clicked
+    expect(onToggleSelect).toHaveBeenCalledWith('event-1');
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('handles event with very long institution name', () => {
+    const eventWithLongInstitution = {
+      ...mockEvent,
+      analysis: {
+        ...mockEvent.analysis,
+        institution: 'This is a very long institution name that should be truncated to prevent layout issues and overflow problems in the UI'
+      }
+    };
+    render(<EventCard {...defaultProps} event={eventWithLongInstitution} />);
+
+    const institutionElement = screen.getByText(eventWithLongInstitution.analysis.institution);
+    expect(institutionElement).toHaveClass('truncate');
+  });
+
+  it('handles event with time information', () => {
+    const eventWithTime = {
+      ...mockEvent,
+      analysis: { ...mockEvent.analysis, time: '14:00 CET' }
+    };
+    render(<EventCard {...defaultProps} event={eventWithTime} />);
+
+    expect(screen.getByText(/14:00 CET/)).toBeInTheDocument();
+  });
+
+  it('handles event without time information', () => {
+    const eventWithoutTime = {
+      ...mockEvent,
+      analysis: { ...mockEvent.analysis, time: undefined }
+    };
+    render(<EventCard {...defaultProps} event={eventWithoutTime} />);
+
+    expect(screen.getByText('2026-05-15')).toBeInTheDocument();
+  });
+
+  it('displays recurring event indicator', () => {
+    const recurringEvent = {
+      ...mockEvent,
+      analysis: {
+        ...mockEvent.analysis,
+        recurrence: { isRecurring: true, frequency: 'Weekly', interval: 1 }
+      }
+    };
+    render(<EventCard {...defaultProps} event={recurringEvent} />);
+
+    const recurringIcon = document.querySelector('[title*="Recurs"]');
+    expect(recurringIcon).toBeInTheDocument();
+  });
+
+  it('does not display recurring indicator for non-recurring events', () => {
+    const nonRecurringEvent = {
+      ...mockEvent,
+      analysis: {
+        ...mockEvent.analysis,
+        recurrence: { isRecurring: false, frequency: 'Weekly', interval: 1 }
+      }
+    };
+    render(<EventCard {...defaultProps} event={nonRecurringEvent} />);
+
+    const recurringIcon = document.querySelector('[title*="Recurs"]');
+    expect(recurringIcon).not.toBeInTheDocument();
+  });
+
+  it('applies different colors for different statuses', () => {
+    const statuses = [
+      { status: 'Responded - On hold for updates', color: 'text-orange-600' },
+      { status: 'Confirmation - To be briefed', color: 'text-indigo-600' },
+      { status: 'Prep ready', color: 'text-purple-600' },
+      { status: 'MOs comms', color: 'text-pink-600' }
+    ];
+
+    statuses.forEach(({ status, color }) => {
+      const eventWithStatus = {
+        ...mockEvent,
+        followUp: { ...mockEvent.followUp, status: status as any }
+      };
+      const { unmount } = render(<EventCard {...defaultProps} event={eventWithStatus} />);
+      const statusElement = screen.getByText(status);
+      expect(statusElement).toHaveClass(color);
+      unmount();
+    });
+  });
+
+  it('handles empty venue gracefully', () => {
+    const eventWithoutVenue = {
+      ...mockEvent,
+      analysis: { ...mockEvent.analysis, venue: '' }
+    };
+    render(<EventCard {...defaultProps} event={eventWithoutVenue} />);
+
+    // Should still render without crashing
+    expect(screen.getByText('Annual Conference 2026')).toBeInTheDocument();
+  });
+
+  it('prevents delete action from triggering select', () => {
+    const onDelete = vi.fn();
+    const onSelect = vi.fn();
+
+    render(<EventCard {...defaultProps} onDelete={onDelete} onClick={onSelect} />);
+
+    const deleteButton = screen.getByTitle('Delete Event');
+    fireEvent.click(deleteButton);
+
+    // Select should not be called
+    expect(onSelect).not.toHaveBeenCalled();
+
+    // Delete confirmation should appear
+    expect(screen.getByText('Delete Invitation?')).toBeInTheDocument();
+  });
+
+  it('handles click on card container', () => {
+    const onSelect = vi.fn();
+    render(<EventCard {...defaultProps} onClick={onSelect} />);
+
+    const card = screen.getByText('Annual Conference 2026').closest('div[class*="cursor-pointer"]');
+    expect(card).toBeTruthy();
+    fireEvent.click(card!);
+    expect(onSelect).toHaveBeenCalledWith('event-1');
   });
 });

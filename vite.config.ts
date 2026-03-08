@@ -5,19 +5,14 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
-      build: {
-        outDir: 'Frontend/build',
-      },
       server: {
         port: 3000,
         host: '0.0.0.0',
       },
-      build: {
-        outDir: 'Frontend/build',
-      },
       plugins: [react()],
       build: {
-        outDir: 'Frontend/build'
+        outDir: 'Frontend/build',
+        emptyOutDir: true,
       },
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
@@ -26,10 +21,8 @@ export default defineConfig(({ mode }) => {
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),
+          'mammoth': 'mammoth/mammoth.browser.js',
         }
-      },
-      build: {
-        outDir: 'Frontend/build'
       }
     };
 });

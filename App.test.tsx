@@ -6,10 +6,10 @@ import { Priority } from './types';
 
 // Mock the child components to simplify testing
 vi.mock('./components/EventCard', () => ({
-  EventCard: ({ event, onSelect, isSelected }: any) => (
+  EventCard: ({ event, onClick, isSelected }: any) => (
     <div
       data-testid={`event-card-${event.id}`}
-      onClick={() => onSelect(event.id)}
+      onClick={() => onClick(event.id)}
       className={isSelected ? 'selected' : ''}
     >
       {event.analysis.eventName}
@@ -30,9 +30,11 @@ vi.mock('./components/UploadModal', () => ({
       <button onClick={onClose}>Close</button>
       <button onClick={() => onAnalysisComplete({
         id: 'new-event',
-        analysis: { eventName: 'New Event', priority: Priority.High, status: 'To Respond' },
-        contact: { name: '' },
-        followUp: { status: 'To Respond' }
+        createdAt: Date.now(),
+        originalText: 'test',
+        analysis: { eventName: 'New Event', priority: Priority.High, date: '2026-05-01', venue: 'Test', institution: 'Test', theme: 'Test', description: 'Test', priorityScore: 80, priorityReasoning: 'Test', initialDeadline: '2026-04-01', finalDeadline: '2026-04-30', linkedActivities: [] },
+        contact: { name: '', email: '', role: '', organization: '', repRole: 'Participant', polContact: '', notes: '' },
+        followUp: { status: 'To Respond', briefing: '', prepResources: '', postEventNotes: '', commsPack: { remarks: '', representative: '', datePlace: '', additionalInfo: '' } }
       })}>Add Event</button>
     </div>
   )
@@ -50,6 +52,10 @@ vi.mock('./components/ContactsView', () => ({
   ContactsView: () => <div data-testid="contacts-view">Contacts View</div>
 }));
 
+vi.mock('./components/CalendarSync', () => ({
+  CalendarSync: ({ onEventsSynced }: any) => <div data-testid="calendar-sync">Calendar Sync</div>
+}));
+
 describe('App', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -57,7 +63,7 @@ describe('App', () => {
 
   it('renders app header', () => {
     render(<App />);
-    expect(screen.getByText('OBESSU Event Flow')).toBeInTheDocument();
+    expect(screen.getByText('EventFlow AI')).toBeInTheDocument();
   });
 
   it('renders search input', () => {
@@ -387,5 +393,166 @@ describe('App', () => {
     fireEvent.click(contactsTab);
 
     expect(screen.getByTestId('contacts-view')).toBeInTheDocument();
+  });
+
+  // Additional edge case and boundary tests
+  it('handles empty search gracefully', () => {
+    render(<App />);
+    const upcomingTab = screen.getByText('Upcoming');
+    fireEvent.click(upcomingTab);
+
+    const searchInput = screen.getByPlaceholderText('Search events...');
+    fireEvent.change(searchInput, { target: { value: '' } });
+
+    // Should show all events when search is empty
+    expect(screen.getByText(/Active List/)).toBeInTheDocument();
+  });
+
+  it('handles special characters in search', () => {
+    render(<App />);
+    const upcomingTab = screen.getByText('Upcoming');
+    fireEvent.click(upcomingTab);
+
+    const searchInput = screen.getByPlaceholderText('Search events...');
+    fireEvent.change(searchInput, { target: { value: '@#$%^&*()' } });
+
+    // Should not crash and show appropriate results
+    expect(screen.getByText(/Active List/)).toBeInTheDocument();
+  });
+
+  it('maintains view mode when switching tabs', () => {
+    render(<App />);
+
+    // Start on calendar view
+    expect(screen.getByTestId('calendar-view')).toBeInTheDocument();
+
+    // Switch to upcoming
+    const upcomingTab = screen.getByText('Upcoming');
+    fireEvent.click(upcomingTab);
+    expect(screen.queryByTestId('calendar-view')).not.toBeInTheDocument();
+
+    // Switch back to calendar
+    const calendarTab = screen.getByText('Calendar');
+    fireEvent.click(calendarTab);
+    expect(screen.getByTestId('calendar-view')).toBeInTheDocument();
+  });
+
+  it('deselects event when switching to calendar view', () => {
+    render(<App />);
+
+    // Select an event in upcoming view
+    const upcomingTab = screen.getByText('Upcoming');
+    fireEvent.click(upcomingTab);
+
+    const events = screen.queryAllByTestId(/event-card-/);
+    if (events.length > 0) {
+      fireEvent.click(events[0]);
+    }
+
+    // Switch to calendar view
+    const calendarTab = screen.getByText('Calendar');
+    fireEvent.click(calendarTab);
+
+    // Calendar view should be shown
+    expect(screen.getByTestId('calendar-view')).toBeInTheDocument();
+  });
+
+  it('handles multiple rapid tab switches', () => {
+    render(<App />);
+
+    const calendarTab = screen.getByText('Calendar');
+    const upcomingTab = screen.getByText('Upcoming');
+    const pastTab = screen.getByText('Past');
+    const contactsTab = screen.getByText('Contacts');
+    const overviewTab = screen.getByText('Overview');
+
+    // Rapidly switch tabs
+    fireEvent.click(upcomingTab);
+    fireEvent.click(pastTab);
+    fireEvent.click(contactsTab);
+    fireEvent.click(overviewTab);
+    fireEvent.click(calendarTab);
+
+    // Should end on calendar view without crashing
+    expect(screen.getByTestId('calendar-view')).toBeInTheDocument();
+  });
+
+  it('preserves search term when switching views', () => {
+    render(<App />);
+    const upcomingTab = screen.getByText('Upcoming');
+    fireEvent.click(upcomingTab);
+
+    const searchInput = screen.getByPlaceholderText('Search events...');
+    fireEvent.change(searchInput, { target: { value: 'Test Search' } });
+
+    // Switch to past view
+    const pastTab = screen.getByText('Past');
+    fireEvent.click(pastTab);
+
+    // Search term should be preserved
+    expect((searchInput as HTMLInputElement).value).toBe('Test Search');
+  });
+
+  it('handles event selection in empty filtered list', () => {
+    render(<App />);
+    const upcomingTab = screen.getByText('Upcoming');
+    fireEvent.click(upcomingTab);
+
+    const searchInput = screen.getByPlaceholderText('Search events...');
+    fireEvent.change(searchInput, { target: { value: 'NonexistentEventXYZ123' } });
+
+    // Should show no events message
+    expect(screen.getByText(/No upcoming events found/)).toBeInTheDocument();
+
+    // Placeholder should be shown
+    expect(screen.getByText('Select an event to view details')).toBeInTheDocument();
+  });
+
+  it('clears selected event when it is filtered out', () => {
+    render(<App />);
+    const upcomingTab = screen.getByText('Upcoming');
+    fireEvent.click(upcomingTab);
+
+    const events = screen.queryAllByTestId(/event-card-/);
+    if (events.length > 0) {
+      fireEvent.click(events[0]);
+
+      // Event detail should be shown
+      expect(screen.queryByTestId('event-detail')).toBeInTheDocument();
+
+      // Now filter it out
+      const searchInput = screen.getByPlaceholderText('Search events...');
+      fireEvent.change(searchInput, { target: { value: 'NonexistentFilter' } });
+
+      // Placeholder should be shown since selected event is filtered out
+      expect(screen.getByText('Select an event to view details')).toBeInTheDocument();
+    }
+  });
+
+  it('handles adding event with missing commsPack', () => {
+    render(<App />);
+
+    const addButton = screen.getByText('Add Invitation');
+    fireEvent.click(addButton);
+
+    const addEventButton = screen.getByText('Add Event');
+    fireEvent.click(addEventButton);
+
+    // Should have switched to upcoming view
+    expect(screen.getByText(/Active List/)).toBeInTheDocument();
+  });
+
+  it('displays correct event count in sidebar for different views', () => {
+    render(<App />);
+
+    // Check upcoming count
+    const upcomingTab = screen.getByText('Upcoming');
+    fireEvent.click(upcomingTab);
+    expect(screen.getByText(/Active List \(\d+\)/)).toBeInTheDocument();
+
+    // Check past count
+    const pastTab = screen.getByText('Past');
+    fireEvent.click(pastTab);
+    expect(screen.getByText(/Archived List \(\d+\)/)).toBeInTheDocument();
   });
 });

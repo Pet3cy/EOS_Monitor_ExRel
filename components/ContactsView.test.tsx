@@ -20,6 +20,7 @@ describe('ContactsView Filtering', () => {
         events={mockEvents}
         onUpdateContact={vi.fn()}
         onDeleteContact={vi.fn()}
+        onUpdateEvent={vi.fn()}
         selectedContactId={null}
         setSelectedContactId={vi.fn()}
       />
@@ -39,6 +40,7 @@ describe('ContactsView Filtering', () => {
         events={mockEvents}
         onUpdateContact={vi.fn()}
         onDeleteContact={vi.fn()}
+        onUpdateEvent={vi.fn()}
         selectedContactId={null}
         setSelectedContactId={vi.fn()}
       />
@@ -58,6 +60,7 @@ describe('ContactsView Filtering', () => {
         events={mockEvents}
         onUpdateContact={vi.fn()}
         onDeleteContact={vi.fn()}
+        onUpdateEvent={vi.fn()}
         selectedContactId={null}
         setSelectedContactId={vi.fn()}
       />
@@ -77,6 +80,7 @@ describe('ContactsView Filtering', () => {
         events={mockEvents}
         onUpdateContact={vi.fn()}
         onDeleteContact={vi.fn()}
+        onUpdateEvent={vi.fn()}
         selectedContactId={null}
         setSelectedContactId={vi.fn()}
       />
@@ -95,6 +99,7 @@ describe('ContactsView Filtering', () => {
         events={mockEvents}
         onUpdateContact={vi.fn()}
         onDeleteContact={vi.fn()}
+        onUpdateEvent={vi.fn()}
         selectedContactId={null}
         setSelectedContactId={vi.fn()}
       />
@@ -112,6 +117,7 @@ describe('ContactsView Filtering', () => {
         events={mockEvents}
         onUpdateContact={vi.fn()}
         onDeleteContact={vi.fn()}
+        onUpdateEvent={vi.fn()}
         selectedContactId={null}
         setSelectedContactId={vi.fn()}
       />
@@ -127,6 +133,7 @@ describe('ContactsView Filtering', () => {
         events={mockEvents}
         onUpdateContact={vi.fn()}
         onDeleteContact={vi.fn()}
+        onUpdateEvent={vi.fn()}
         selectedContactId={null}
         setSelectedContactId={vi.fn()}
       />
@@ -143,6 +150,7 @@ describe('ContactsView Filtering', () => {
         events={mockEvents}
         onUpdateContact={vi.fn()}
         onDeleteContact={vi.fn()}
+        onUpdateEvent={vi.fn()}
         selectedContactId={null}
         setSelectedContactId={vi.fn()}
       />
@@ -160,15 +168,106 @@ describe('ContactsView Filtering', () => {
         events={mockEvents}
         onUpdateContact={vi.fn()}
         onDeleteContact={vi.fn()}
+        onUpdateEvent={vi.fn()}
         selectedContactId={null}
         setSelectedContactId={setSelectedContactId}
       />
     );
 
     const contactCard = screen.getByText('Alice Smith').closest('div[class*="cursor-pointer"]');
-    if (contactCard) {
-      fireEvent.click(contactCard);
-      expect(setSelectedContactId).toHaveBeenCalledWith('c1');
-    }
+    expect(contactCard).toBeTruthy();
+    fireEvent.click(contactCard!);
+    expect(setSelectedContactId).toHaveBeenCalledWith('c1');
+  });
+
+  // Additional edge case tests
+  it('filters by multiple fields simultaneously', () => {
+    const multiFieldContact = { id: 'c4', name: 'TestUser TestEmail', email: 'testuser@testorg.com', organization: 'TestOrg', role: 'Role', notes: '' };
+    const contactsWithMulti = [...mockContacts, multiFieldContact];
+
+    render(
+      <ContactsView
+        contacts={contactsWithMulti}
+        events={mockEvents}
+        onUpdateContact={vi.fn()}
+        onDeleteContact={vi.fn()}
+        selectedContactId={null}
+        setSelectedContactId={vi.fn()}
+      />
+    );
+
+    const input = screen.getByPlaceholderText(/search/i);
+    fireEvent.change(input, { target: { value: 'Test' } });
+
+    expect(screen.getByText('TestUser TestEmail')).toBeInTheDocument();
+  });
+
+  it('handles contacts with missing email', () => {
+    const contactWithoutEmail = { ...mockContacts[0], email: '' };
+    render(
+      <ContactsView
+        contacts={[contactWithoutEmail]}
+        events={mockEvents}
+        onUpdateContact={vi.fn()}
+        onDeleteContact={vi.fn()}
+        selectedContactId={null}
+        setSelectedContactId={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Alice Smith')).toBeInTheDocument();
+  });
+
+  it('handles contacts with missing organization', () => {
+    const contactWithoutOrg = { ...mockContacts[0], organization: '' };
+    render(
+      <ContactsView
+        contacts={[contactWithoutOrg]}
+        events={mockEvents}
+        onUpdateContact={vi.fn()}
+        onDeleteContact={vi.fn()}
+        selectedContactId={null}
+        setSelectedContactId={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Alice Smith')).toBeInTheDocument();
+  });
+
+  it('clears search when input is cleared', () => {
+    render(
+      <ContactsView
+        contacts={mockContacts}
+        events={mockEvents}
+        onUpdateContact={vi.fn()}
+        onDeleteContact={vi.fn()}
+        selectedContactId={null}
+        setSelectedContactId={vi.fn()}
+      />
+    );
+
+    const input = screen.getByPlaceholderText(/search/i);
+    fireEvent.change(input, { target: { value: 'Alice' } });
+    expect(screen.getByText('Alice Smith')).toBeInTheDocument();
+    expect(screen.queryByText('Bob Jones')).not.toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: '' } });
+    expect(screen.getByText('Alice Smith')).toBeInTheDocument();
+    expect(screen.getByText('Bob Jones')).toBeInTheDocument();
+  });
+
+  it('handles empty contacts list', () => {
+    render(
+      <ContactsView
+        contacts={[]}
+        events={mockEvents}
+        onUpdateContact={vi.fn()}
+        onDeleteContact={vi.fn()}
+        selectedContactId={null}
+        setSelectedContactId={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText(/Directory \(0\)/)).toBeInTheDocument();
   });
 });

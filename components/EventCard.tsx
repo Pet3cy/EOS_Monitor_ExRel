@@ -1,5 +1,5 @@
 
-import React, { useState, memo } from 'react';
+import React, { useState } from 'react';
 import { EventData } from '../types';
 import { PriorityBadge } from './PriorityBadge';
 import { Calendar, MapPin, Building2, User, Trash2, Repeat } from 'lucide-react';
@@ -15,7 +15,7 @@ interface EventCardProps {
   onToggleSelect?: (id: string) => void;
 }
 
-export const EventCard: React.FC<EventCardProps> = memo(({
+export const EventCard: React.FC<EventCardProps> = React.memo(({
   event, 
   onClick, 
   onDelete, 
@@ -23,7 +23,7 @@ export const EventCard: React.FC<EventCardProps> = memo(({
   showCheckbox,
   isChecked,
   onToggleSelect
-}: EventCardProps) => {
+}) => {
   const { analysis } = event;
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -48,10 +48,18 @@ export const EventCard: React.FC<EventCardProps> = memo(({
     if (onToggleSelect) onToggleSelect(event.id);
   };
 
+  const handleCardClick = () => {
+    onClick(event.id);
+  };
+
+  const handleConfirmDelete = () => {
+    onDelete(event.id);
+  };
+
   return (
     <>
       <div 
-        onClick={() => onClick(event.id)}
+        onClick={handleCardClick}
         className={`p-4 mb-3 rounded-lg border cursor-pointer transition-all hover:shadow-md group/card relative ${
           isSelected ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'border-slate-200 bg-white'
         }`}
@@ -124,7 +132,7 @@ export const EventCard: React.FC<EventCardProps> = memo(({
       <ConfirmDeleteModal 
         isOpen={showConfirm}
         onClose={() => setShowConfirm(false)}
-        onConfirm={() => onDelete(event.id)}
+        onConfirm={handleConfirmDelete}
         title="Delete Invitation?"
         message={`Are you sure you want to delete "${analysis.eventName}"? All extracted analysis and assigned tasks will be lost.`}
       />
