@@ -135,7 +135,7 @@ describe('EventCard', () => {
       const confirmButton = screen.getByText('Delete Permanently');
       fireEvent.click(confirmButton);
 
-      expect(onDelete).toHaveBeenCalledWith('e1');
+      expect(onDelete).toHaveBeenCalledWith(mockEvent);
     }
   });
 

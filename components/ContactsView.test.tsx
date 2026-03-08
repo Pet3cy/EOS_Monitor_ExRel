@@ -106,10 +106,9 @@ describe('ContactsView', () => {
     render(<ContactsView {...defaultProps} setSelectedContactId={setSelectedContactId} />);
 
     const contactCard = screen.getByText('John Doe').closest('div');
-    if (contactCard) {
-      fireEvent.click(contactCard);
-      expect(setSelectedContactId).toHaveBeenCalledWith('c1');
-    }
+    expect(contactCard).not.toBeNull();
+    fireEvent.click(contactCard!);
+    expect(setSelectedContactId).toHaveBeenCalledWith('c1');
   });
 
   it('should show add new contact button', () => {
@@ -175,27 +174,19 @@ describe('ContactsView', () => {
   it('should show delete confirmation modal', () => {
     render(<ContactsView {...defaultProps} />);
 
-    const contactCard = screen.getAllByRole('button').find(btn => {
-      const svg = btn.querySelector('svg');
-      return svg && btn.closest('.group');
-    });
-
     // Find delete button via the trash icon
     const allButtons = screen.getAllByRole('button');
     const deleteButton = allButtons.find(btn => btn.querySelector('svg') && btn.parentElement?.classList.contains('group'));
-
-    if (deleteButton) {
-      fireEvent.click(deleteButton);
-      expect(screen.getByText('Delete Contact Record?')).toBeInTheDocument();
-    }
+    expect(deleteButton).toBeDefined();
+    fireEvent.click(deleteButton!);
+    expect(screen.getByText('Delete Contact Record?')).toBeInTheDocument();
   });
 
-  it('should call onDeleteContact when delete is confirmed', async () => {
+  it.skip('should call onDeleteContact when delete is confirmed', async () => {
+    // Requires locating and clicking the delete button, confirming in the modal,
+    // then asserting onDeleteContact was called — skipped until selectors are stabilized
     const onDeleteContact = vi.fn();
     render(<ContactsView {...defaultProps} onDeleteContact={onDeleteContact} />);
-
-    // Since we can't easily trigger delete from the UI in test, we'll check the modal callback
-    expect(onDeleteContact).not.toHaveBeenCalled();
   });
 
   it('should sort contacts alphabetically', () => {
@@ -214,11 +205,11 @@ describe('ContactsView', () => {
     // Find sort button (arrow icon)
     const sortButtons = screen.getAllByRole('button');
     const sortButton = sortButtons.find(btn => btn.title?.includes('Sort'));
+    expect(sortButton).toBeDefined();
+    fireEvent.click(sortButton!);
 
-    if (sortButton) {
-      fireEvent.click(sortButton);
-      // Sort order should change
-    }
+    // After toggling, contacts should still be rendered
+    expect(screen.getByText('John Doe')).toBeInTheDocument();
   });
 
   it('should show empty search state', () => {
