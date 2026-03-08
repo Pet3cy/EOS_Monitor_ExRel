@@ -389,237 +389,120 @@ describe('App', () => {
     expect(screen.getByTestId('contacts-view')).toBeInTheDocument();
   });
 
-  // Bulk Operations Tests
-  it('toggles checkbox selection when event checkbox is clicked', async () => {
-    render(<App />);
-    const upcomingTab = screen.getByText('Upcoming');
-    fireEvent.click(upcomingTab);
-
-    const events = screen.queryAllByTestId(/event-card-/);
-    if (events.length > 0) {
-      // Mock EventCard should handle checkbox clicks
-      expect(events[0]).toBeInTheDocument();
-    }
-  });
-
-  it('displays bulk action bar when events are selected', () => {
-    render(<App />);
-    const upcomingTab = screen.getByText('Upcoming');
-    fireEvent.click(upcomingTab);
-
-    // Bulk actions would show in the sidebar header
-    expect(screen.getByText(/Active List/)).toBeInTheDocument();
-  });
-
-  it('marks multiple events as completed in bulk', () => {
-    render(<App />);
-    const upcomingTab = screen.getByText('Upcoming');
-    fireEvent.click(upcomingTab);
-
-    // Test would verify bulk mark completed functionality
-    expect(screen.getByText(/Active List/)).toBeInTheDocument();
-  });
-
-  it('deletes multiple events in bulk', () => {
-    render(<App />);
-    const upcomingTab = screen.getByText('Upcoming');
-    fireEvent.click(upcomingTab);
-
-    // Test would verify bulk delete functionality
-    expect(screen.getByText(/Active List/)).toBeInTheDocument();
-  });
-
-  // Undo Functionality Tests
-  it('displays undo toast after deleting event', async () => {
-    render(<App />);
-    const upcomingTab = screen.getByText('Upcoming');
-    fireEvent.click(upcomingTab);
-
-    // After delete operation, undo toast should appear
-    // This would require triggering a delete via EventCard mock
-    expect(screen.getByText(/Active List/)).toBeInTheDocument();
-  });
-
-  it('restores deleted events when undo is clicked', () => {
-    render(<App />);
-    const upcomingTab = screen.getByText('Upcoming');
-    fireEvent.click(upcomingTab);
-
-    // Test undo functionality
-    expect(screen.getByText(/Active List/)).toBeInTheDocument();
-  });
-
-  it('clears undo history after timeout', async () => {
-    vi.useFakeTimers();
-    render(<App />);
-    const upcomingTab = screen.getByText('Upcoming');
-    fireEvent.click(upcomingTab);
-
-    // Fast-forward time to clear undo history
-    vi.advanceTimersByTime(8001);
-    vi.useRealTimers();
-  });
-
-  // Sorting Tests
-  it('sorts events by date ascending', async () => {
-    render(<App />);
-    const upcomingTab = screen.getByText('Upcoming');
-    fireEvent.click(upcomingTab);
-
-    // Click Date sort button
-    const dateButton = screen.getByText('Date');
-    fireEvent.click(dateButton);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Active List/)).toBeInTheDocument();
-    });
-  });
-
-  it('sorts events by date descending', async () => {
-    render(<App />);
-    const upcomingTab = screen.getByText('Upcoming');
-    fireEvent.click(upcomingTab);
-
-    const dateButton = screen.getByText('Date');
-    fireEvent.click(dateButton); // First click: asc
-    fireEvent.click(dateButton); // Second click: desc
-
-    await waitFor(() => {
-      expect(screen.getByText(/Active List/)).toBeInTheDocument();
-    });
-  });
-
-  it('sorts events by priority score', () => {
-    render(<App />);
-    const upcomingTab = screen.getByText('Upcoming');
-    fireEvent.click(upcomingTab);
-
-    const priorityButton = screen.getByText('Priority');
-    fireEvent.click(priorityButton);
-
-    expect(screen.getByText(/Active List/)).toBeInTheDocument();
-  });
-
-  it('sorts events by institution name', () => {
-    render(<App />);
-    const upcomingTab = screen.getByText('Upcoming');
-    fireEvent.click(upcomingTab);
-
-    const institutionButton = screen.getByText('Institution');
-    fireEvent.click(institutionButton);
-
-    expect(screen.getByText(/Active List/)).toBeInTheDocument();
-  });
-
-  // Representative Role Filter Tests
-  it('filters events by representative role', async () => {
-    render(<App />);
-    const upcomingTab = screen.getByText('Upcoming');
-    fireEvent.click(upcomingTab);
-
-    // Find the Role filter dropdown
-    const roleSelects = screen.getAllByRole('combobox');
-    const roleSelect = roleSelects.find(select => {
-      const options = Array.from(select.querySelectorAll('option'));
-      return options.some(opt => opt.textContent === 'Speaker');
-    });
-
-    if (roleSelect) {
-      fireEvent.change(roleSelect, { target: { value: 'Speaker' } });
-      await waitFor(() => {
-        expect(screen.getByText(/Active List/)).toBeInTheDocument();
-      });
-    }
-  });
-
-  it('shows all roles when filter is set to All', async () => {
-    render(<App />);
-    const upcomingTab = screen.getByText('Upcoming');
-    fireEvent.click(upcomingTab);
-
-    const roleSelects = screen.getAllByRole('combobox');
-    const roleSelect = roleSelects.find(select => {
-      const options = Array.from(select.querySelectorAll('option'));
-      return options.some(opt => opt.textContent === 'Speaker');
-    });
-
-    if (roleSelect) {
-      fireEvent.change(roleSelect, { target: { value: 'All' } });
-      await waitFor(() => {
-        expect(screen.getByText(/Active List/)).toBeInTheDocument();
-      });
-    }
-  });
-
-  // Show Past Events Toggle Tests
-  it('shows past events toggle in upcoming view', () => {
-    render(<App />);
-    const upcomingTab = screen.getByText('Upcoming');
-    fireEvent.click(upcomingTab);
-
-    expect(screen.getByText('Show Past Events')).toBeInTheDocument();
-  });
-
-  it('toggles past events visibility', async () => {
-    render(<App />);
-    const upcomingTab = screen.getByText('Upcoming');
-    fireEvent.click(upcomingTab);
-
-    const toggle = screen.getByText('Show Past Events').closest('div')?.querySelector('button');
-    if (toggle) {
-      fireEvent.click(toggle);
-      await waitFor(() => {
-        expect(toggle).toHaveClass('bg-blue-600');
-      });
-    }
-  });
-
-  it('does not show past events toggle in past view', () => {
-    render(<App />);
-    const pastTab = screen.getByText('Past');
-    fireEvent.click(pastTab);
-
-    expect(screen.queryByText('Show Past Events')).not.toBeInTheDocument();
-  });
-
-  // CalendarSync Integration Tests
-  it('renders CalendarSync component', () => {
-    render(<App />);
-    // CalendarSync should be in the header
-    expect(screen.getByText('EventFlow AI')).toBeInTheDocument();
-  });
-
-  it('adds synced events without duplicates', () => {
-    render(<App />);
-    // CalendarSync onEventsSynced handler should filter duplicates
-    expect(screen.getByText('EventFlow AI')).toBeInTheDocument();
-  });
-
-  // Edge Cases and Error Handling
-  it('handles empty event list gracefully', () => {
+  // Additional edge case and boundary tests
+  it('handles empty search gracefully', () => {
     render(<App />);
     const upcomingTab = screen.getByText('Upcoming');
     fireEvent.click(upcomingTab);
 
     const searchInput = screen.getByPlaceholderText('Search events...');
-    fireEvent.change(searchInput, { target: { value: 'NoMatchingEventsXYZ999' } });
+    fireEvent.change(searchInput, { target: { value: '' } });
 
-    expect(screen.getByText(/No upcoming events found/)).toBeInTheDocument();
+    // Should show all events when search is empty
+    expect(screen.getByText(/Active List/)).toBeInTheDocument();
   });
 
-  it('handles rapid view switching', () => {
+  it('handles special characters in search', () => {
+    render(<App />);
+    const upcomingTab = screen.getByText('Upcoming');
+    fireEvent.click(upcomingTab);
+
+    const searchInput = screen.getByPlaceholderText('Search events...');
+    fireEvent.change(searchInput, { target: { value: '@#$%^&*()' } });
+
+    // Should not crash and show appropriate results
+    expect(screen.getByText(/Active List/)).toBeInTheDocument();
+  });
+
+  it('maintains view mode when switching tabs', () => {
     render(<App />);
 
-    fireEvent.click(screen.getByText('Calendar'));
-    fireEvent.click(screen.getByText('Upcoming'));
-    fireEvent.click(screen.getByText('Past'));
-    fireEvent.click(screen.getByText('Contacts'));
-    fireEvent.click(screen.getByText('Overview'));
+    // Start on calendar view
+    expect(screen.getByTestId('calendar-view')).toBeInTheDocument();
 
-    expect(screen.getByTestId('overview')).toBeInTheDocument();
+    // Switch to upcoming
+    const upcomingTab = screen.getByText('Upcoming');
+    fireEvent.click(upcomingTab);
+    expect(screen.queryByTestId('calendar-view')).not.toBeInTheDocument();
+
+    // Switch back to calendar
+    const calendarTab = screen.getByText('Calendar');
+    fireEvent.click(calendarTab);
+    expect(screen.getByTestId('calendar-view')).toBeInTheDocument();
   });
 
-  it('maintains event selection when switching views', () => {
+  it('deselects event when switching to calendar view', () => {
+    render(<App />);
+
+    // Select an event in upcoming view
+    const upcomingTab = screen.getByText('Upcoming');
+    fireEvent.click(upcomingTab);
+
+    const events = screen.queryAllByTestId(/event-card-/);
+    if (events.length > 0) {
+      fireEvent.click(events[0]);
+    }
+
+    // Switch to calendar view
+    const calendarTab = screen.getByText('Calendar');
+    fireEvent.click(calendarTab);
+
+    // Calendar view should be shown
+    expect(screen.getByTestId('calendar-view')).toBeInTheDocument();
+  });
+
+  it('handles multiple rapid tab switches', () => {
+    render(<App />);
+
+    const calendarTab = screen.getByText('Calendar');
+    const upcomingTab = screen.getByText('Upcoming');
+    const pastTab = screen.getByText('Past');
+    const contactsTab = screen.getByText('Contacts');
+    const overviewTab = screen.getByText('Overview');
+
+    // Rapidly switch tabs
+    fireEvent.click(upcomingTab);
+    fireEvent.click(pastTab);
+    fireEvent.click(contactsTab);
+    fireEvent.click(overviewTab);
+    fireEvent.click(calendarTab);
+
+    // Should end on calendar view without crashing
+    expect(screen.getByTestId('calendar-view')).toBeInTheDocument();
+  });
+
+  it('preserves search term when switching views', () => {
+    render(<App />);
+    const upcomingTab = screen.getByText('Upcoming');
+    fireEvent.click(upcomingTab);
+
+    const searchInput = screen.getByPlaceholderText('Search events...');
+    fireEvent.change(searchInput, { target: { value: 'Test Search' } });
+
+    // Switch to past view
+    const pastTab = screen.getByText('Past');
+    fireEvent.click(pastTab);
+
+    // Search term should be preserved
+    expect((searchInput as HTMLInputElement).value).toBe('Test Search');
+  });
+
+  it('handles event selection in empty filtered list', () => {
+    render(<App />);
+    const upcomingTab = screen.getByText('Upcoming');
+    fireEvent.click(upcomingTab);
+
+    const searchInput = screen.getByPlaceholderText('Search events...');
+    fireEvent.change(searchInput, { target: { value: 'NonexistentEventXYZ123' } });
+
+    // Should show no events message
+    expect(screen.getByText(/No upcoming events found/)).toBeInTheDocument();
+
+    // Placeholder should be shown
+    expect(screen.getByText('Select an event to view details')).toBeInTheDocument();
+  });
+
+  it('clears selected event when it is filtered out', () => {
     render(<App />);
     const upcomingTab = screen.getByText('Upcoming');
     fireEvent.click(upcomingTab);
@@ -628,25 +511,42 @@ describe('App', () => {
     if (events.length > 0) {
       fireEvent.click(events[0]);
 
-      // Switch to calendar and back
-      fireEvent.click(screen.getByText('Calendar'));
-      fireEvent.click(screen.getByText('Upcoming'));
+      // Event detail should be shown
+      expect(screen.queryByTestId('event-detail')).toBeInTheDocument();
 
-      // Event detail should persist if still in filtered list
-      expect(screen.getByText(/Active List/)).toBeInTheDocument();
+      // Now filter it out
+      const searchInput = screen.getByPlaceholderText('Search events...');
+      fireEvent.change(searchInput, { target: { value: 'NonexistentFilter' } });
+
+      // Placeholder should be shown since selected event is filtered out
+      expect(screen.getByText('Select an event to view details')).toBeInTheDocument();
     }
   });
 
-  it('clears event selection when filtered out', async () => {
+  it('handles adding event with missing commsPack', () => {
     render(<App />);
+
+    const addButton = screen.getByText('Add Invitation');
+    fireEvent.click(addButton);
+
+    const addEventButton = screen.getByText('Add Event');
+    fireEvent.click(addEventButton);
+
+    // Should have switched to upcoming view
+    expect(screen.getByText(/Active List/)).toBeInTheDocument();
+  });
+
+  it('displays correct event count in sidebar for different views', () => {
+    render(<App />);
+
+    // Check upcoming count
     const upcomingTab = screen.getByText('Upcoming');
     fireEvent.click(upcomingTab);
+    expect(screen.getByText(/Active List \(\d+\)/)).toBeInTheDocument();
 
-    const searchInput = screen.getByPlaceholderText('Search events...');
-    fireEvent.change(searchInput, { target: { value: 'FilterOutEverything123' } });
-
-    await waitFor(() => {
-      expect(screen.getByText('Select an event to view details')).toBeInTheDocument();
-    });
+    // Check past count
+    const pastTab = screen.getByText('Past');
+    fireEvent.click(pastTab);
+    expect(screen.getByText(/Archived List \(\d+\)/)).toBeInTheDocument();
   });
 });

@@ -348,4 +348,219 @@ describe('CalendarView', () => {
 
     expect(screen.getByText('Reset All Filters')).toBeInTheDocument();
   });
+
+  // Additional edge case and boundary tests
+  it('handles date range boundaries correctly', () => {
+    (generateCalendarWeeks as any).mockReturnValue([]);
+    render(<CalendarView events={mockEvents} />);
+
+    const dateInputs = screen.getAllByDisplayValue('2026-01-01');
+    if (dateInputs.length >= 1) {
+      // Test setting end date before start date
+      const endDateInputs = screen.getAllByDisplayValue('2026-12-31');
+      if (endDateInputs.length >= 1) {
+        fireEvent.change(endDateInputs[0], { target: { value: '2025-12-31' } });
+
+        // Calendar should handle this gracefully
+        expect(generateCalendarWeeks).toHaveBeenCalled();
+      }
+    }
+  });
+
+  it('handles events with same date correctly', () => {
+    const duplicateDateEvents = [
+      mockEvents[0],
+      { ...mockEvents[0], id: 'event-2', analysis: { ...mockEvents[0].analysis, eventName: 'Another Event' } }
+    ];
+
+    const weekWithMultipleEvents = [{
+      number: 20,
+      start: new Date(2026, 4, 11),
+      end: new Date(2026, 4, 17),
+      days: [
+        {
+          date: new Date(2026, 4, 15),
+          dateString: '2026-05-15',
+          events: duplicateDateEvents
+        }
+      ]
+    }];
+
+    (generateCalendarWeeks as any).mockReturnValue(weekWithMultipleEvents);
+    render(<CalendarView events={duplicateDateEvents} />);
+
+    expect(screen.getByText('Annual Conference')).toBeInTheDocument();
+    expect(screen.getByText('Another Event')).toBeInTheDocument();
+  });
+
+  it('displays Medium priority events with orange border', () => {
+    const mediumPriorityEvent = { ...mockEvents[0], analysis: { ...mockEvents[0].analysis, priority: Priority.Medium } };
+    const weekWithMediumEvent = [{
+      number: 20,
+      start: new Date(2026, 4, 11),
+      end: new Date(2026, 4, 17),
+      days: [
+        {
+          date: new Date(2026, 4, 15),
+          dateString: '2026-05-15',
+          events: [mediumPriorityEvent]
+        }
+      ]
+    }];
+
+    (generateCalendarWeeks as any).mockReturnValue(weekWithMediumEvent);
+    render(<CalendarView events={[mediumPriorityEvent]} />);
+
+    const eventName = screen.getByText('Annual Conference');
+    const eventCard = eventName.closest('.bg-white');
+    expect(eventCard).toBeInTheDocument();
+  });
+
+  it('displays Low priority events correctly', () => {
+    const lowPriorityEvent = { ...mockEvents[0], analysis: { ...mockEvents[0].analysis, priority: Priority.Low } };
+    const weekWithLowEvent = [{
+      number: 20,
+      start: new Date(2026, 4, 11),
+      end: new Date(2026, 4, 17),
+      days: [
+        {
+          date: new Date(2026, 4, 15),
+          dateString: '2026-05-15',
+          events: [lowPriorityEvent]
+        }
+      ]
+    }];
+
+    (generateCalendarWeeks as any).mockReturnValue(weekWithLowEvent);
+    render(<CalendarView events={[lowPriorityEvent]} />);
+
+    expect(screen.getByText('Annual Conference')).toBeInTheDocument();
+  });
+
+  it('handles empty events array gracefully', () => {
+    (generateCalendarWeeks as any).mockReturnValue([]);
+    render(<CalendarView events={[]} />);
+
+    expect(screen.getByText(/No roadmap entries found/)).toBeInTheDocument();
+  });
+
+  it('filters by multiple themes consecutively', () => {
+    const eventsWithDifferentThemes = [
+      mockEvents[0],
+      { ...mockEvents[0], id: 'event-2', analysis: { ...mockEvents[0].analysis, theme: 'Environment' } },
+      { ...mockEvents[0], id: 'event-3', analysis: { ...mockEvents[0].analysis, theme: 'Health' } }
+    ];
+
+    (generateCalendarWeeks as any).mockReturnValue([]);
+    render(<CalendarView events={eventsWithDifferentThemes} />);
+
+    const themeSelect = screen.getAllByRole('combobox')[0];
+
+    // Filter by first theme
+    fireEvent.change(themeSelect, { target: { value: 'Education' } });
+    expect(generateCalendarWeeks).toHaveBeenLastCalledWith(
+      eventsWithDifferentThemes,
+      2026,
+      '2026-01-01',
+      '2026-12-31',
+      'All',
+      'Education'
+    );
+
+    // Filter by second theme
+    fireEvent.change(themeSelect, { target: { value: 'Environment' } });
+    expect(generateCalendarWeeks).toHaveBeenLastCalledWith(
+      eventsWithDifferentThemes,
+      2026,
+      '2026-01-01',
+      '2026-12-31',
+      'All',
+      'Environment'
+    );
+  });
+
+  it('combines priority and theme filters', () => {
+    (generateCalendarWeeks as any).mockReturnValue([]);
+    render(<CalendarView events={mockEvents} />);
+
+    // Set priority filter
+    const highButton = screen.getByText('High');
+    fireEvent.click(highButton);
+
+    // Set theme filter
+    const themeSelect = screen.getAllByRole('combobox')[0];
+    fireEvent.change(themeSelect, { target: { value: 'Education' } });
+
+    // Both filters should be applied
+    expect(generateCalendarWeeks).toHaveBeenLastCalledWith(
+      mockEvents,
+      2026,
+      '2026-01-01',
+      '2026-12-31',
+      Priority.High,
+      'Education'
+    );
+  });
+
+  it('clicking priority filter twice toggles sort order', () => {
+    (generateCalendarWeeks as any).mockReturnValue([]);
+    render(<CalendarView events={mockEvents} />);
+
+    const highButton = screen.getByText('High');
+
+    // First click
+    fireEvent.click(highButton);
+    expect(generateCalendarWeeks).toHaveBeenLastCalledWith(
+      mockEvents,
+      2026,
+      '2026-01-01',
+      '2026-12-31',
+      Priority.High,
+      'All'
+    );
+
+    // Click All to reset
+    const allButton = screen.getByText('All');
+    fireEvent.click(allButton);
+
+    expect(generateCalendarWeeks).toHaveBeenLastCalledWith(
+      mockEvents,
+      2026,
+      '2026-01-01',
+      '2026-12-31',
+      'All',
+      'All'
+    );
+  });
+
+  it('updates date range and resets properly', () => {
+    (generateCalendarWeeks as any).mockReturnValue([]);
+    render(<CalendarView events={mockEvents} />);
+
+    // Change start date
+    const dateInputs = screen.getAllByDisplayValue('2026-01-01');
+    if (dateInputs[0]) {
+      fireEvent.change(dateInputs[0], { target: { value: '2026-03-01' } });
+    }
+
+    // Change end date
+    const endDateInputs = screen.getAllByDisplayValue('2026-12-31');
+    if (endDateInputs[0]) {
+      fireEvent.change(endDateInputs[0], { target: { value: '2026-09-30' } });
+    }
+
+    // Reset filters
+    const resetButton = screen.getByTitle('Clear all filters');
+    fireEvent.click(resetButton);
+
+    // Should be back to defaults
+    expect(generateCalendarWeeks).toHaveBeenLastCalledWith(
+      mockEvents,
+      2026,
+      '2026-01-01',
+      '2026-12-31',
+      'All',
+      'All'
+    );
+  });
 });

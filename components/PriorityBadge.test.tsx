@@ -9,28 +9,28 @@ describe('PriorityBadge', () => {
     render(<PriorityBadge priority={Priority.High} />);
     const badge = screen.getByText('High Priority');
     expect(badge).toBeInTheDocument();
-    expect(badge).toHaveClass('bg-green-100', 'text-green-800', 'border-green-200');
+    expect(badge).toHaveClass('bg-red-100', 'text-red-800', 'border-red-200');
   });
 
   it('renders Medium priority with correct styling', () => {
     render(<PriorityBadge priority={Priority.Medium} />);
     const badge = screen.getByText('Medium Priority');
     expect(badge).toBeInTheDocument();
-    expect(badge).toHaveClass('bg-orange-100', 'text-orange-800', 'border-orange-200');
+    expect(badge).toHaveClass('bg-amber-100', 'text-amber-800', 'border-amber-200');
   });
 
   it('renders Low priority with correct styling', () => {
     render(<PriorityBadge priority={Priority.Low} />);
     const badge = screen.getByText('Low Priority');
     expect(badge).toBeInTheDocument();
-    expect(badge).toHaveClass('bg-yellow-100', 'text-yellow-800', 'border-yellow-200');
+    expect(badge).toHaveClass('bg-blue-100', 'text-blue-800', 'border-blue-200');
   });
 
   it('renders Irrelevant priority with correct styling', () => {
     render(<PriorityBadge priority={Priority.Irrelevant} />);
     const badge = screen.getByText('Irrelevant Priority');
     expect(badge).toBeInTheDocument();
-    expect(badge).toHaveClass('bg-red-100', 'text-red-800', 'border-red-200');
+    expect(badge).toHaveClass('bg-slate-100', 'text-slate-500', 'border-slate-200');
   });
 
   it('applies common badge styles to all priorities', () => {

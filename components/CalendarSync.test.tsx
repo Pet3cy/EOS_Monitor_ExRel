@@ -133,4 +133,99 @@ describe('CalendarSync', () => {
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute('title', 'Connect Google Drive/Calendar first to enable sync');
   });
+
+  // Additional edge case tests
+  it('handles rapid connection status checks without race conditions', async () => {
+    let callCount = 0;
+    vi.spyOn(global, 'fetch').mockImplementation(() => {
+      callCount++;
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ connected: callCount % 2 === 0 }) // Alternate between true/false
+      } as Response);
+    });
+
+    const onEventsSynced = vi.fn();
+    const { unmount } = render(<CalendarSync onEventsSynced={onEventsSynced} />);
+
+    // Wait for initial check
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalled();
+    });
+
+    unmount();
+
+    // Should handle unmounting gracefully
+    expect(console.error).not.toHaveBeenCalledWith(
+      expect.stringContaining('unmounted component')
+    );
+  });
+
+  it('button remains disabled during status check', async () => {
+    vi.spyOn(global, 'fetch').mockImplementation(() =>
+      new Promise(resolve =>
+        setTimeout(() => resolve({
+          ok: true,
+          json: async () => ({ connected: true })
+        } as Response), 100)
+      )
+    );
+
+    const onEventsSynced = vi.fn();
+    render(<CalendarSync onEventsSynced={onEventsSynced} />);
+
+    // Button should be disabled initially
+    const button = screen.getByRole('button');
+    expect(button).toBeDisabled();
+  });
+
+  it('cleans up on unmount without errors', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({ connected: true })
+    } as Response);
+
+    const onEventsSynced = vi.fn();
+    const { unmount } = render(<CalendarSync onEventsSynced={onEventsSynced} />);
+
+    await waitFor(() => {
+      const button = screen.getByRole('button');
+      expect(button).not.toBeDisabled();
+    });
+
+    // Unmount should not cause errors
+    expect(() => unmount()).not.toThrow();
+  });
+
+  it('handles null or undefined response body', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => null
+    } as unknown as Response);
+
+    const onEventsSynced = vi.fn();
+    render(<CalendarSync onEventsSynced={onEventsSynced} />);
+
+    await waitFor(() => {
+      const button = screen.getByRole('button');
+      expect(button).toBeDisabled();
+    });
+  });
+
+  it('handles malformed JSON response', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => { throw new Error('Invalid JSON'); }
+    } as Response);
+
+    const onEventsSynced = vi.fn();
+    render(<CalendarSync onEventsSynced={onEventsSynced} />);
+
+    await waitFor(() => {
+      expect(console.error).toHaveBeenCalledWith(
+        'Failed to check status:',
+        expect.objectContaining({ message: 'Invalid JSON' })
+      );
+    });
+  });
 });

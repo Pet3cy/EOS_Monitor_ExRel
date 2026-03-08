@@ -119,4 +119,47 @@ describe('ConfirmDeleteModal', () => {
     const modal = container.querySelector('.z-\\[100\\]');
     expect(modal).toBeInTheDocument();
   });
+
+  // Additional edge case tests
+  it('handles rapid open/close cycles', () => {
+    const { rerender } = render(<ConfirmDeleteModal {...defaultProps} isOpen={false} />);
+
+    // Rapidly toggle
+    rerender(<ConfirmDeleteModal {...defaultProps} isOpen={true} />);
+    expect(screen.getByText('Delete Item?')).toBeInTheDocument();
+
+    rerender(<ConfirmDeleteModal {...defaultProps} isOpen={false} />);
+    expect(screen.queryByText('Delete Item?')).not.toBeInTheDocument();
+
+    rerender(<ConfirmDeleteModal {...defaultProps} isOpen={true} />);
+    expect(screen.getByText('Delete Item?')).toBeInTheDocument();
+  });
+
+  it('handles empty title gracefully', () => {
+    render(<ConfirmDeleteModal {...defaultProps} title="" />);
+    expect(screen.getByText('Are you sure you want to delete this item?')).toBeInTheDocument();
+  });
+
+  it('handles empty message gracefully', () => {
+    render(<ConfirmDeleteModal {...defaultProps} message="" />);
+    expect(screen.getByText('Delete Item?')).toBeInTheDocument();
+  });
+
+  it('handles very long title text', () => {
+    const longTitle = 'A'.repeat(200);
+    render(<ConfirmDeleteModal {...defaultProps} title={longTitle} />);
+    expect(screen.getByText(longTitle)).toBeInTheDocument();
+  });
+
+  it('handles very long message text', () => {
+    const longMessage = 'This is a very long message that explains in great detail why this deletion is important and what consequences it may have. '.repeat(10);
+    render(<ConfirmDeleteModal {...defaultProps} message={longMessage} />);
+    expect(screen.getByText(longMessage)).toBeInTheDocument();
+  });
+
+  it('prevents body scroll when modal is open', () => {
+    render(<ConfirmDeleteModal {...defaultProps} />);
+    const backdrop = document.querySelector('.fixed.inset-0');
+    expect(backdrop).toBeInTheDocument();
+  });
 });
