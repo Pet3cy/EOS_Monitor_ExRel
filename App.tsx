@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Plus, Search, Layout, Filter, CalendarClock, History, PieChart, Users, Calendar as CalendarIcon, CheckSquare, Trash2, CheckCircle2, ArrowUpDown, Undo2, X } from 'lucide-react';
 import { EventData, Priority, Contact } from './types';
 import { EventCard } from './components/EventCard';
@@ -263,19 +263,23 @@ export default function App() {
     setEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e));
   };
 
-  const handleDeleteEvent = (id: string) => {
+  const handleDeleteEvent = useCallback((id: string) => {
+    // Note: To keep the callback stable without putting state updates inside another
+    // state updater (which is an anti-pattern), we accept that `events` is a dependency here.
+    // We use functional updates for other states where possible.
     const eventToDelete = events.find(e => e.id === id);
     if (eventToDelete) {
         setDeletedEventsHistory({ events: [eventToDelete], timestamp: Date.now() });
         setEvents(prev => prev.filter(e => e.id !== id));
-        if (selectedEventId === id) setSelectedEventId(null);
+
+        setSelectedEventId(prev => prev === id ? null : prev);
         setSelectedEventIds(prev => {
             const next = new Set(prev);
             next.delete(id);
             return next;
         });
     }
-  };
+  }, [events]);
 
   const handleUpdateContact = (updatedContact: Contact) => {
     setContacts(prev => {
@@ -379,14 +383,18 @@ export default function App() {
   }, [events, searchTerm, statusFilter, viewMode, sortField, sortOrder]);
 
   // Bulk Actions
-  const handleToggleSelect = (id: string) => {
+  const handleToggleSelect = useCallback((id: string) => {
     setSelectedEventIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  };
+  }, []);
+
+  const handleSelectEvent = useCallback((id: string) => {
+    setSelectedEventId(id);
+  }, []);
 
   const handleBulkDelete = () => {
     const eventsToDelete = events.filter(e => selectedEventIds.has(e.id));
@@ -712,9 +720,9 @@ export default function App() {
                         isSelected={selectedEventId === event.id}
                         showCheckbox={true}
                         isChecked={selectedEventIds.has(event.id)}
-                        onToggleSelect={() => handleToggleSelect(event.id)}
-                        onClick={() => setSelectedEventId(event.id)}
-                        onDelete={() => handleDeleteEvent(event.id)}
+                        onToggleSelect={handleToggleSelect}
+                        onClick={handleSelectEvent}
+                        onDelete={handleDeleteEvent}
                         />
                     ))
                     )}
