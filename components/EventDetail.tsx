@@ -303,6 +303,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                  {/* Shared Actions */}
                  <div className="flex items-center gap-1">
                     <button onClick={handleExportJSON} className="p-2 text-slate-400 hover:text-emerald-400 rounded-lg transition-colors" title="Export JSON"><FileJson size={16}/></button>
+                    <button onClick={handleExportCSV} className="p-2 text-slate-400 hover:text-emerald-400 rounded-lg transition-colors" title="Export CSV"><FileText size={16}/></button>
                     <div className="relative" ref={calendarMenuRef}>
                         <button onClick={() => setShowCalendarMenu(!showCalendarMenu)} className="p-2 text-slate-400 hover:text-emerald-400 rounded-lg transition-colors" title="Calendar">
                             <CalendarPlus size={16}/>
