@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { EventDetail } from './EventDetail';
 import { EventData, Priority } from '../types';
@@ -117,6 +117,44 @@ describe('EventDetail', () => {
 
     expect(screen.getByText('Event Two')).toBeInTheDocument();
     expect(screen.getByText('Institution B')).toBeInTheDocument();
+    expect(screen.queryByText('Event One')).not.toBeInTheDocument();
+  });
+
+  it('updates displayed event when same key but event prop data changes', () => {
+    const updatedEvent1: EventData = {
+      ...mockEvent1,
+      analysis: {
+        ...mockEvent1.analysis,
+        eventName: 'Updated Event One',
+        institution: 'Updated Institution A'
+      }
+    };
+
+    const { rerender } = render(
+      <EventDetail
+        key={mockEvent1.id}
+        event={mockEvent1}
+        onUpdate={mockOnUpdate}
+        onDelete={mockOnDelete}
+      />
+    );
+
+    expect(screen.getByText('Event One')).toBeInTheDocument();
+    expect(screen.getByText('Institution A')).toBeInTheDocument();
+
+    // Rerender with same key but updated data to simulate external mutation
+    // (e.g., contact propagation or stakeholder rename)
+    rerender(
+      <EventDetail
+        key={mockEvent1.id}
+        event={updatedEvent1}
+        onUpdate={mockOnUpdate}
+        onDelete={mockOnDelete}
+      />
+    );
+
+    expect(screen.getByText('Updated Event One')).toBeInTheDocument();
+    expect(screen.getByText('Updated Institution A')).toBeInTheDocument();
     expect(screen.queryByText('Event One')).not.toBeInTheDocument();
   });
 });
