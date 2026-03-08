@@ -4,85 +4,110 @@ import React from 'react';
 import { CalendarSync } from './CalendarSync';
 
 describe('CalendarSync', () => {
-  const originalFetch = global.fetch;
-  const originalConsoleError = console.error;
-
   beforeEach(() => {
-    vi.clearAllMocks();
-    cleanup();
-    console.error = vi.fn(); // Suppress console.error in tests
+    vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
-    global.fetch = originalFetch;
-    console.error = originalConsoleError;
+    cleanup();
+    vi.restoreAllMocks();
   });
 
   it('handles failed status check correctly (non-ok response)', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: false,
-      statusText: 'Internal Server Error'
-    });
+      statusText: 'Internal Server Error',
+    } as Response);
 
     const onEventsSynced = vi.fn();
     render(<CalendarSync onEventsSynced={onEventsSynced} />);
 
+    // Verify error was logged
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/auth/status');
+      expect(console.error).toHaveBeenCalledWith(
+        'Failed to check status:',
+        expect.objectContaining({ message: 'Failed to check status: Internal Server Error' })
+      );
     });
 
-    // Verify error was logged
-    expect(console.error).toHaveBeenCalledWith(
-      'Failed to check status:',
-      expect.objectContaining({ message: 'Failed to check status: Internal Server Error' })
-    );
-
-    // Button should be in disconnected state (disabled)
+    // Button should remain in disconnected state (disabled)
     const button = screen.getByRole('button');
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute('title', 'Connect Google Drive/Calendar first to enable sync');
   });
 
   it('handles failed status check correctly (network error)', async () => {
-    global.fetch = vi.fn().mockRejectedValue(new Error('Network Error'));
+    vi.spyOn(global, 'fetch').mockRejectedValue(new Error('Network Error'));
 
     const onEventsSynced = vi.fn();
     render(<CalendarSync onEventsSynced={onEventsSynced} />);
 
+    // Verify error was logged
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/auth/status');
+      expect(console.error).toHaveBeenCalledWith(
+        'Failed to check status:',
+        expect.objectContaining({ message: 'Network Error' })
+      );
     });
 
-    // Verify error was logged
-    expect(console.error).toHaveBeenCalledWith(
-      'Failed to check status:',
-      expect.objectContaining({ message: 'Network Error' })
-    );
-
-    // Button should be in disconnected state (disabled)
+    // Button should remain in disconnected state (disabled)
     const button = screen.getByRole('button');
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute('title', 'Connect Google Drive/Calendar first to enable sync');
   });
 
   it('handles successful status check correctly', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
-      json: async () => ({ connected: true })
-    });
+      json: async () => ({ connected: true }),
+    } as Response);
 
     const onEventsSynced = vi.fn();
     render(<CalendarSync onEventsSynced={onEventsSynced} />);
 
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/auth/status');
-    });
-
     // Wait for the button state to update
     await waitFor(() => {
-        const button = screen.getByRole('button');
-        expect(button).not.toBeDisabled();
-        expect(button).not.toHaveAttribute('title', 'Connect Google Drive/Calendar first to enable sync');
+      const button = screen.getByRole('button');
+      expect(button).not.toBeDisabled();
+      expect(button).not.toHaveAttribute('title', 'Connect Google Drive/Calendar first to enable sync');
     });
+  });
+
+  it('reverts to disabled button when status check fails after a successful connection', async () => {
+    // First render: connected successfully
+    const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({ connected: true }),
+    } as Response);
+
+    const onEventsSynced = vi.fn();
+    const { unmount } = render(<CalendarSync onEventsSynced={onEventsSynced} />);
+
+    await waitFor(() => {
+      const button = screen.getByRole('button');
+      expect(button).not.toBeDisabled();
+    });
+
+    unmount();
+
+    // Second render: status check fails
+    fetchSpy.mockResolvedValue({
+      ok: false,
+      statusText: 'Service Unavailable',
+    } as Response);
+
+    render(<CalendarSync onEventsSynced={onEventsSynced} />);
+
+    await waitFor(() => {
+      expect(console.error).toHaveBeenCalledWith(
+        'Failed to check status:',
+        expect.objectContaining({ message: 'Failed to check status: Service Unavailable' })
+      );
+    });
+
+    // Button should be disabled after the failed re-check
+    const button = screen.getByRole('button');
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('title', 'Connect Google Drive/Calendar first to enable sync');
   });
 });
