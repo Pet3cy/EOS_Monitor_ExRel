@@ -166,28 +166,24 @@ describe('App', () => {
   it('should filter by status', () => {
     render(<App />);
 
-    // Switch to upcoming view
     const upcomingTab = screen.getByText('Upcoming');
     fireEvent.click(upcomingTab);
 
     const statusSelect = screen.getByDisplayValue('All Statuses');
     fireEvent.change(statusSelect, { target: { value: 'To Respond' } });
 
-    // Should filter events
+    // Mock EventCard renders event names — verify at least one To Respond event is shown
+    expect(screen.getByText('Solidar Webinar: Advocacy Campaigning')).toBeInTheDocument();
   });
 
-  it('should show bulk actions when events are selected', () => {
+  it.skip('should show bulk actions when events are selected', () => {
+    // Requires EventCard checkbox interaction which is mocked away
     render(<App />);
-
-    // This would require more complex interaction with EventCard checkboxes
-    // Since EventCard is mocked, we'll skip this detailed test
   });
 
-  it('should handle undo delete', async () => {
+  it.skip('should handle undo delete', async () => {
+    // Requires triggering delete through mocked EventCard and verifying undo toast
     render(<App />);
-
-    // This would require triggering a delete and then checking for undo toast
-    // Complex interaction that would need full component implementation
   });
 
   it('should sync calendar events', async () => {
@@ -196,9 +192,9 @@ describe('App', () => {
     const syncButton = screen.getByText('Sync');
     fireEvent.click(syncButton);
 
-    // Events should be added
+    // CalendarSync mock calls onEventsSynced([]) — verify no crash
     await waitFor(() => {
-      // Check that onEventsSynced was called
+      expect(screen.getByText('EventFlow AI')).toBeInTheDocument();
     });
   });
 
@@ -211,7 +207,8 @@ describe('App', () => {
     const dateButton = screen.getByText('Date');
     fireEvent.click(dateButton);
 
-    // Events should be sorted
+    // Verify events are still rendered after sorting
+    expect(screen.getByText('Solidar Webinar: Advocacy Campaigning')).toBeInTheDocument();
   });
 
   it('should sort events by priority', () => {
@@ -223,7 +220,7 @@ describe('App', () => {
     const priorityButton = screen.getByText('Priority');
     fireEvent.click(priorityButton);
 
-    // Events should be sorted by priority
+    expect(screen.getByText('Solidar Webinar: Advocacy Campaigning')).toBeInTheDocument();
   });
 
   it('should sort events by institution', () => {
@@ -235,7 +232,7 @@ describe('App', () => {
     const institutionButton = screen.getByText('Institution');
     fireEvent.click(institutionButton);
 
-    // Events should be sorted by institution
+    expect(screen.getByText('Solidar Webinar: Advocacy Campaigning')).toBeInTheDocument();
   });
 
   it('should toggle sort order', () => {
@@ -248,7 +245,8 @@ describe('App', () => {
     fireEvent.click(dateButton);
     fireEvent.click(dateButton);
 
-    // Sort order should toggle
+    // Events still rendered after toggling sort order
+    expect(screen.getByText('Solidar Webinar: Advocacy Campaigning')).toBeInTheDocument();
   });
 
   it('should filter by rep role', () => {
@@ -260,7 +258,8 @@ describe('App', () => {
     const roleSelect = screen.getByDisplayValue('All Roles');
     fireEvent.change(roleSelect, { target: { value: 'Speaker' } });
 
-    // Should filter to speaker events
+    // Speaker events should remain visible
+    expect(screen.getByText('Solidar Webinar: Advocacy Campaigning')).toBeInTheDocument();
   });
 
   it('should switch to past events view', () => {
@@ -281,11 +280,11 @@ describe('App', () => {
 
     const toggle = screen.getByText('Show Past Events');
     const toggleButton = toggle.nextElementSibling;
+    expect(toggleButton).not.toBeNull();
+    fireEvent.click(toggleButton!);
 
-    if (toggleButton) {
-      fireEvent.click(toggleButton);
-      // Past events should now be visible
-    }
+    // After toggling, list header should still be present
+    expect(screen.getByText(/Active List/)).toBeInTheDocument();
   });
 
   it('should display event count', () => {
