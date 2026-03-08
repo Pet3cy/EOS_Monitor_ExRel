@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { flattenObject } from './csvService.js';
+import { flattenObject } from './csvService.ts';
 
 test('flattenObject flattens nested objects', () => {
   const input = {
