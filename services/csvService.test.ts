@@ -36,6 +36,13 @@ describe('csvService', () => {
     it('should not escape simple strings', () => {
       expect(escapeCSVField('simple')).toBe('simple');
     });
+
+    it('should neutralize formula injection', () => {
+      expect(escapeCSVField('=CMD()')).toBe("\"'=CMD()\"");
+      expect(escapeCSVField('+1+1')).toBe("\"'+1+1\"");
+      expect(escapeCSVField('-1-1')).toBe("\"'-1-1\"");
+      expect(escapeCSVField('@SUM(A1)')).toBe("\"'@SUM(A1)\"");
+    });
   });
 
   describe('arrayToCSV', () => {
@@ -282,6 +289,15 @@ describe('csvService', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0]).toEqual({ A: '1', B: '', C: '3' });
+    });
+
+    it('should handle Windows-style \\r\\n line endings', () => {
+      const csv = 'Name,Email\r\nJohn,john@example.com\r\nJane,jane@example.com';
+      const result = parseCSV(csv);
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toEqual({ Name: 'John', Email: 'john@example.com' });
+      expect(result[1]).toEqual({ Name: 'Jane', Email: 'jane@example.com' });
     });
   });
 });

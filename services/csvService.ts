@@ -9,8 +9,12 @@ import { EventData, Contact } from '../types';
  */
 export function escapeCSVField(value: string | number | undefined | null): string {
   if (value === undefined || value === null) return '';
-  const str = String(value);
-  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+  let str = String(value);
+  // Neutralize spreadsheet formula injection for user-controlled cells
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = "'" + str;
+  }
+  if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes("'")) {
     return `"${str.replace(/"/g, '""')}"`;
   }
   return str;
@@ -132,6 +136,9 @@ export function parseCSV(csvContent: string): Record<string, string>[] {
     if (char === '"') {
       inQuotes = !inQuotes;
       current += char;
+    } else if (char === '\r') {
+      // Skip carriage returns; newlines are handled below
+      continue;
     } else if (char === '\n' && !inQuotes) {
       if (current.trim()) lines.push(current);
       current = '';
