@@ -27,6 +27,10 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [showNewContactModal, setShowNewContactModal] = useState(false);
 
+  useEffect(() => {
+    setLocalEvent({ ...event });
+    setIsEditing(false);
+  }, [event]);
 
 
   const handleChange = (section: keyof EventData, field: string, value: any) => {
