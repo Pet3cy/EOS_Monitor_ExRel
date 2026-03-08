@@ -54,7 +54,7 @@ describe('EventCard', () => {
 
   const defaultProps = {
     event: mockEvent,
-    onSelect: vi.fn(),
+    onClick: vi.fn(),
     onDelete: vi.fn(),
     isSelected: false
   };
