@@ -20,6 +20,16 @@ const isCompletedOrArchived = (status: string) => {
     return status.startsWith('Completed') || status === 'Not Relevant';
 };
 
+/**
+ * Main application component that renders the OBESSU Event Flow user interface.
+ *
+ * Renders the header with search and navigation, the main content area (calendar, overview, contacts,
+ * or event list with detail pane), and the upload modal. Manages application state for events,
+ * contacts, selection, search, view mode, and provides handlers for creating, updating, deleting,
+ * and searching events and contacts.
+ *
+ * @returns The root React element rendering the complete event-management UI including navigation, event lists, detail view, and upload modal.
+ */
 export default function App() {
   const [events, setEvents] = useState<EventData[]>(MOCK_EVENTS);
   const [contacts, setContacts] = useState<Contact[]>(MOCK_CONTACTS);
