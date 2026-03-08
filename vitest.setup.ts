@@ -3,8 +3,14 @@ import { expect, afterEach } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
 // Cleanup after each test
+import { afterEach, vi } from 'vitest';
+import { cleanup } from '@testing-library/react';
+
+// Cleanup after each test
 afterEach(() => {
   cleanup();
+  vi.resetAllMocks();
+  global.fetch = vi.fn();
 });
 
 // Mock window.matchMedia
