@@ -157,9 +157,10 @@ describe('ConfirmDeleteModal', () => {
     expect(screen.getByText(longMessage)).toBeInTheDocument();
   });
 
-  it('renders fixed backdrop overlay when open', () => {
-    render(<ConfirmDeleteModal {...defaultProps} />);
-    const backdrop = document.querySelector('.fixed.inset-0');
-    expect(backdrop).toBeInTheDocument();
+  it('renders fixed overlay that covers viewport', () => {
+    const { container } = render(<ConfirmDeleteModal {...defaultProps} />);
+    const overlay = container.querySelector('.fixed.inset-0');
+    expect(overlay).toBeInTheDocument();
+  });
   });
 });
