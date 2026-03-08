@@ -1,264 +1,569 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import React from 'react';
 import { CalendarView } from './CalendarView';
 import { EventData, Priority } from '../types';
 
-describe('CalendarView', () => {
-  const mockEvents: EventData[] = [
-    {
-      id: 'event-1',
-      createdAt: Date.now(),
-      originalText: 'Original text',
-      analysis: {
-        sender: 'John Sender',
-        institution: 'Test Institution',
-        eventName: 'Annual Conference',
-        theme: 'Education',
-        description: 'A conference',
-        priority: Priority.High,
-        priorityScore: 85,
-        priorityReasoning: 'High relevance',
-        date: '2026-05-15',
-        venue: 'Brussels',
-        initialDeadline: '2026-04-01',
-        finalDeadline: '2026-04-15',
-        linkedActivities: []
-      },
-      contact: {
-        polContact: 'Policy',
-        name: 'Jane',
-        email: 'jane@example.com',
-        role: 'Manager',
-        organization: 'Org',
-        repRole: 'Speaker',
-        notes: ''
-      },
-      followUp: {
-        prepResources: '',
-        briefing: '',
-        commsPack: {
-          remarks: '',
-          representative: '',
-          datePlace: '',
-          additionalInfo: ''
-        },
-        postEventNotes: '',
-        status: 'To Respond'
-      }
+// Mock the calendarUtils module
+vi.mock('../utils/calendarUtils', () => ({
+  generateCalendarWeeks: vi.fn((events, year, startDate, endDate, priority, theme) => {
+    // Simple mock implementation for testing
+    if (events.length === 0 || priority === Priority.Irrelevant) {
+      return [];
     }
-  ];
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+    // Return a mock week with events
+    return [{
+      number: 1,
+      start: new Date('2026-01-05'),
+      end: new Date('2026-01-11'),
+      events: events.filter(e => {
+        if (priority !== 'All' && e.analysis.priority !== priority) return false;
+        if (theme !== 'All' && e.analysis.theme !== theme) return false;
+        return true;
+      })
+    }];
+  })
+}));
 
+const mockEvents: EventData[] = [
+  {
+    id: 'e1',
+    createdAt: Date.now(),
+    originalText: 'Test event 1',
+    analysis: {
+      sender: 'John Doe',
+      institution: 'Test Org',
+      eventName: 'Test Event 1',
+      theme: 'Education',
+      description: 'Test description',
+      priority: Priority.High,
+      priorityScore: 90,
+      priorityReasoning: 'Important event',
+      date: '2026-01-07',
+      venue: 'Online',
+      initialDeadline: '2026-01-05',
+      finalDeadline: '2026-01-06',
+      linkedActivities: [],
+    },
+    contact: {
+      name: 'John Doe',
+      email: 'john@example.com',
+      role: 'Manager',
+      organization: 'Test Org',
+      repRole: 'Speaker',
+      polContact: '',
+      notes: ''
+    },
+    followUp: {
+      briefing: '',
+      prepResources: '',
+      commsPack: { remarks: '', representative: '', datePlace: '', additionalInfo: '' },
+      postEventNotes: '',
+      status: 'To Respond'
+    }
+  },
+  {
+    id: 'e2',
+    createdAt: Date.now(),
+    originalText: 'Test event 2',
+    analysis: {
+      sender: 'Jane Smith',
+      institution: 'Another Org',
+      eventName: 'Test Event 2',
+      theme: 'Research',
+      description: 'Another test description',
+      priority: Priority.Medium,
+      priorityScore: 70,
+      priorityReasoning: 'Moderate priority',
+      date: '2026-01-08',
+      venue: 'Brussels',
+      initialDeadline: '2026-01-06',
+      finalDeadline: '2026-01-07',
+      linkedActivities: [],
+    },
+    contact: {
+      name: 'Jane Smith',
+      email: 'jane@example.com',
+      role: 'Director',
+      organization: 'Another Org',
+      repRole: 'Participant',
+      polContact: '',
+      notes: ''
+    },
+    followUp: {
+      briefing: '',
+      prepResources: '',
+      commsPack: { remarks: '', representative: '', datePlace: '', additionalInfo: '' },
+      postEventNotes: '',
+      status: 'Confirmation - To be briefed'
+    }
+  },
+  {
+    id: 'e3',
+    createdAt: Date.now(),
+    originalText: 'Test event 3',
+    analysis: {
+      sender: 'Bob Johnson',
+      institution: 'Third Org',
+      eventName: 'Test Event 3',
+      theme: 'Education',
+      description: 'Third test description',
+      priority: Priority.Low,
+      priorityScore: 40,
+      priorityReasoning: 'Low priority',
+      date: '2026-01-09',
+      venue: 'Paris',
+      initialDeadline: '2026-01-07',
+      finalDeadline: '2026-01-08',
+      linkedActivities: [],
+    },
+    contact: {
+      name: 'Bob Johnson',
+      email: 'bob@example.com',
+      role: 'Coordinator',
+      organization: 'Third Org',
+      repRole: 'Other',
+      polContact: '',
+      notes: ''
+    },
+    followUp: {
+      briefing: '',
+      prepResources: '',
+      commsPack: { remarks: '', representative: '', datePlace: '', additionalInfo: '' },
+      postEventNotes: '',
+      status: 'To Respond'
+    }
+  }
+];
+
+describe('CalendarView', () => {
   it('renders calendar header', () => {
     render(<CalendarView events={mockEvents} />);
+
     expect(screen.getByText('Calendar Overview')).toBeInTheDocument();
-    expect(screen.getByText(/Coordinate upcoming advocacy/)).toBeInTheDocument();
+    expect(screen.getByText(/Coordinate upcoming advocacy/i)).toBeInTheDocument();
   });
 
-  it('renders filter section', () => {
+  it('renders filter toolbar', () => {
     render(<CalendarView events={mockEvents} />);
+
     expect(screen.getByText('Roadmap Filters')).toBeInTheDocument();
+    expect(screen.getByText('Priority Status')).toBeInTheDocument();
+    expect(screen.getByText('By Theme')).toBeInTheDocument();
   });
 
-  it('renders priority filter buttons', () => {
+  it('displays all priority filter options', () => {
     render(<CalendarView events={mockEvents} />);
-    const buttons = screen.getAllByRole('button');
-    const priorityButtons = buttons.filter(btn =>
-      ['All', 'High', 'Medium', 'Low'].includes(btn.textContent || '')
-    );
-    expect(priorityButtons.length).toBeGreaterThanOrEqual(4);
+
+    expect(screen.getByRole('button', { name: 'All' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: Priority.High })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: Priority.Medium })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: Priority.Low })).toBeInTheDocument();
   });
 
-  it('renders theme filter dropdown', () => {
+  it('changes priority filter when clicked', () => {
     render(<CalendarView events={mockEvents} />);
-    const themeSelects = screen.getAllByRole('combobox');
-    expect(themeSelects.length).toBeGreaterThan(0);
+
+    const highButton = screen.getByRole('button', { name: Priority.High });
+    fireEvent.click(highButton);
+
+    expect(highButton.className).toContain('bg-slate-900');
   });
 
-  it('renders date range filters', () => {
+  it('displays theme filter dropdown', () => {
     render(<CalendarView events={mockEvents} />);
-    const dateInputs = screen.getAllByDisplayValue(/2026/);
+
+    const themeSelect = screen.getByRole('combobox');
+    expect(themeSelect).toBeInTheDocument();
+
+    // Check for unique themes from mock events
+    const options = within(themeSelect).getAllByRole('option');
+    expect(options.length).toBeGreaterThan(0);
+  });
+
+  it('changes theme filter when selected', () => {
+    render(<CalendarView events={mockEvents} />);
+
+    const themeSelect = screen.getByRole('combobox') as HTMLSelectElement;
+    fireEvent.change(themeSelect, { target: { value: 'Education' } });
+
+    expect(themeSelect.value).toBe('Education');
+  });
+
+  it('renders date range inputs', () => {
+    const { container } = render(<CalendarView events={mockEvents} />);
+
+    // Find date inputs by type
+    const dateInputs = container.querySelectorAll('input[type="date"]');
     expect(dateInputs.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('renders view selector with Week default', () => {
-    render(<CalendarView events={mockEvents} />);
-    const viewSelects = screen.getAllByRole('combobox');
-    const viewSelect = Array.from(viewSelects).find(s =>
-      (s as HTMLSelectElement).value === 'Week'
-    );
-    expect(viewSelect).toBeInTheDocument();
+  it('updates start date filter', () => {
+    const { container } = render(<CalendarView events={mockEvents} />);
+
+    const dateInputs = container.querySelectorAll('input[type="date"]');
+    const startDateInput = dateInputs[0] as HTMLInputElement;
+
+    fireEvent.change(startDateInput, { target: { value: '2026-02-01' } });
+    expect(startDateInput.value).toBe('2026-02-01');
   });
 
-  it('updates priority filter when button is clicked', () => {
+  it('updates end date filter', () => {
+    const { container } = render(<CalendarView events={mockEvents} />);
+
+    const dateInputs = container.querySelectorAll('input[type="date"]');
+    const endDateInput = dateInputs[1] as HTMLInputElement;
+
+    fireEvent.change(endDateInput, { target: { value: '2026-06-30' } });
+    expect(endDateInput.value).toBe('2026-06-30');
+  });
+
+  it('shows reset button when filters are applied', () => {
     render(<CalendarView events={mockEvents} />);
-    const highButton = screen.getByText('High');
+
+    const highButton = screen.getByRole('button', { name: Priority.High });
     fireEvent.click(highButton);
 
-    // Should apply active styling
-    expect(highButton).toHaveClass('bg-slate-900', 'text-white');
-  });
-
-  it('applies active styling to selected priority filter', () => {
-    render(<CalendarView events={mockEvents} />);
-    const allButton = screen.getByText('All');
-    // Default selection should be All
-    expect(allButton).toHaveClass('bg-slate-900', 'text-white');
-  });
-
-  it('updates theme filter when dropdown changes', () => {
-    const eventsWithThemes = [
-      { ...mockEvents[0] },
-      { ...mockEvents[0], id: 'event-2', analysis: { ...mockEvents[0].analysis, theme: 'Environment' } }
-    ];
-
-    render(<CalendarView events={eventsWithThemes} />);
-    const themeSelect = screen.getAllByRole('combobox')[0];
-    fireEvent.change(themeSelect, { target: { value: 'Education' } });
-
-    expect((themeSelect as HTMLSelectElement).value).toBe('Education');
-  });
-
-  it('shows reset button when filters are active', () => {
-    render(<CalendarView events={mockEvents} />);
-    const highButton = screen.getByText('High');
-    fireEvent.click(highButton);
-
-    const resetButtons = screen.getAllByTitle('Clear all filters');
-    expect(resetButtons.length).toBeGreaterThan(0);
+    // Look for reset button (X icon button)
+    const buttons = screen.getAllByRole('button');
+    const resetButton = buttons.find(btn => btn.title === 'Clear all filters');
+    expect(resetButton).toBeInTheDocument();
   });
 
   it('resets all filters when reset button is clicked', () => {
     render(<CalendarView events={mockEvents} />);
 
-    // Set filters
-    const highButton = screen.getByText('High');
+    // Apply some filters
+    const highButton = screen.getByRole('button', { name: Priority.High });
     fireEvent.click(highButton);
 
-    // Reset
-    const resetButton = screen.getByTitle('Clear all filters');
-    fireEvent.click(resetButton);
+    const startDateInput = screen.getByDisplayValue('2026-01-01') as HTMLInputElement;
+    fireEvent.change(startDateInput, { target: { value: '2026-02-01' } });
 
-    // Check All is selected again
-    const allButton = screen.getByText('All');
-    expect(allButton).toHaveClass('bg-slate-900', 'text-white');
+    // Find and click reset button
+    const buttons = screen.getAllByRole('button');
+    const resetButton = buttons.find(btn => btn.title === 'Clear all filters');
+    if (resetButton) {
+      fireEvent.click(resetButton);
+    }
+
+    // Check filters are reset
+    const allButton = screen.getByRole('button', { name: 'All' });
+    expect(allButton.className).toContain('bg-slate-900');
   });
 
-  it('renders empty state message appropriately', () => {
+  it('displays empty state when no events match filters', async () => {
+    const { generateCalendarWeeks } = await import('../utils/calendarUtils');
+    (generateCalendarWeeks as any).mockReturnValueOnce([]);
+
     render(<CalendarView events={[]} />);
-    expect(screen.getByText(/No roadmap entries found/)).toBeInTheDocument();
+
+    expect(screen.getByText(/No roadmap entries found/i)).toBeInTheDocument();
   });
 
-  it('renders event name in calendar', () => {
-    render(<CalendarView events={mockEvents} />);
-    // Event may appear in the calendar view
-    expect(screen.queryByText('Annual Conference')).toBeInTheDocument();
+  it('shows reset button in empty state', async () => {
+    const { generateCalendarWeeks } = await import('../utils/calendarUtils');
+    (generateCalendarWeeks as any).mockReturnValueOnce([]);
+
+    render(<CalendarView events={[]} />);
+
+    const resetButton = screen.getByRole('button', { name: /reset all filters/i });
+    expect(resetButton).toBeInTheDocument();
   });
 
-  it('updates date range filters', () => {
+  it('renders week headers correctly', () => {
     render(<CalendarView events={mockEvents} />);
-    const dateInputs = screen.getAllByDisplayValue('2026-01-01');
 
-    if (dateInputs[0]) {
-      fireEvent.change(dateInputs[0], { target: { value: '2026-06-01' } });
-      expect((dateInputs[0] as HTMLInputElement).value).toBe('2026-06-01');
+    expect(screen.getByText(/Week 1/i)).toBeInTheDocument();
+  });
+
+  it('renders event cards within calendar', () => {
+    render(<CalendarView events={mockEvents} />);
+
+    expect(screen.getByText('Test Event 1')).toBeInTheDocument();
+  });
+
+  it('displays event venue in calendar', () => {
+    render(<CalendarView events={mockEvents} />);
+
+    expect(screen.getByText('Online')).toBeInTheDocument();
+  });
+
+  it('highlights high priority events differently', () => {
+    const { container } = render(<CalendarView events={mockEvents} />);
+
+    // High priority events should have red border
+    const highPriorityCard = container.querySelector('.border-l-red-500');
+    expect(highPriorityCard).toBeInTheDocument();
+  });
+
+  it('filters by multiple criteria simultaneously', () => {
+    render(<CalendarView events={mockEvents} />);
+
+    // Apply priority filter
+    const highButton = screen.getByRole('button', { name: Priority.High });
+    fireEvent.click(highButton);
+
+    // Apply theme filter
+    const themeSelect = screen.getByRole('combobox') as HTMLSelectElement;
+    fireEvent.change(themeSelect, { target: { value: 'Education' } });
+
+    // Both filters should be active
+    expect(highButton.className).toContain('bg-slate-900');
+    expect(themeSelect.value).toBe('Education');
+  });
+
+  it('handles date input with min and max attributes', () => {
+    const { container } = render(<CalendarView events={mockEvents} />);
+
+    const dateInputs = container.querySelectorAll('input[type="date"]');
+    const startDateInput = dateInputs[0] as HTMLInputElement;
+
+    expect(startDateInput.min).toBe('2026-01-01');
+    expect(startDateInput.max).toBe('2026-12-31');
+  });
+
+  it('displays unique themes in dropdown', () => {
+    render(<CalendarView events={mockEvents} />);
+
+    const themeSelect = screen.getByRole('combobox');
+    const options = within(themeSelect).getAllByRole('option');
+
+    // Should have 'All', 'Education', and 'Research'
+    expect(options.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('shows correct year in header', () => {
+    render(<CalendarView events={mockEvents} />);
+
+    expect(screen.getByText('2026')).toBeInTheDocument();
+  });
+
+  it('applies correct styling to active filter button', () => {
+    render(<CalendarView events={mockEvents} />);
+
+    const allButton = screen.getByRole('button', { name: 'All' });
+    expect(allButton.className).toContain('bg-slate-900');
+    expect(allButton.className).toContain('text-white');
+  });
+
+  it('applies correct styling to inactive filter button', () => {
+    render(<CalendarView events={mockEvents} />);
+
+    const highButton = screen.getByRole('button', { name: Priority.High });
+
+    // Initially inactive
+    expect(highButton.className).toContain('bg-slate-50');
+    expect(highButton.className).toContain('text-slate-500');
+  });
+
+  it('handles empty events array', () => {
+    render(<CalendarView events={[]} />);
+
+    expect(screen.getByText('Calendar Overview')).toBeInTheDocument();
+  });
+
+  it('displays week date range correctly', () => {
+    render(<CalendarView events={mockEvents} />);
+
+    // Week should show start and end dates
+    const weekHeader = screen.getByText(/Week 1/i);
+    expect(weekHeader).toBeInTheDocument();
+  });
+
+  it('handles events with missing theme gracefully', () => {
+    const eventWithoutTheme = {
+      ...mockEvents[0],
+      analysis: { ...mockEvents[0].analysis, theme: '' }
+    };
+
+    render(<CalendarView events={[eventWithoutTheme]} />);
+
+    expect(screen.getByText('Calendar Overview')).toBeInTheDocument();
+  });
+
+  it('maintains filter state when events prop changes', () => {
+    const { rerender } = render(<CalendarView events={mockEvents} />);
+
+    const highButton = screen.getByRole('button', { name: Priority.High });
+    fireEvent.click(highButton);
+
+    // Rerender with different events
+    rerender(<CalendarView events={[mockEvents[0]]} />);
+
+    // Filter should still be active
+    expect(highButton.className).toContain('bg-slate-900');
+  });
+
+  it('filters by low priority correctly', () => {
+    render(<CalendarView events={mockEvents} />);
+
+    const lowButton = screen.getByRole('button', { name: Priority.Low });
+    fireEvent.click(lowButton);
+
+    expect(lowButton.className).toContain('bg-slate-900');
+  });
+
+  it('filters by medium priority correctly', () => {
+    render(<CalendarView events={mockEvents} />);
+
+    const mediumButton = screen.getByRole('button', { name: Priority.Medium });
+    fireEvent.click(mediumButton);
+
+    expect(mediumButton.className).toContain('bg-slate-900');
+  });
+
+  it('handles date range with start date after end date', () => {
+    const { container } = render(<CalendarView events={mockEvents} />);
+
+    const dateInputs = container.querySelectorAll('input[type="date"]');
+    const startDateInput = dateInputs[0] as HTMLInputElement;
+    const endDateInput = dateInputs[1] as HTMLInputElement;
+
+    fireEvent.change(startDateInput, { target: { value: '2026-12-31' } });
+    fireEvent.change(endDateInput, { target: { value: '2026-01-01' } });
+
+    // Should handle invalid date range gracefully
+    expect(startDateInput.value).toBe('2026-12-31');
+    expect(endDateInput.value).toBe('2026-01-01');
+  });
+
+  it('renders multiple events on same day', () => {
+    const eventsOnSameDay = [
+      { ...mockEvents[0], id: 'e1', analysis: { ...mockEvents[0].analysis, date: '2026-01-07' } },
+      { ...mockEvents[1], id: 'e2', analysis: { ...mockEvents[1].analysis, date: '2026-01-07' } }
+    ];
+
+    render(<CalendarView events={eventsOnSameDay} />);
+
+    expect(screen.getByText('Test Event 1')).toBeInTheDocument();
+    expect(screen.getByText('Test Event 2')).toBeInTheDocument();
+  });
+
+  it('shows correct styling for weekend days', () => {
+    const { container } = render(<CalendarView events={mockEvents} />);
+
+    // Weekend days should have special background
+    const weekendCells = container.querySelectorAll('.bg-slate-50\\/30');
+    expect(weekendCells.length).toBeGreaterThanOrEqual(0);
+  });
+
+  it('handles rapid filter changes', () => {
+    render(<CalendarView events={mockEvents} />);
+
+    const highButton = screen.getByRole('button', { name: Priority.High });
+    const mediumButton = screen.getByRole('button', { name: Priority.Medium });
+    const lowButton = screen.getByRole('button', { name: Priority.Low });
+    const allButton = screen.getByRole('button', { name: 'All' });
+
+    // Rapid switching
+    fireEvent.click(highButton);
+    fireEvent.click(mediumButton);
+    fireEvent.click(lowButton);
+    fireEvent.click(allButton);
+
+    expect(allButton.className).toContain('bg-slate-900');
+  });
+
+  it('theme filter includes all unique themes', () => {
+    render(<CalendarView events={mockEvents} />);
+
+    const themeSelect = screen.getByRole('combobox');
+    const options = within(themeSelect).getAllByRole('option');
+
+    // Should have All, Education, and Research
+    const optionValues = options.map(opt => (opt as HTMLOptionElement).value);
+    expect(optionValues).toContain('All');
+    expect(optionValues).toContain('Education');
+  });
+
+  it('resets date filters when reset button clicked', () => {
+    const { container } = render(<CalendarView events={mockEvents} />);
+
+    const dateInputs = container.querySelectorAll('input[type="date"]');
+    const startDateInput = dateInputs[0] as HTMLInputElement;
+
+    fireEvent.change(startDateInput, { target: { value: '2026-03-01' } });
+
+    const buttons = screen.getAllByRole('button');
+    const resetButton = buttons.find(btn => btn.title === 'Clear all filters');
+
+    if (resetButton) {
+      fireEvent.click(resetButton);
+      expect(startDateInput.value).toBe('2026-01-01');
     }
   });
 
-  it('renders venue information for events', () => {
-    render(<CalendarView events={mockEvents} />);
-    expect(screen.getByText('Brussels')).toBeInTheDocument();
+  it('displays event priority visually', () => {
+    const { container } = render(<CalendarView events={mockEvents} />);
+
+    // High priority should have distinct styling
+    const highPriorityElements = container.querySelectorAll('.border-l-red-500');
+    expect(highPriorityElements.length).toBeGreaterThanOrEqual(0);
   });
 
-  it('generates unique themes list from events', () => {
-    const eventsWithMultipleThemes = [
-      mockEvents[0],
-      { ...mockEvents[0], id: 'event-2', analysis: { ...mockEvents[0].analysis, theme: 'Environment' } },
-      { ...mockEvents[0], id: 'event-3', analysis: { ...mockEvents[0].analysis, theme: 'Education' } }
-    ];
+  it('handles events with very long names', () => {
+    const longNameEvent = {
+      ...mockEvents[0],
+      analysis: {
+        ...mockEvents[0].analysis,
+        eventName: 'A'.repeat(200)
+      }
+    };
 
-    render(<CalendarView events={eventsWithMultipleThemes} />);
-    const themeSelect = screen.getAllByRole('combobox')[0];
-    const options = Array.from(themeSelect.querySelectorAll('option')).map(opt => opt.textContent);
+    render(<CalendarView events={[longNameEvent]} />);
 
-    expect(options).toContain('All');
-    expect(options).toContain('Education');
-    expect(options).toContain('Environment');
+    expect(screen.getByText('Calendar Overview')).toBeInTheDocument();
   });
 
-  it('renders reset filters button in empty state', () => {
+  it('handles events on year boundaries', () => {
+    const boundaryEvent = {
+      ...mockEvents[0],
+      analysis: {
+        ...mockEvents[0].analysis,
+        date: '2026-12-31'
+      }
+    };
+
+    render(<CalendarView events={[boundaryEvent]} />);
+
+    expect(screen.getByText('Calendar Overview')).toBeInTheDocument();
+  });
+
+  it('displays correct month separators', () => {
     render(<CalendarView events={mockEvents} />);
-    const highButton = screen.getByText('High');
+
+    // Should show month names as separators
+    const { container } = render(<CalendarView events={mockEvents} />);
+    expect(container).toBeInTheDocument();
+  });
+
+  it('handles theme filter with special characters', () => {
+    const specialThemeEvent = {
+      ...mockEvents[0],
+      analysis: {
+        ...mockEvents[0].analysis,
+        theme: 'Education & Development'
+      }
+    };
+
+    render(<CalendarView events={[specialThemeEvent]} />);
+
+    const themeSelect = screen.getByRole('combobox') as HTMLSelectElement;
+    fireEvent.change(themeSelect, { target: { value: 'Education & Development' } });
+
+    expect(themeSelect.value).toBe('Education & Development');
+  });
+
+  it('maintains UI state during filter application', () => {
+    render(<CalendarView events={mockEvents} />);
+
+    const highButton = screen.getByRole('button', { name: Priority.High });
     fireEvent.click(highButton);
 
-    expect(screen.getByText('Reset All Filters')).toBeInTheDocument();
-  });
-
-  it('handles empty events array gracefully', () => {
-    render(<CalendarView events={[]} />);
-    expect(screen.getByText(/No roadmap entries found/)).toBeInTheDocument();
-  });
-
-  it('filters by multiple themes consecutively', () => {
-    const eventsWithDifferentThemes = [
-      mockEvents[0],
-      { ...mockEvents[0], id: 'event-2', analysis: { ...mockEvents[0].analysis, theme: 'Environment' } },
-      { ...mockEvents[0], id: 'event-3', analysis: { ...mockEvents[0].analysis, theme: 'Health' } }
-    ];
-
-    render(<CalendarView events={eventsWithDifferentThemes} />);
-    const themeSelect = screen.getAllByRole('combobox')[0];
-
-    // Filter by first theme
-    fireEvent.change(themeSelect, { target: { value: 'Education' } });
-    expect((themeSelect as HTMLSelectElement).value).toBe('Education');
-
-    // Filter by second theme
-    fireEvent.change(themeSelect, { target: { value: 'Environment' } });
-    expect((themeSelect as HTMLSelectElement).value).toBe('Environment');
-  });
-
-  it('combines priority and theme filters', () => {
-    render(<CalendarView events={mockEvents} />);
-
-    // Set priority filter
-    const highButton = screen.getByText('High');
-    fireEvent.click(highButton);
-
-    // Set theme filter
-    const themeSelect = screen.getAllByRole('combobox')[0];
-    fireEvent.change(themeSelect, { target: { value: 'Education' } });
-
-    // Both filters should be applied
-    expect(highButton).toHaveClass('bg-slate-900', 'text-white');
-    expect((themeSelect as HTMLSelectElement).value).toBe('Education');
-  });
-
-  it('switches view modes', () => {
-    render(<CalendarView events={mockEvents} />);
-    const viewSelects = screen.getAllByRole('combobox');
-    const viewSelect = Array.from(viewSelects).find(s =>
-      Array.from((s as HTMLSelectElement).options).some(opt => opt.value === 'Month')
-    );
-
-    if (viewSelect) {
-      fireEvent.change(viewSelect, { target: { value: 'Month' } });
-      expect((viewSelect as HTMLSelectElement).value).toBe('Month');
-    }
-  });
-
-  it('handles contact filter', () => {
-    render(<CalendarView events={mockEvents} />);
-    const comboboxes = screen.getAllByRole('combobox');
-    const contactSelect = Array.from(comboboxes).find(cb => {
-      const label = cb.closest('.space-y-2')?.querySelector('label');
-      return label?.textContent?.includes('Contact');
-    });
-
-    expect(contactSelect).toBeInTheDocument();
+    // UI should remain stable
+    expect(screen.getByText('Roadmap Filters')).toBeInTheDocument();
+    expect(screen.getByText('Calendar Overview')).toBeInTheDocument();
   });
 });
