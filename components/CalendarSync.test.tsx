@@ -56,6 +56,28 @@ describe('CalendarSync', () => {
     expect(button).toHaveAttribute('title', 'Connect Google Drive/Calendar first to enable sync');
   });
 
+  it('keeps button disabled when API returns connected: false', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({ connected: false }),
+    } as Response);
+
+    const onEventsSynced = vi.fn();
+    render(<CalendarSync onEventsSynced={onEventsSynced} />);
+
+    // Wait for fetch to complete
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/auth/status');
+    });
+
+    // Button should remain disabled — user is not connected
+    const button = screen.getByRole('button');
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('title', 'Connect Google Drive/Calendar first to enable sync');
+    // No error should be logged for a valid response
+    expect(console.error).not.toHaveBeenCalled();
+  });
+
   it('handles successful status check correctly', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
