@@ -202,10 +202,11 @@ describe('CalendarView', () => {
       select.closest('[class*="space-y"]')?.textContent?.includes('By Contact')
     );
 
-    if (contactSelect) {
-      fireEvent.change(contactSelect, { target: { value: 'John Doe' } });
-      expect(screen.getByText('Event 1')).toBeInTheDocument();
-    }
+    expect(contactSelect).toBeDefined();
+    fireEvent.change(contactSelect!, { target: { value: 'John Doe' } });
+    expect(screen.getByText('Event 1')).toBeInTheDocument();
+    expect(screen.queryByText('Event 2')).not.toBeInTheDocument();
+  }
   });
 
   it('should display event times when available', () => {
