@@ -108,8 +108,9 @@ describe('CalendarView', () => {
     const highButton = screen.getByRole('button', { name: 'High' });
     fireEvent.click(highButton);
 
-    // Should show only high priority events
+    // Should show only high priority events and hide medium priority
     expect(screen.getByText('Event 1')).toBeInTheDocument();
+    expect(screen.queryByText('Event 2')).not.toBeInTheDocument();
   });
 
   it('should switch between view modes', () => {
@@ -127,8 +128,9 @@ describe('CalendarView', () => {
     const themeSelect = screen.getAllByRole('combobox')[0];
     fireEvent.change(themeSelect, { target: { value: 'Education' } });
 
-    // Should filter to Education theme
+    // Should filter to Education theme and hide Policy theme
     expect(screen.getByText('Event 1')).toBeInTheDocument();
+    expect(screen.queryByText('Event 2')).not.toBeInTheDocument();
   });
 
   it('should reset all filters', () => {
