@@ -94,11 +94,7 @@ describe('ErrorBoundary', () => {
   });
 
   it('reloads window when reload button is clicked', () => {
-    const reloadMock = vi.fn();
-    Object.defineProperty(window, 'location', {
-      value: { reload: reloadMock },
-      writable: true
-    });
+    const reloadMock = vi.spyOn(window.location, 'reload').mockImplementation(() => {});
 
     render(
       <ErrorBoundary>

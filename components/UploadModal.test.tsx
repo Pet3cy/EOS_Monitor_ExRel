@@ -64,10 +64,9 @@ describe('UploadModal', () => {
     render(<UploadModal {...defaultProps} />);
     const buttons = screen.getAllByRole('button');
     const closeButton = buttons.find(btn => btn.querySelector('svg') && !btn.textContent);
-    if (closeButton) {
-      fireEvent.click(closeButton);
-      expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
-    }
+    expect(closeButton).toBeTruthy();
+    fireEvent.click(closeButton as HTMLButtonElement);
+    expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
   });
 
   it('renders mode toggle buttons', () => {
@@ -216,10 +215,9 @@ describe('UploadModal', () => {
     const file = new File(['test content'], 'test.pdf', { type: 'application/pdf' });
     const input = screen.getByText(/Drop PDF/).closest('div')?.querySelector('input[type="file"]');
 
-    if (input) {
-      fireEvent.change(input, { target: { files: [file] } });
-      expect(screen.getByText('test.pdf')).toBeInTheDocument();
-    }
+    expect(input).toBeTruthy();
+    fireEvent.change(input as HTMLInputElement, { target: { files: [file] } });
+    expect(screen.getByText('test.pdf')).toBeInTheDocument();
   });
 
   it('rejects files larger than 10MB', () => {
@@ -230,10 +228,9 @@ describe('UploadModal', () => {
     const largeFile = new File(['x'.repeat(11 * 1024 * 1024)], 'large.pdf', { type: 'application/pdf' });
     const input = screen.getByText(/Drop PDF/).closest('div')?.querySelector('input[type="file"]');
 
-    if (input) {
-      fireEvent.change(input, { target: { files: [largeFile] } });
-      expect(screen.getByText(/File is too large/)).toBeInTheDocument();
-    }
+    expect(input).toBeTruthy();
+    fireEvent.change(input as HTMLInputElement, { target: { files: [largeFile] } });
+    expect(screen.getByText(/File is too large/)).toBeInTheDocument();
   });
 
   it('processes DOCX files using mammoth', async () => {
@@ -244,16 +241,15 @@ describe('UploadModal', () => {
     const docxFile = new File(['docx content'], 'test.docx', { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
     const input = screen.getByText(/Drop PDF/).closest('div')?.querySelector('input[type="file"]');
 
-    if (input) {
-      fireEvent.change(input, { target: { files: [docxFile] } });
+    expect(input).toBeTruthy();
+    fireEvent.change(input as HTMLInputElement, { target: { files: [docxFile] } });
 
-      const analyzeButton = screen.getByText('Analyze with AI');
-      fireEvent.click(analyzeButton);
+    const analyzeButton = screen.getByText('Analyze with AI');
+    fireEvent.click(analyzeButton);
 
-      await waitFor(() => {
-        expect(mammoth.extractRawText).toHaveBeenCalled();
-      });
-    }
+    await waitFor(() => {
+      expect(mammoth.extractRawText).toHaveBeenCalled();
+    });
   });
 
   it('displays error on analysis failure', async () => {
