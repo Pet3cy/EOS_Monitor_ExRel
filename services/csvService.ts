@@ -3,6 +3,9 @@
  * Arrays are joined into a semicolon-separated string.
  */
 export const flattenObject = (obj: any, prefix = ''): Record<string, string> => {
+  if (obj == null || typeof obj !== 'object') {
+    return {};
+  }
   return Object.keys(obj).reduce((acc: any, k: string) => {
     const pre = prefix.length ? prefix + '.' : '';
     if (typeof obj[k] === 'object' && obj[k] !== null && !Array.isArray(obj[k])) {
