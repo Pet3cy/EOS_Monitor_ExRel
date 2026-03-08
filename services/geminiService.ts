@@ -21,6 +21,7 @@ const MAX_CACHE_SIZE = 50;
 const MEMORY_CACHE = new Map<string, AnalysisResult>();
 
 // Purge any legacy sessionStorage entries from before in-memory-only caching
+// TODO: Remove this cleanup block after a few releases once users have migrated
 if (typeof sessionStorage !== 'undefined') {
   try {
     const keysToRemove: string[] = [];
@@ -59,8 +60,10 @@ const generateCacheKey = async (input: AnalysisInput): Promise<string> => {
 };
 
 const getFromCache = (key: string): AnalysisResult | null => {
-  if (MEMORY_CACHE.has(key)) {
-    return MEMORY_CACHE.get(key) || null;
+  const cached = MEMORY_CACHE.get(key);
+  if (cached) {
+    // Return a shallow copy to prevent callers from mutating the cached entry
+    return { ...cached, linkedActivities: [...cached.linkedActivities] };
   }
   return null;
 };
