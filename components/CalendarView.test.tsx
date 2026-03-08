@@ -206,8 +206,8 @@ describe('CalendarView', () => {
     fireEvent.change(contactSelect!, { target: { value: 'John Doe' } });
     expect(screen.getByText('Event 1')).toBeInTheDocument();
     expect(screen.queryByText('Event 2')).not.toBeInTheDocument();
-  }
   });
+
 
   it('should display event times when available', () => {
     render(<CalendarView events={mockEvents} />);
