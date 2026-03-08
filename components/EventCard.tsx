@@ -125,7 +125,7 @@ export const EventCard: React.FC<EventCardProps> = memo(({
       <ConfirmDeleteModal 
         isOpen={showConfirm}
         onClose={() => setShowConfirm(false)}
-        onConfirm={() => onDelete(event.id)}
+        onConfirm={() => onDelete(event)}
         title="Delete Invitation?"
         message={`Are you sure you want to delete "${analysis.eventName}"? All extracted analysis and assigned tasks will be lost.`}
       />
