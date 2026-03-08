@@ -1,0 +1,65 @@
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import React from 'react';
+import { PriorityBadge } from './PriorityBadge';
+import { Priority } from '../types';
+
+describe('PriorityBadge', () => {
+  it('renders High priority with correct styling', () => {
+    render(<PriorityBadge priority={Priority.High} />);
+    const badge = screen.getByText('High Priority');
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveClass('bg-red-100', 'text-red-800', 'border-red-200');
+  });
+
+  it('renders Medium priority with correct styling', () => {
+    render(<PriorityBadge priority={Priority.Medium} />);
+    const badge = screen.getByText('Medium Priority');
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveClass('bg-amber-100', 'text-amber-800', 'border-amber-200');
+  });
+
+  it('renders Low priority with correct styling', () => {
+    render(<PriorityBadge priority={Priority.Low} />);
+    const badge = screen.getByText('Low Priority');
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveClass('bg-blue-100', 'text-blue-800', 'border-blue-200');
+  });
+
+  it('renders Irrelevant priority with correct styling', () => {
+    render(<PriorityBadge priority={Priority.Irrelevant} />);
+    const badge = screen.getByText('Irrelevant Priority');
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveClass('bg-slate-100', 'text-slate-500', 'border-slate-200');
+  });
+
+  it('applies common badge styles to all priorities', () => {
+    const { container, rerender, unmount } = render(<PriorityBadge priority={Priority.High} />);
+    let badge = container.firstChild as HTMLElement;
+    expect(badge).toHaveClass('px-2.5', 'py-0.5', 'rounded-full', 'text-xs', 'font-medium', 'border');
+
+    rerender(<PriorityBadge priority={Priority.Medium} />);
+    badge = container.firstChild as HTMLElement;
+    expect(badge).toHaveClass('px-2.5', 'py-0.5', 'rounded-full', 'text-xs', 'font-medium', 'border');
+
+    unmount();
+  });
+
+  it('renders as a span element', () => {
+    const { container, unmount } = render(<PriorityBadge priority={Priority.High} />);
+    const badge = container.firstChild as HTMLElement;
+    expect(badge.tagName).toBe('SPAN');
+    unmount();
+  });
+
+  it('handles all priority enum values without errors', () => {
+    const priorities = [Priority.High, Priority.Medium, Priority.Low, Priority.Irrelevant];
+    priorities.forEach(priority => {
+      const { unmount, container } = render(<PriorityBadge priority={priority} />);
+      const badge = container.querySelector('span');
+      expect(badge).toBeInTheDocument();
+      expect(badge?.textContent).toContain(`${priority} Priority`);
+      unmount();
+    });
+  });
+});
