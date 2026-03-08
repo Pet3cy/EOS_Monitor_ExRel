@@ -258,6 +258,7 @@ export default function App() {
                 events={events} 
                 onUpdateContact={handleUpdateContact} 
                 onDeleteContact={handleDeleteContact}
+                onUpdateEvent={handleUpdateEvent}
                 selectedContactId={selectedContactId}
                 setSelectedContactId={setSelectedContactId}
               />
@@ -280,7 +281,7 @@ export default function App() {
                         key={event.id} 
                         event={event} 
                         isSelected={selectedEventId === event.id}
-                        onSelect={handleSelectEvent}
+                        onClick={handleSelectEvent}
                         onDelete={handleDeleteEvent}
                         />
                     ))
@@ -296,7 +297,6 @@ export default function App() {
                         onDelete={() => handleDeleteEvent(selectedEvent.id)}
                         contacts={contacts}
                         onViewContact={handleViewContactProfile}
-                        onAddContact={handleUpdateContact}
                     />
                 ) : (
                     <div className="h-full flex flex-col items-center justify-center text-slate-400">
