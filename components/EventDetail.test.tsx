@@ -81,8 +81,7 @@ describe('EventDetail', () => {
     onUpdate: vi.fn(),
     onDelete: vi.fn(),
     contacts: mockContacts,
-    onViewContact: vi.fn(),
-    onAddContact: vi.fn()
+    onViewContact: vi.fn()
   };
 
   beforeEach(() => {
@@ -219,24 +218,42 @@ describe('EventDetail', () => {
     });
   });
 
-  it('shows delete button when not editing', () => {
+  it('shows delete button in editor mode', () => {
     render(<EventDetail {...defaultProps} />);
-    const deleteButton = screen.getByTitle('Delete Event');
-    expect(deleteButton).toBeInTheDocument();
+    // Switch to editor mode where delete button is visible
+    const editorButton = screen.getByText('Editor');
+    fireEvent.click(editorButton);
+
+    // The delete button is a <Trash2> icon button with no title attribute
+    const buttons = screen.getAllByRole('button');
+    const deleteButton = buttons.find(btn => btn.querySelector('.lucide-trash-2'));
+    expect(deleteButton).toBeTruthy();
   });
 
   it('opens delete confirmation modal', () => {
     render(<EventDetail {...defaultProps} />);
-    const deleteButton = screen.getByTitle('Delete Event');
-    fireEvent.click(deleteButton);
+    // Switch to editor mode where delete button is visible
+    const editorButton = screen.getByText('Editor');
+    fireEvent.click(editorButton);
+
+    const buttons = screen.getAllByRole('button');
+    const deleteButton = buttons.find(btn => btn.querySelector('.lucide-trash-2'));
+    expect(deleteButton).toBeTruthy();
+    fireEvent.click(deleteButton!);
 
     expect(screen.getByText('Delete Event?')).toBeInTheDocument();
   });
 
   it('calls onDelete when delete is confirmed', () => {
     render(<EventDetail {...defaultProps} />);
-    const deleteButton = screen.getByTitle('Delete Event');
-    fireEvent.click(deleteButton);
+    // Switch to editor mode where delete button is visible
+    const editorButton = screen.getByText('Editor');
+    fireEvent.click(editorButton);
+
+    const buttons = screen.getAllByRole('button');
+    const deleteButton = buttons.find(btn => btn.querySelector('.lucide-trash-2'));
+    expect(deleteButton).toBeTruthy();
+    fireEvent.click(deleteButton!);
 
     const confirmButton = screen.getByText('Delete Permanently');
     fireEvent.click(confirmButton);
@@ -360,28 +377,10 @@ describe('EventDetail', () => {
     const createElementSpy = vi.spyOn(document, 'createElement');
     render(<EventDetail {...defaultProps} />);
 
-    const exportButtons = screen.getAllByRole('button');
-    const jsonButton = exportButtons.find(btn => btn.getAttribute('title') === 'Export as JSON');
-
-    if (jsonButton) {
-      fireEvent.click(jsonButton);
-      expect(createElementSpy).toHaveBeenCalledWith('a');
-    }
-
-    createElementSpy.mockRestore();
-  });
-
-  it('exports event as CSV', () => {
-    const createElementSpy = vi.spyOn(document, 'createElement');
-    render(<EventDetail {...defaultProps} />);
-
-    const exportButtons = screen.getAllByRole('button');
-    const csvButton = exportButtons.find(btn => btn.getAttribute('title') === 'Export as CSV');
-
-    if (csvButton) {
-      fireEvent.click(csvButton);
-      expect(createElementSpy).toHaveBeenCalledWith('a');
-    }
+    const jsonButton = screen.getByTitle('Export JSON');
+    expect(jsonButton).toBeInTheDocument();
+    fireEvent.click(jsonButton);
+    expect(createElementSpy).toHaveBeenCalledWith('a');
 
     createElementSpy.mockRestore();
   });
@@ -570,13 +569,10 @@ describe('EventDetail', () => {
     const createElementSpy = vi.spyOn(document, 'createElement');
     render(<EventDetail {...defaultProps} event={eventWithSpecialChars} />);
 
-    const exportButtons = screen.getAllByRole('button');
-    const jsonButton = exportButtons.find(btn => btn.getAttribute('title') === 'Export as JSON');
-
-    if (jsonButton) {
-      fireEvent.click(jsonButton);
-      expect(createElementSpy).toHaveBeenCalled();
-    }
+    const jsonButton = screen.getByTitle('Export JSON');
+    expect(jsonButton).toBeInTheDocument();
+    fireEvent.click(jsonButton);
+    expect(createElementSpy).toHaveBeenCalledWith('a');
 
     createElementSpy.mockRestore();
   });

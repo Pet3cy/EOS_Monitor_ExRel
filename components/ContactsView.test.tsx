@@ -20,6 +20,7 @@ describe('ContactsView Filtering', () => {
         events={mockEvents}
         onUpdateContact={vi.fn()}
         onDeleteContact={vi.fn()}
+        onUpdateEvent={vi.fn()}
         selectedContactId={null}
         setSelectedContactId={vi.fn()}
       />
@@ -39,6 +40,7 @@ describe('ContactsView Filtering', () => {
         events={mockEvents}
         onUpdateContact={vi.fn()}
         onDeleteContact={vi.fn()}
+        onUpdateEvent={vi.fn()}
         selectedContactId={null}
         setSelectedContactId={vi.fn()}
       />
@@ -58,6 +60,7 @@ describe('ContactsView Filtering', () => {
         events={mockEvents}
         onUpdateContact={vi.fn()}
         onDeleteContact={vi.fn()}
+        onUpdateEvent={vi.fn()}
         selectedContactId={null}
         setSelectedContactId={vi.fn()}
       />
@@ -77,6 +80,7 @@ describe('ContactsView Filtering', () => {
         events={mockEvents}
         onUpdateContact={vi.fn()}
         onDeleteContact={vi.fn()}
+        onUpdateEvent={vi.fn()}
         selectedContactId={null}
         setSelectedContactId={vi.fn()}
       />
@@ -95,6 +99,7 @@ describe('ContactsView Filtering', () => {
         events={mockEvents}
         onUpdateContact={vi.fn()}
         onDeleteContact={vi.fn()}
+        onUpdateEvent={vi.fn()}
         selectedContactId={null}
         setSelectedContactId={vi.fn()}
       />
@@ -112,6 +117,7 @@ describe('ContactsView Filtering', () => {
         events={mockEvents}
         onUpdateContact={vi.fn()}
         onDeleteContact={vi.fn()}
+        onUpdateEvent={vi.fn()}
         selectedContactId={null}
         setSelectedContactId={vi.fn()}
       />
@@ -127,6 +133,7 @@ describe('ContactsView Filtering', () => {
         events={mockEvents}
         onUpdateContact={vi.fn()}
         onDeleteContact={vi.fn()}
+        onUpdateEvent={vi.fn()}
         selectedContactId={null}
         setSelectedContactId={vi.fn()}
       />
@@ -143,6 +150,7 @@ describe('ContactsView Filtering', () => {
         events={mockEvents}
         onUpdateContact={vi.fn()}
         onDeleteContact={vi.fn()}
+        onUpdateEvent={vi.fn()}
         selectedContactId={null}
         setSelectedContactId={vi.fn()}
       />
@@ -160,16 +168,16 @@ describe('ContactsView Filtering', () => {
         events={mockEvents}
         onUpdateContact={vi.fn()}
         onDeleteContact={vi.fn()}
+        onUpdateEvent={vi.fn()}
         selectedContactId={null}
         setSelectedContactId={setSelectedContactId}
       />
     );
 
     const contactCard = screen.getByText('Alice Smith').closest('div[class*="cursor-pointer"]');
-    if (contactCard) {
-      fireEvent.click(contactCard);
-      expect(setSelectedContactId).toHaveBeenCalledWith('c1');
-    }
+    expect(contactCard).toBeTruthy();
+    fireEvent.click(contactCard!);
+    expect(setSelectedContactId).toHaveBeenCalledWith('c1');
   });
 
   // Additional edge case tests
