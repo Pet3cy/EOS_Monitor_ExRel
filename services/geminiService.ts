@@ -17,7 +17,6 @@ const getAiClient = (): GoogleGenAI => {
 };
 
 // Caching configuration
-const CACHE_PREFIX = 'gemini_cache_v2_';
 const MAX_CACHE_SIZE = 50;
 const MEMORY_CACHE = new Map<string, AnalysisResult>();
 
@@ -27,7 +26,7 @@ if (typeof sessionStorage !== 'undefined') {
     const keysToRemove: string[] = [];
     for (let i = 0; i < sessionStorage.length; i++) {
       const key = sessionStorage.key(i);
-      if (key?.startsWith(CACHE_PREFIX)) {
+      if (key?.startsWith('gemini_cache_v2_')) {
         keysToRemove.push(key);
       }
     }
@@ -47,7 +46,7 @@ const generateCacheKey = async (input: AnalysisInput): Promise<string> => {
     const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    return `${CACHE_PREFIX}${hashHex}`;
+    return hashHex;
   }
 
   let hash = 0;
@@ -56,7 +55,7 @@ const generateCacheKey = async (input: AnalysisInput): Promise<string> => {
     hash = ((hash << 5) - hash) + char;
     hash = hash & hash;
   }
-  return `${CACHE_PREFIX}${hash}`;
+  return String(hash);
 };
 
 const getFromCache = (key: string): AnalysisResult | null => {
