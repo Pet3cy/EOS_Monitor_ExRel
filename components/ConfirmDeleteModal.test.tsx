@@ -162,5 +162,4 @@ describe('ConfirmDeleteModal', () => {
     const overlay = container.querySelector('.fixed.inset-0');
     expect(overlay).toBeInTheDocument();
   });
-  });
 });
