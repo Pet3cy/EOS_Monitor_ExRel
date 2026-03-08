@@ -21,13 +21,12 @@ const isCompletedOrArchived = (status: string) => {
 };
 
 /**
- * Root React component that provides the event management UI and coordinates application state and actions.
+ * Render the OBESSU Event Flow application UI.
  *
- * Manages events and contacts state, search and view-mode filtering, selection, and handlers for creating,
- * updating, deleting, and propagating contact changes; renders the main header, list/detail panes, specialized
- * views (calendar, overview, contacts), and the upload modal.
+ * Manages in-memory events and contacts state, selection, search term, view mode, and provides handlers
+ * for creating, updating, deleting, selecting, and filtering events and contacts.
  *
- * @returns The root JSX element for the application UI
+ * @returns The root React element for the event-management user interface
  */
 export default function App() {
   const [events, setEvents] = useState<EventData[]>(MOCK_EVENTS);
@@ -258,7 +257,6 @@ export default function App() {
                 events={events} 
                 onUpdateContact={handleUpdateContact} 
                 onDeleteContact={handleDeleteContact}
-                onUpdateEvent={handleUpdateEvent}
                 selectedContactId={selectedContactId}
                 setSelectedContactId={setSelectedContactId}
               />
@@ -281,7 +279,7 @@ export default function App() {
                         key={event.id} 
                         event={event} 
                         isSelected={selectedEventId === event.id}
-                        onClick={handleSelectEvent}
+                        onSelect={handleSelectEvent}
                         onDelete={handleDeleteEvent}
                         />
                     ))
@@ -297,6 +295,7 @@ export default function App() {
                         onDelete={() => handleDeleteEvent(selectedEvent.id)}
                         contacts={contacts}
                         onViewContact={handleViewContactProfile}
+                        onAddContact={handleUpdateContact}
                     />
                 ) : (
                     <div className="h-full flex flex-col items-center justify-center text-slate-400">
