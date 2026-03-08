@@ -121,7 +121,7 @@ describe('EventCard', () => {
     const card = screen.getByText('Annual Conference 2026').closest('div[tabIndex="0"]');
     if (card) {
       fireEvent.keyDown(card, { key: 'Enter' });
-      expect(defaultProps.onSelect).toHaveBeenCalledWith('event-1');
+      expect(defaultProps.onClick).toHaveBeenCalledWith('event-1');
     }
   });
 
