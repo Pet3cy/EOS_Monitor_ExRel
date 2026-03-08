@@ -57,17 +57,18 @@ describe('CalendarSync', () => {
   });
 
   it('keeps button disabled when API returns connected: false', async () => {
+    const jsonSpy = vi.fn().mockResolvedValue({ connected: false });
     vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
-      json: async () => ({ connected: false }),
-    } as Response);
+      json: jsonSpy,
+    } as unknown as Response);
 
     const onEventsSynced = vi.fn();
     render(<CalendarSync onEventsSynced={onEventsSynced} />);
 
-    // Wait for fetch to complete
+    // Wait for the full checkStatus path to complete (fetch called + json parsed)
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/auth/status');
+      expect(jsonSpy).toHaveBeenCalled();
     });
 
     // Button should remain disabled — user is not connected
