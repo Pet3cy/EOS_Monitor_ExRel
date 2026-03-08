@@ -8,7 +8,7 @@ import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 interface EventCardProps {
   event: EventData;
   onClick: (id: string) => void;
-  onDelete: (id: string) => void;
+  onDelete: (event: EventData) => void;
   isSelected: boolean;
   showCheckbox?: boolean;
   isChecked?: boolean;
