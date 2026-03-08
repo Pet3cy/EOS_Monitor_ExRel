@@ -121,7 +121,26 @@ export function downloadCSV(csvContent: string, filename: string): void {
  * Parse CSV string to array of objects
  */
 export function parseCSV(csvContent: string): Record<string, string>[] {
-  const lines = csvContent.split('\n').filter(line => line.trim());
+  if (!csvContent.trim()) return [];
+
+  // Split into lines while respecting quoted fields
+  const lines: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (const char of csvContent) {
+    if (char === '"') {
+      inQuotes = !inQuotes;
+      current += char;
+    } else if (char === '\n' && !inQuotes) {
+      if (current.trim()) lines.push(current);
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  if (current.trim()) lines.push(current);
+
   if (lines.length === 0) return [];
 
   const headers = parseCSVLine(lines[0]);
