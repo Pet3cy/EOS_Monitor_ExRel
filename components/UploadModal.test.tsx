@@ -322,7 +322,9 @@ describe('UploadModal', () => {
       expect(defaultProps.onAnalysisComplete).toHaveBeenCalled();
       const eventData = defaultProps.onAnalysisComplete.mock.calls[0][0];
       expect(eventData.id).toBeTruthy();
-      expect(eventData.id).toMatch(/^[a-f0-9-]{36}$/); // UUID format
+      expect(eventData.id).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      );
     });
   });
 
