@@ -57,14 +57,15 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
   }, [selectedContactId, contacts]);
 
   const filteredContacts = useMemo(() => {
+    const lowerSearchTerm = searchTerm.toLowerCase();
     return contacts.filter(c => 
-      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.organization.toLowerCase().includes(searchTerm.toLowerCase())
+      c.name.toLowerCase().includes(lowerSearchTerm) ||
+      c.email.toLowerCase().includes(lowerSearchTerm) ||
+      c.organization.toLowerCase().includes(lowerSearchTerm)
     ).sort((a, b) => {
-      const nameA = a.name.toLowerCase();
-      const nameB = b.name.toLowerCase();
-      return sortOrder === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+      return sortOrder === 'asc'
+        ? a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+        : b.name.localeCompare(a.name, undefined, { sensitivity: 'base' });
     });
   }, [contacts, searchTerm, sortOrder]);
 
