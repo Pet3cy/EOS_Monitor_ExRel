@@ -47,7 +47,7 @@ export const MOCK_EVENTS: EventData[] = [
         notes: '' 
     },
     followUp: { 
-      briefing: 'Focus on OBESSU's recent successful campaigns on student participation.', 
+      briefing: "Focus on OBESSU's recent successful campaigns on student participation.",
       prepResources: '',
       commsPack: { remarks: '', representative: 'Panagiotis', datePlace: 'Feb 10, Online', additionalInfo: '' },
       postEventNotes: '', 
@@ -66,7 +66,7 @@ export const MOCK_EVENTS: EventData[] = [
       description: 'Webinar discussing the impact of smartphones and social media restrictions on education based on evidence from schools in Europe.',
       priority: Priority.Medium,
       priorityScore: 70,
-      priorityReasoning: 'Relevant for OBESSU's digital education positions and student well-being.',
+      priorityReasoning: "Relevant for OBESSU's digital education positions and student well-being.",
       date: '2026-02-12',
       venue: 'Online',
       initialDeadline: '2026-02-10',
