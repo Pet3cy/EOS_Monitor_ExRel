@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 import { generateBriefing } from '../services/gemmaService';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
-import { flattenObject } from '../services/csvService';
 
 interface EventDetailProps {
   event: EventData;
@@ -131,6 +130,20 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   };
 
   const handleExportCSV = () => {
+    const flattenObject = (obj: any, prefix = ''): Record<string, string> => {
+      return Object.keys(obj).reduce((acc: any, k: string) => {
+        const pre = prefix.length ? prefix + '.' : '';
+        if (typeof obj[k] === 'object' && obj[k] !== null && !Array.isArray(obj[k])) {
+          Object.assign(acc, flattenObject(obj[k], pre + k));
+        } else if (Array.isArray(obj[k])) {
+          acc[pre + k] = obj[k].join('; ');
+        } else {
+          acc[pre + k] = String(obj[k]);
+        }
+        return acc;
+      }, {});
+    };
+
     const flatEvent = flattenObject(localEvent);
     const headers = Object.keys(flatEvent);
     const values = Object.values(flatEvent).map(v => `"${v.replace(/"/g, '""')}"`);
@@ -303,7 +316,6 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                  {/* Shared Actions */}
                  <div className="flex items-center gap-1">
                     <button onClick={handleExportJSON} className="p-2 text-slate-400 hover:text-emerald-400 rounded-lg transition-colors" title="Export JSON"><FileJson size={16}/></button>
-                    <button onClick={handleExportCSV} className="p-2 text-slate-400 hover:text-emerald-400 rounded-lg transition-colors" title="Export CSV"><FileText size={16}/></button>
                     <div className="relative" ref={calendarMenuRef}>
                         <button onClick={() => setShowCalendarMenu(!showCalendarMenu)} className="p-2 text-slate-400 hover:text-emerald-400 rounded-lg transition-colors" title="Calendar">
                             <CalendarPlus size={16}/>

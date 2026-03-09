@@ -1,3 +1,0 @@
-## 2023-10-27 - Preventing re-renders in large lists
-**Learning:** Wrapping a component in `React.memo` is insufficient if the parent continues to pass inline functions as props (e.g., `onClick={() => handle(id)}`). In `App.tsx`, these inline functions caused all `EventCard` components to re-render whenever *any* state in `App.tsx` changed (such as filtering or searching).
-**Action:** When rendering large lists, always pass stable handler functions (wrapped in `useCallback` or defined statically) to list items. The list item component should handle passing its own ID to the stable function rather than using closures created inside the `.map` loop.
