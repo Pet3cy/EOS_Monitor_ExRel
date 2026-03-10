@@ -1284,20 +1284,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                         <option value="Not Relevant">Not Relevant</option>
                                      </select>
                                  </div>
-                                 <select 
-                                    className="p-2 bg-slate-50 border border-slate-200 rounded-lg font-bold text-sm text-slate-700 outline-none min-w-[240px]"
-                                    value={localEvent.followUp.status}
-                                    onChange={(e) => handleChange('followUp', 'status', e.target.value as EventData['followUp']['status'])}
-                                 >
-                                    <option value="To Respond">To Respond</option>
-                                    <option value="Responded - On hold for updates">Responded - On hold for updates</option>
-                                    <option value="Confirmation - To be briefed">Confirmation - To be briefed</option>
-                                    <option value="Prep ready">Prep ready</option>
-                                    <option value="Completed - No follow up">Completed - No follow up</option>
-                                    <option value="Completed - Follow Up">Completed - Follow Up</option>
-                                    <option value="MOs comms">MOs comms</option>
-                                    <option value="Not Relevant">Not Relevant</option>
-                                 </select>
+
                             </div>
 
                             <Section title="Follow-up Reminders">
