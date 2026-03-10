@@ -78,7 +78,6 @@ const saveToCache = (key: string, data: AnalysisResult) => {
   MEMORY_CACHE.set(key, data);
 };
 
-
 /** @internal Exported for testing — clears the in-memory analysis cache. */
 export const clearCache = () => {
   MEMORY_CACHE.clear();
@@ -116,7 +115,6 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
   });
 
   const data = JSON.parse(response.text || "{}");
-  
 
   const result: AnalysisResult = {
     ...data,
