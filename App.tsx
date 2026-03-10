@@ -265,19 +265,18 @@ export default function App() {
     setEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e));
   };
 
-  const handleDeleteEvent = (id: string) => {
-    const eventToDelete = events.find(e => e.id === id);
-    if (eventToDelete) {
-        setDeletedEventsHistory({ events: [eventToDelete], timestamp: Date.now() });
-        setEvents(prev => prev.filter(e => e.id !== id));
-        if (selectedEventId === id) setSelectedEventId(null);
-        setSelectedEventIds(prev => {
-            const next = new Set(prev);
-            next.delete(id);
-            return next;
-        });
-    }
-  };
+  // ⚡ Bolt: Stable callback to prevent EventCard re-renders
+  const handleDeleteEvent = React.useCallback((eventToDelete: EventData) => {
+    const id = eventToDelete.id;
+    setDeletedEventsHistory({ events: [eventToDelete], timestamp: Date.now() });
+    setEvents(prev => prev.filter(e => e.id !== id));
+    setSelectedEventId(prevId => prevId === id ? null : prevId);
+    setSelectedEventIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+    });
+  }, []);
 
   const handleUpdateContact = (updatedContact: Contact) => {
     setContacts(prev => {
@@ -342,10 +341,11 @@ export default function App() {
   };
 
   const filteredEvents = useMemo(() => {
+    const lowerSearchTerm = searchTerm.toLowerCase();
     let result = events.filter(e => {
       const matchesSearch = 
-        e.analysis.eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        e.analysis.institution.toLowerCase().includes(searchTerm.toLowerCase());
+        e.analysis.eventName.toLowerCase().includes(lowerSearchTerm) ||
+        e.analysis.institution.toLowerCase().includes(lowerSearchTerm);
       
       if (!matchesSearch) return false;
 
@@ -378,17 +378,23 @@ export default function App() {
     });
 
     return result;
-  }, [events, searchTerm, statusFilter, viewMode, sortField, sortOrder]);
+  }, [events, searchTerm, statusFilter, repRoleFilter, showPastEvents, viewMode, sortField, sortOrder]);
 
   // Bulk Actions
-  const handleToggleSelect = (id: string) => {
+  // ⚡ Bolt: Stable callback to prevent EventCard re-renders
+  const handleToggleSelect = React.useCallback((id: string) => {
     setSelectedEventIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  };
+  }, []);
+
+  // ⚡ Bolt: Stable callback to prevent EventCard re-renders
+  const handleCardClick = React.useCallback((id: string) => {
+      setSelectedEventId(id);
+  }, []);
 
   const handleBulkDelete = () => {
     const eventsToDelete = events.filter(e => selectedEventIds.has(e.id));
@@ -718,9 +724,9 @@ export default function App() {
                         isSelected={selectedEventId === event.id}
                         showCheckbox={true}
                         isChecked={selectedEventIds.has(event.id)}
-                        onToggleSelect={() => handleToggleSelect(event.id)}
-                        onClick={() => setSelectedEventId(event.id)}
-                        onDelete={() => handleDeleteEvent(event.id)}
+                        onToggleSelect={handleToggleSelect}
+                        onClick={handleCardClick}
+                        onDelete={handleDeleteEvent}
                         />
                     ))
                     )}
@@ -732,7 +738,7 @@ export default function App() {
                     <EventDetail 
                         event={selectedEvent} 
                         onUpdate={handleUpdateEvent}
-                        onDelete={() => handleDeleteEvent(selectedEvent.id)}
+                        onDelete={() => handleDeleteEvent(selectedEvent)}
                         contacts={contacts}
                         onViewContact={handleViewContactProfile}
                     />
