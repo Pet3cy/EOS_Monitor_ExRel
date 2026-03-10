@@ -27,8 +27,9 @@ const escapeICS = (str: string) =>
     .replace(/,/g, '\\,')
     .replace(/\n/g, '\\n');
 
+const encoder = new TextEncoder();
+
 const foldLine = (line: string) => {
-  const encoder = new TextEncoder();
   if (encoder.encode(line).length <= 75) return line;
   const chunks: string[] = [];
   let current = '';
