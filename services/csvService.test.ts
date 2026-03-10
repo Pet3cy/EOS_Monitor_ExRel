@@ -37,6 +37,11 @@ describe('csvService', () => {
       expect(escapeCSVField('simple')).toBe('simple');
     });
 
+    it('should not escape strings with apostrophes', () => {
+      expect(escapeCSVField("it's fine")).toBe("it's fine");
+      expect(escapeCSVField("O'Brien")).toBe("O'Brien");
+    });
+
     it('should neutralize formula injection', () => {
       expect(escapeCSVField('=CMD()')).toBe("\"'=CMD()\"");
       expect(escapeCSVField('+1+1')).toBe("\"'+1+1\"");

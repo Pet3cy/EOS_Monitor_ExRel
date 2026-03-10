@@ -13,8 +13,10 @@ export function escapeCSVField(value: string | number | undefined | null): strin
   // Neutralize spreadsheet formula injection for user-controlled cells
   if (/^[=+\-@\t\r]/.test(str)) {
     str = "'" + str;
+    // Always quote formula-prefixed strings to preserve the neutralization prefix
+    return `"${str.replace(/"/g, '""')}"`;
   }
-  if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes("'")) {
+  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
     return `"${str.replace(/"/g, '""')}"`;
   }
   return str;
@@ -136,8 +138,8 @@ export function parseCSV(csvContent: string): Record<string, string>[] {
     if (char === '"') {
       inQuotes = !inQuotes;
       current += char;
-    } else if (char === '\r') {
-      // Skip carriage returns; newlines are handled below
+    } else if (char === '\r' && !inQuotes) {
+      // Skip carriage returns outside quotes; newlines are handled below
       continue;
     } else if (char === '\n' && !inQuotes) {
       if (current.trim()) lines.push(current);
