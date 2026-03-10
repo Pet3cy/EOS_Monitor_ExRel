@@ -249,7 +249,7 @@ export const generateBriefing = async (event: any) => {
   });
 
   if (response.text) {
-    briefingCacheService.set(cacheKey, response.text);
+    cache.set(cacheKey, response.text);
   }
 
   return response.text;
