@@ -42,7 +42,7 @@ describe('PriorityBadge', () => {
     },
   ];
 
-  it.each(testCases)('renders  correctly with appropriate styles', ({ priority, text, classes }) => {
+  it.each(testCases)('renders $text correctly with appropriate styles', ({ priority, text, classes }) => {
     render(<PriorityBadge priority={priority} />);
     const badge = screen.getByText(text);
 
