@@ -9,6 +9,13 @@ import {
 } from 'lucide-react';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
+const REP_ROLE_CLASSES: Record<string, string> = {
+  'Speaker': 'bg-indigo-50 text-indigo-700 border-indigo-100',
+  'Activity Host': 'bg-purple-50 text-purple-700 border-purple-100',
+  'Participant': 'bg-blue-50 text-blue-700 border-blue-100',
+  'Other': 'bg-blue-50 text-blue-700 border-blue-100'
+};
+
 interface ContactsViewProps {
   contacts: Contact[];
   events: EventData[];
@@ -324,30 +331,26 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
                                 </div>
                             </div>
                             <div className="mt-4 sm:mt-0 shrink-0">
-                                <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide border shadow-sm ${
-                                  event.contact.repRole === 'Speaker' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' :
-                                  event.contact.repRole === 'Activity Host' ? 'bg-purple-50 text-purple-700 border-purple-100' :
-                                  'bg-blue-50 text-blue-700 border-blue-100'
-                                }`}>
-                                   {event.contact.repRole === 'Speaker' && <Activity size={12}/>}
-                                   <select 
-                                      className="bg-transparent outline-none cursor-pointer appearance-none"
-                                      value={event.contact.repRole}
-                                      onChange={(e) => {
-                                        onUpdateEvent({
-                                          ...event,
-                                          contact: {
-                                            ...event.contact,
-                                            repRole: e.target.value as any
-                                          }
-                                        });
-                                      }}
-                                   >
-                                      <option value="Participant">Participant</option>
-                                      <option value="Speaker">Speaker</option>
-                                      <option value="Activity Host">Activity Host</option>
-                                      <option value="Other">Other</option>
-                                   </select>
+                                <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide border shadow-sm ${REP_ROLE_CLASSES[event.contact.repRole] || REP_ROLE_CLASSES['Other']}`}>
+                                    {event.contact.repRole === 'Speaker' && <Activity size={12}/>}
+                                    <select
+                                        className="bg-transparent outline-none cursor-pointer appearance-none"
+                                        value={event.contact.repRole}
+                                        onChange={(e) => {
+                                            onUpdateEvent({
+                                                ...event,
+                                                contact: {
+                                                    ...event.contact,
+                                                    repRole: e.target.value as any
+                                                }
+                                            });
+                                        }}
+                                    >
+                                        <option value="Participant">Participant</option>
+                                        <option value="Speaker">Speaker</option>
+                                        <option value="Activity Host">Activity Host</option>
+                                        <option value="Other">Other</option>
+                                    </select>
                                 </div>
                             </div>
                        </div>

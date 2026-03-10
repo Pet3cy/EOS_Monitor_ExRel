@@ -338,15 +338,38 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
                               const isWeekend = day.getDay() === 0 || day.getDay() === 6;
                               const hasConflict = dayEvents.length > 1;
 
+                              let dayBgClass = '';
+                              if (isToday) {
+                                dayBgClass = 'bg-blue-50/20';
+                              } else if (isWeekend) {
+                                dayBgClass = 'bg-slate-50/30';
+                              }
+
+                              const conflictClass = hasConflict ? 'bg-red-50/30 ring-1 ring-red-200 inset-0' : '';
+
+                              let weekdayTextClass = 'text-slate-400';
+                              if (isToday) {
+                                weekdayTextClass = 'text-blue-600';
+                              } else if (hasConflict) {
+                                weekdayTextClass = 'text-red-600';
+                              }
+
+                              let dateBadgeClass = 'text-slate-700';
+                              if (isToday) {
+                                dateBadgeClass = 'bg-blue-600 text-white';
+                              } else if (hasConflict) {
+                                dateBadgeClass = 'bg-red-100 text-red-700';
+                              }
+
                               return (
-                                  <div key={dateKey} className={`min-h-[160px] p-3 flex flex-col group ${isToday ? 'bg-blue-50/20' : isWeekend ? 'bg-slate-50/30' : ''} ${hasConflict ? 'bg-red-50/30 ring-1 ring-red-200 inset-0' : ''} hover:bg-slate-50 transition-colors`}>
+                                  <div key={dateKey} className={`min-h-[160px] p-3 flex flex-col group ${dayBgClass} ${conflictClass} hover:bg-slate-50 transition-colors`}>
                                       <div className="flex items-center justify-between mb-3">
-                                          <span className={`text-[10px] font-bold uppercase tracking-wider ${isToday ? 'text-blue-600' : hasConflict ? 'text-red-600' : 'text-slate-400'}`}>
+                                          <span className={`text-[10px] font-bold uppercase tracking-wider ${weekdayTextClass}`}>
                                               {day.toLocaleDateString('en-US', { weekday: 'short' })}
                                           </span>
                                           <div className="flex items-center gap-1">
                                             {hasConflict && <span title="Multiple events scheduled"><AlertCircle size={12} className="text-red-500" /></span>}
-                                            <span className={`text-sm font-bold flex items-center justify-center w-6 h-6 rounded-full ${isToday ? 'bg-blue-600 text-white' : hasConflict ? 'bg-red-100 text-red-700' : 'text-slate-700'}`}>
+                                            <span className={`text-sm font-bold flex items-center justify-center w-6 h-6 rounded-full ${dateBadgeClass}`}>
                                                 {day.getDate()}
                                             </span>
                                           </div>
