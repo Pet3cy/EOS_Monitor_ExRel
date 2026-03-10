@@ -105,20 +105,18 @@ describe('ConfirmDeleteModal', () => {
     expect(screen.getByText('Delete Permanently')).toBeInTheDocument();
   });
 
-  it('should prevent multiple rapid clicks from calling onConfirm multiple times', () => {
+  it('should call onConfirm and onClose on each click (no built-in debounce)', () => {
     const onConfirm = vi.fn();
     const onClose = vi.fn();
     render(<ConfirmDeleteModal {...defaultProps} onConfirm={onConfirm} onClose={onClose} />);
 
     const deleteButton = screen.getByText('Delete Permanently');
 
-    // Rapid clicks
-    fireEvent.click(deleteButton);
-    fireEvent.click(deleteButton);
+    // The component has no built-in debounce — each click calls both callbacks.
+    // In real usage, the parent sets isOpen=false after onClose, unmounting the modal.
     fireEvent.click(deleteButton);
 
-    // onClose should be called 3 times, but the modal would close after first click
-    // In practice, only the first click matters
-    expect(onConfirm).toHaveBeenCalled();
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
