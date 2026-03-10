@@ -46,9 +46,8 @@ describe('ConfirmDeleteModal', () => {
   });
 
   it('calls onClose when clicking the backdrop', () => {
-    const { container } = render(<ConfirmDeleteModal {...defaultProps} />);
-    const backdrop = container.firstChild as HTMLElement;
-    fireEvent.click(backdrop);
+    render(<ConfirmDeleteModal {...defaultProps} />);
+    fireEvent.click(screen.getByTestId('modal-backdrop'));
     expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
   });
 
