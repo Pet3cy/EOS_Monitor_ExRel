@@ -13,9 +13,17 @@ export default defineConfig(({ mode }) => {
         outDir: 'Frontend/build',
       },
       plugins: [react()],
+      define: {
+        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
+      },
+      build: {
+        outDir: 'Frontend/build',
+      },
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),
+          'mammoth': 'mammoth/mammoth.browser.js'
         }
       }
     };
