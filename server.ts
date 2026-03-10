@@ -51,7 +51,7 @@ function extractJSON(rawText: string): any {
   throw new Error('Could not extract valid JSON from model response. Raw: ' + rawText.substring(0, 200));
 }
 
-const ai = new GoogleGenAI(process.env.GEMINI_API_KEY || 'dummy_key');
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || 'dummy_key' });
 
 const TOKEN_FILE = './.user-tokens.json';
 
