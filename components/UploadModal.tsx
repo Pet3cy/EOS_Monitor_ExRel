@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Upload, X, Loader2, FileText, File, Mail, Clipboard, CheckCircle2 } from 'lucide-react';
 import mammoth from 'mammoth';
-import { analyzeInvitation, AnalysisInput } from '../services/geminiService';
+import { analyzeInvitation, AnalysisInput } from '../services/gemmaService';
 import { EventData, Priority } from '../types';
 
 interface UploadModalProps {

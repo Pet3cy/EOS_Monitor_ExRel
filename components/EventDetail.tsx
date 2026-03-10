@@ -6,7 +6,7 @@ import {
   Calendar, MapPin, Building2, AlertCircle, Clock, FileText, 
   UserPlus, Mail, MessageSquare, CheckCircle, Save, Mic, FileAudio, Loader2, Sparkles, Megaphone, Image as ImageIcon, X, Link as LinkIcon, ExternalLink, Briefcase, Trash2, Copy, FileCheck, Users, User, FileJson, FileSpreadsheet, Download, Plus, Search, Edit2, Repeat, Repeat1, CalendarPlus, ChevronDown, Target, Zap, ShieldAlert, ArrowRight
 } from 'lucide-react';
-import { summarizeFollowUp, generateBriefing } from '../services/geminiService';
+import { summarizeFollowUp, generateBriefing } from '../services/gemmaService';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
 interface EventDetailProps {
@@ -241,7 +241,7 @@ END:VCALENDAR`;
 
   const splitBriefing = (text: string) => {
     // Simple logic to extract potential "red lines" if the AI generated them
-    // This assumes the AI output format in geminiService
+    // This assumes the AI output format in gemmaService
     const parts = text.split(/Red Lines|RED LINES|Red lines/);
     if (parts.length > 1) {
         return {

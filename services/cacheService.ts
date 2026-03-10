@@ -5,7 +5,7 @@
  */
 
 export class CacheService {
-  private static PREFIX = 'gemini_cache_';
+  private static PREFIX = 'gemma_cache_';
   // Optional: Add a version or max size limit if needed
 
   /**
