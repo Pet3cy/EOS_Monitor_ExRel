@@ -332,14 +332,13 @@ async function startServer() {
     }
 
     try {
-      const model = ai.getGenerativeModel({
+      const response = await ai.models.generateContent({
         model: 'gemini-1.5-pro',
-        systemInstruction: SYSTEM_PROMPT,
-      });
-
-      const response = await model.generateContent({
-        contents: [{ role: 'user', parts }],
-        generationConfig: {
+        contents: {
+          parts,
+        },
+        config: {
+          systemInstruction: SYSTEM_PROMPT,
           temperature: 0.2,
           responseMimeType: 'application/json',
           responseSchema: {
@@ -368,7 +367,10 @@ async function startServer() {
         },
       });
 
-      const rawText = response.response.text();
+      const rawText = response.text;
+      if (!rawText) {
+        throw new Error('Gemini returned an empty response.');
+      }
       res.json({ result: extractJSON(rawText) });
     } catch (error: any) {
       console.error("AI Analyze Error:", error);
