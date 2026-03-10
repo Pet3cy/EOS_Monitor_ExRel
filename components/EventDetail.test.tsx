@@ -93,17 +93,26 @@ describe('EventDetail', () => {
   });
 
   describe('Header and Basic Rendering', () => {
-    it('should render event details header', () => {
+    it('should render event name and date in report mode', () => {
       render(<EventDetail {...defaultProps} />);
+
+      expect(screen.getByText('Test Conference 2026')).toBeInTheDocument();
+      expect(screen.getByText(/2026-06-15/)).toBeInTheDocument();
+      expect(screen.getByText(/Education/)).toBeInTheDocument();
+    });
+
+    it('should render event header with institution in editor mode', () => {
+      render(<EventDetail {...defaultProps} />);
+      switchToEditor();
 
       expect(screen.getByText('Test Conference 2026')).toBeInTheDocument();
       expect(screen.getByText('Test University')).toBeInTheDocument();
       expect(screen.getByText('2026-06-15')).toBeInTheDocument();
-      expect(screen.getByText('Education')).toBeInTheDocument();
     });
 
-    it('should render PriorityBadge', () => {
+    it('should render PriorityBadge in editor mode', () => {
       render(<EventDetail {...defaultProps} />);
+      switchToEditor();
 
       expect(screen.getByText('High Priority')).toBeInTheDocument();
     });
