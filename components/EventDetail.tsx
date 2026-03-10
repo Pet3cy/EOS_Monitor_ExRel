@@ -20,6 +20,13 @@ interface EventDetailProps {
 type TabType = 'context' | 'logistics' | 'prep' | 'outcomes' | 'raw';
 type ViewMode = 'report' | 'editor';
 
+const PRIORITY_CLASSES: Record<Priority, string> = {
+  [Priority.High]: 'bg-emerald-500 text-slate-900',
+  [Priority.Medium]: 'bg-orange-500 text-white',
+  [Priority.Low]: 'bg-slate-700 text-slate-300',
+  [Priority.Irrelevant]: 'bg-slate-700 text-slate-300',
+};
+
 export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDelete, contacts = [], onViewContact }) => {
   const [localEvent, setLocalEvent] = useState<EventData>(event);
   const [viewMode, setViewMode] = useState<ViewMode>('report');
@@ -411,11 +418,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Priority Score</span>
                              </div>
                              <div className="mt-6 relative z-10">
-                                 <span className={`inline-block px-3 py-1 rounded-lg text-xs font-bold uppercase ${
-                                     localEvent.analysis.priority === Priority.High ? 'bg-emerald-500 text-slate-900' : 
-                                     localEvent.analysis.priority === Priority.Medium ? 'bg-orange-500 text-white' : 
-                                     'bg-slate-700 text-slate-300'
-                                 }`}>
+                                 <span className={`inline-block px-3 py-1 rounded-lg text-xs font-bold uppercase ${PRIORITY_CLASSES[localEvent.analysis.priority] || 'bg-slate-700 text-slate-300'}`}>
                                      {localEvent.analysis.priority} Level
                                  </span>
                              </div>
