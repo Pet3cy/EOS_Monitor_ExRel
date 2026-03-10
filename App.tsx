@@ -12,6 +12,7 @@ import { ContactsView } from './components/ContactsView';
 import { CalendarSync } from './components/CalendarSync';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { EmailParserView } from './components/EmailParserView';
+import { LiveAssistant } from './components/LiveAssistant';
 
 const MOCK_CONTACTS: Contact[] = [
   { id: 'c20', name: 'Alessandro Di Miceli', email: 'alessandro@obessu.org', role: 'Board Member', organization: 'OBESSU', notes: 'Portfolio: VET and Apprenticeships' },
@@ -802,6 +803,8 @@ export default function App() {
           onAnalysisComplete={handleAnalysisComplete}
         />
       )}
+      
+      <LiveAssistant />
     </div>
   );
 }
