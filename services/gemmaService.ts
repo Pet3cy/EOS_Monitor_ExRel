@@ -260,8 +260,8 @@ export const chatWithAssistant = async (message: string, history: {role: string,
     // In a real app we'd pass history to the chat creation, but for simplicity we'll just send the message
     // If we want to use history, we'd need to map it to the correct format, but the SDK handles it differently.
     // For now, let's just send the message with context.
-    const contextStr = history.map(h => \`\${h.role}: \${h.text}\`).join('\\n');
-    const fullMessage = history.length > 0 ? \`Previous conversation:\\n\${contextStr}\\n\\nUser: \${message}\` : message;
+    const contextStr = history.map(h => `${h.role}: ${h.text}`).join('\n');
+    const fullMessage = history.length > 0 ? `Previous conversation:\n${contextStr}\n\nUser: ${message}` : message;
     
     const response = await chat.sendMessage({ message: fullMessage });
     return response.text || "";
@@ -275,7 +275,7 @@ export const researchOrganization = async (query: string): Promise<{text: string
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: \`Research the following organization or event: \${query}. Provide a brief summary of their recent activities and relevance to OBESSU.\`,
+      contents: `Research the following organization or event: ${query}. Provide a brief summary of their recent activities and relevance to OBESSU.`,
       config: {
         tools: [{ googleSearch: {} }],
       },

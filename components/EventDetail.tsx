@@ -167,11 +167,15 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     setContactSearch('');
   };
 
-  const filteredContacts = contacts.filter(c => 
-    c.name.toLowerCase().includes(contactSearch.toLowerCase()) ||
-    c.email.toLowerCase().includes(contactSearch.toLowerCase()) ||
-    c.organization.toLowerCase().includes(contactSearch.toLowerCase())
-  );
+  // ⚡ Bolt Optimization: Wrap filteredContacts in useMemo and hoist contactSearch.toLowerCase()
+  const filteredContacts = React.useMemo(() => {
+    const lowerSearch = contactSearch.toLowerCase();
+    return contacts.filter(c =>
+      c.name.toLowerCase().includes(lowerSearch) ||
+      c.email.toLowerCase().includes(lowerSearch) ||
+      c.organization.toLowerCase().includes(lowerSearch)
+    );
+  }, [contacts, contactSearch]);
 
   // --- Export Functions ---
 

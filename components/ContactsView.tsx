@@ -71,14 +71,20 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
   }, [notesBuffer, selectedContact, onUpdateContact]);
 
   const filteredContacts = useMemo(() => {
+    // ⚡ Bolt Optimization: Hoist searchTerm.toLowerCase() outside the filter loop
+    const lowerSearchTerm = searchTerm.toLowerCase();
+
     return contacts.filter(c => 
-      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.organization.toLowerCase().includes(searchTerm.toLowerCase())
+      c.name.toLowerCase().includes(lowerSearchTerm) ||
+      c.email.toLowerCase().includes(lowerSearchTerm) ||
+      c.organization.toLowerCase().includes(lowerSearchTerm)
     ).sort((a, b) => {
-      const valA = sortField === 'name' ? a.name.toLowerCase() : a.organization.toLowerCase();
-      const valB = sortField === 'name' ? b.name.toLowerCase() : b.organization.toLowerCase();
-      return sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      // ⚡ Bolt Optimization: Use localeCompare with sensitivity 'base' to avoid redundant lowercase allocations
+      const valA = sortField === 'name' ? a.name : a.organization;
+      const valB = sortField === 'name' ? b.name : b.organization;
+      return sortOrder === 'asc'
+        ? valA.localeCompare(valB, undefined, { sensitivity: 'base' })
+        : valB.localeCompare(valA, undefined, { sensitivity: 'base' });
     });
   }, [contacts, searchTerm, sortOrder, sortField]);
 

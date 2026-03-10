@@ -342,10 +342,13 @@ export default function App() {
   };
 
   const filteredEvents = useMemo(() => {
+    // ⚡ Bolt Optimization: Hoist searchTerm.toLowerCase() outside the filter loop
+    const lowerSearchTerm = searchTerm.toLowerCase();
+
     let result = events.filter(e => {
       const matchesSearch = 
-        e.analysis.eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        e.analysis.institution.toLowerCase().includes(searchTerm.toLowerCase());
+        e.analysis.eventName.toLowerCase().includes(lowerSearchTerm) ||
+        e.analysis.institution.toLowerCase().includes(lowerSearchTerm);
       
       if (!matchesSearch) return false;
 
