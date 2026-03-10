@@ -28,15 +28,30 @@ const escapeICS = (str: string) =>
     .replace(/\n/g, '\\n');
 
 const foldLine = (line: string) => {
-  if (line.length <= 75) return line;
-  const chunks = [];
-  chunks.push(line.substring(0, 75));
-  let i = 75;
-  while (i < line.length) {
-    chunks.push(' ' + line.substring(i, i + 74));
-    i += 74;
+  const encoder = new TextEncoder();
+  if (encoder.encode(line).length <= 75) return line;
+  const chunks: string[] = [];
+  let current = '';
+  let currentBytes = 0;
+  const maxBytes = 75;
+
+  for (const char of line) {
+    const charBytes = encoder.encode(char).length;
+    const limit = chunks.length === 0 ? maxBytes : maxBytes - 1; // account for leading space on continuation lines
+    if (currentBytes + charBytes > limit) {
+      chunks.push(current);
+      current = char;
+      currentBytes = charBytes;
+    } else {
+      current += char;
+      currentBytes += charBytes;
+    }
   }
-  return chunks.join('\r\n');
+  if (current) chunks.push(current);
+
+  return chunks
+    .map((chunk, i) => (i === 0 ? chunk : ' ' + chunk))
+    .join('\r\n');
 };
 
 export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDelete, contacts = [], onViewContact }) => {
