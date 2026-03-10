@@ -60,7 +60,7 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(cors());
-  app.use(express.json());
+  app.use(express.json({ limit: '10mb' }));
 
   // In-memory store for tokens (for demo purposes)
   let userTokens: any = null;
@@ -379,7 +379,6 @@ async function startServer() {
   });
 
   app.post("/api/ai/briefing", async (req, res) => {
-  app.post("/api/ai/briefing", async (req, res) => {
     const { event } = req.body;
     if (!event?.analysis) return res.status(400).json({ error: "Event with analysis data is required" });
     const prompt = `Create a 1-page executive briefing for a representative attending the following event:
@@ -400,18 +399,18 @@ Include:
 Format as plain text, no JSON.`;
 
     try {
-      const model = ai.getGenerativeModel({
+      const response = await ai.models.generateContent({
         model: 'gemini-1.5-pro',
-        systemInstruction: SYSTEM_PROMPT,
-      });
-
-      const response = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: {
+        contents: prompt,
+        config: {
+          systemInstruction: SYSTEM_PROMPT,
           temperature: 0.3,
         },
       });
-      res.json({ result: response.response.text() });
+      if (!response.text) {
+        throw new Error('Gemini returned an empty response.');
+      }
+      res.json({ result: response.text });
     } catch (error: any) {
       console.error("AI Briefing Error:", error);
       res.status(500).json({ error: error.message });
@@ -427,13 +426,17 @@ ${OBESSU_CONTEXT}
 
 Provide a concise summary of outcomes, key contacts made, and follow-up tasks relevant to OBESSU's strategic themes.`;
     try {
-      const response = await ai.getGenerativeModel({ model: 'gemini-1.5-flash' }).generateContent({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: {
+      const response = await ai.models.generateContent({
+        model: 'gemini-1.5-flash',
+        contents: prompt,
+        config: {
           temperature: 0.3,
         },
       });
-      res.json({ result: response.response.text() });
+      if (!response.text) {
+        throw new Error('Gemini returned an empty response.');
+      }
+      res.json({ result: response.text });
     } catch (error: any) {
       console.error("AI Summarize Error:", error);
       res.status(500).json({ error: error.message });
