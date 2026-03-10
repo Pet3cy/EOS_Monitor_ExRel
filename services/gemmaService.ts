@@ -3,7 +3,7 @@
 import { AnalysisResult, Priority } from '../types';
 import { GoogleGenAI, Type } from '@google/genai';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY });
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || import.meta.env?.VITE_GEMINI_API_KEY });
 
 const OBESSU_CONTEXT = `ORGANIZATIONAL STRUCTURE & PORTFOLIOS (2026):
 BOARD MEMBERS:
@@ -35,18 +35,53 @@ Use the following organizational context to determine relevance and assign prior
 
 ${OBESSU_CONTEXT}`;
 
-function extractJSON(rawText: string): any {
-  try { return JSON.parse(rawText.trim()); } catch {}
-  
-  const stripped = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-  try { return JSON.parse(stripped); } catch {}
-  
-  const match = rawText.match(/\{[\s\S]*\}/);
-  if (match) {
-    try { return JSON.parse(match[0]); } catch {}
+export function extractJSON(rawText: string): any {
+  const attemptParse = (str: string) => {
+    try {
+      const parsed = JSON.parse(str);
+      if (parsed !== null && typeof parsed === 'object') {
+        return parsed;
+      }
+    } catch {}
+    return null;
+  };
+
+  const text = rawText.trim();
+
+  // 1. Try parsing the raw text directly
+  let result = attemptParse(text);
+  if (result) return result;
+
+  // 2. Try extracting from markdown code blocks
+  const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (codeBlockMatch) {
+    result = attemptParse(codeBlockMatch[1].trim());
+    if (result) return result;
   }
-  
-  throw new Error('Could not extract valid JSON from model response. Raw: ' + rawText.substring(0, 200));
+
+  // 3. Find outermost JSON object or array bounds
+  const firstBrace = text.indexOf('{');
+  const lastBrace = text.lastIndexOf('}');
+  const firstBracket = text.indexOf('[');
+  const lastBracket = text.lastIndexOf(']');
+
+  const candidates: string[] = [];
+  if (firstBrace !== -1 && lastBrace !== -1 && firstBrace < lastBrace) {
+    candidates.push(text.substring(firstBrace, lastBrace + 1));
+  }
+  if (firstBracket !== -1 && lastBracket !== -1 && firstBracket < lastBracket) {
+    candidates.push(text.substring(firstBracket, lastBracket + 1));
+  }
+
+  // Try parsing the largest block first
+  candidates.sort((a, b) => b.length - a.length);
+
+  for (const candidate of candidates) {
+    result = attemptParse(candidate);
+    if (result) return result;
+  }
+
+  throw new Error('Could not extract valid JSON from model response. Raw: ' + text.substring(0, 200));
 }
 
 export interface AnalysisInput {
