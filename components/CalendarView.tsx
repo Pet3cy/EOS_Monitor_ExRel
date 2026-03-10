@@ -44,6 +44,23 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
     return `${year}-${month}-${day}`;
   };
 
+  // Pre-filter events and parse their dates once, memoized separately
+  // so that changes to date range or calendar view don't re-run this.
+  const preFilteredEvents = useMemo(() =>
+    events
+      .filter(
+        (event) =>
+          (priorityFilter === 'All' || event.analysis.priority === priorityFilter) &&
+          (themeFilter === 'All' || event.analysis.theme === themeFilter) &&
+          (contactFilter === 'All' || event.contact.name === contactFilter)
+      )
+      .map((event) => ({
+        event,
+        time: new Date(event.analysis.date).getTime(),
+      })),
+    [events, priorityFilter, themeFilter, contactFilter]
+  );
+
   // Generate and filter weeks
   const filteredWeeks = useMemo(() => {
     if (calendarView !== 'Week') return [];
@@ -56,21 +73,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
     if (isNaN(rangeStart.getTime()) || isNaN(rangeEnd.getTime())) {
         return [];
     }
-
-    // Pre-filter events and parse their dates once to improve performance
-    const preFilteredEvents = events.reduce((acc, event) => {
-      const matchesPriority = priorityFilter === 'All' || event.analysis.priority === priorityFilter;
-      const matchesTheme = themeFilter === 'All' || event.analysis.theme === themeFilter;
-      const matchesContact = contactFilter === 'All' || event.contact.name === contactFilter;
-
-      if (matchesPriority && matchesTheme && matchesContact) {
-        acc.push({
-          event,
-          time: new Date(event.analysis.date).getTime()
-        });
-      }
-      return acc;
-    }, [] as Array<{event: EventData, time: number}>);
 
     const yearStart = new Date(rangeStart.getFullYear(), 0, 1);
     const dayOfWeek = yearStart.getDay();
@@ -105,7 +107,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
       });
     }
     return weeksArr;
-  }, [events, priorityFilter, themeFilter, contactFilter, startDateFilter, endDateFilter, calendarView]);
+  }, [preFilteredEvents, priorityFilter, themeFilter, contactFilter, startDateFilter, endDateFilter, calendarView]);
 
   const filteredPeriods = useMemo(() => {
     if (calendarView === 'Week') return [];
@@ -116,16 +118,15 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
     if (isNaN(rangeStart.getTime()) || isNaN(rangeEnd.getTime())) {
         return [];
     }
+
+    const rangeStartMs = rangeStart.getTime();
+    const rangeEndMs = rangeEnd.getTime();
     
-    // Filter events first
-    const filteredEvents = events.filter(event => {
-        const eventDate = new Date(event.analysis.date);
-        const matchesDate = eventDate >= rangeStart && eventDate <= rangeEnd;
-        const matchesPriority = priorityFilter === 'All' || event.analysis.priority === priorityFilter;
-        const matchesTheme = themeFilter === 'All' || event.analysis.theme === themeFilter;
-        const matchesContact = contactFilter === 'All' || event.contact.name === contactFilter;
-        return matchesDate && matchesPriority && matchesTheme && matchesContact;
-    });
+    // Reuse preFilteredEvents (already filtered by priority/theme/contact)
+    // and apply date range filter
+    const filteredEvents = preFilteredEvents
+        .filter(item => item.time >= rangeStartMs && item.time <= rangeEndMs)
+        .map(item => item.event);
 
     // Group events based on viewType
     const grouped = new Map<string, EventData[]>();
@@ -154,7 +155,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
         title,
         events: evs.sort((a, b) => new Date(a.analysis.date).getTime() - new Date(b.analysis.date).getTime())
     }));
-  }, [events, calendarView, priorityFilter, themeFilter, contactFilter, startDateFilter, endDateFilter]);
+  }, [preFilteredEvents, calendarView, startDateFilter, endDateFilter]);
 
   const currentMonthName = (date: Date) => date.toLocaleString('default', { month: 'long' });
 
