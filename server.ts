@@ -3,8 +3,11 @@ import cors from "cors";
 import { google } from "googleapis";
 import dotenv from "dotenv";
 import { createServer as createViteServer } from "vite";
+import fs from "fs";
 
 dotenv.config();
+
+const TOKEN_FILE = './.user-tokens.json';
 
 async function startServer() {
   const app = express();
@@ -15,13 +18,24 @@ async function startServer() {
 
   // In-memory store for tokens (for demo purposes)
   let userTokens: any = null;
+  if (fs.existsSync(TOKEN_FILE)) {
+    try { userTokens = JSON.parse(fs.readFileSync(TOKEN_FILE, 'utf-8')); } catch {}
+  }
 
-  const getOAuth2Client = (redirectUri: string) => {
+  const getOAuth2Client = (redirectUri?: string) => {
     return new google.auth.OAuth2(
-      process.env.CLIENT_ID || process.env.GOOGLE_CLIENT_ID,
-      process.env.CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET,
-      redirectUri
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      redirectUri || `${process.env.APP_URL || 'http://localhost:3000'}/auth/callback`
     );
+  };
+
+  const getAuthenticatedClient = () => {
+    const client = getOAuth2Client();
+    if (userTokens) {
+      client.setCredentials(userTokens);
+    }
+    return client;
   };
 
   app.get("/api/auth/url", (req, res) => {
@@ -31,8 +45,8 @@ async function startServer() {
         return res.status(400).json({ error: "redirectUri is required" });
       }
 
-      const clientId = process.env.CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
-      const clientSecret = process.env.CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET;
+      const clientId = process.env.GOOGLE_CLIENT_ID;
+      const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
       if (!clientId || !clientSecret) {
         return res.status(500).json({ 
@@ -63,12 +77,18 @@ async function startServer() {
 
   app.get(["/auth/callback", "/auth/callback/"], async (req, res) => {
     const { code } = req.query;
+    const safeCode = typeof code === 'string' ? code.replace(/[^a-zA-Z0-9/_\-\.=]/g, '') : '';
+    const origin = process.env.APP_URL || 'http://localhost:3000';
+    
     res.send(`
       <html>
         <body>
           <script>
             if (window.opener) {
-              window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS', code: '${code}' }, '*');
+              window.opener.postMessage(
+                { type: 'OAUTH_AUTH_SUCCESS', code: ${JSON.stringify(safeCode)} },
+                ${JSON.stringify(origin)}
+              );
               window.close();
             } else {
               window.location.href = '/';
@@ -86,8 +106,8 @@ async function startServer() {
       return res.status(400).json({ error: "code and redirectUri are required" });
     }
 
-    const clientId = process.env.CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = process.env.CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET;
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
     if (!clientId || !clientSecret) {
       return res.status(500).json({ 
@@ -100,6 +120,7 @@ async function startServer() {
       const oauth2Client = getOAuth2Client(redirectUri);
       const { tokens } = await oauth2Client.getToken(code);
       userTokens = tokens;
+      fs.writeFileSync(TOKEN_FILE, JSON.stringify(tokens));
       res.json({ success: true });
     } catch (error: any) {
       console.error("Error exchanging code for token:", error);
@@ -113,6 +134,7 @@ async function startServer() {
 
   app.post("/api/auth/disconnect", (req, res) => {
     userTokens = null;
+    if (fs.existsSync(TOKEN_FILE)) fs.unlinkSync(TOKEN_FILE);
     res.json({ success: true });
   });
 
@@ -127,8 +149,7 @@ async function startServer() {
     }
 
     try {
-      const oauth2Client = new google.auth.OAuth2();
-      oauth2Client.setCredentials(userTokens);
+      const oauth2Client = getAuthenticatedClient();
       const drive = google.drive({ version: "v3", auth: oauth2Client });
 
       const response = await drive.files.list({
@@ -149,12 +170,15 @@ async function startServer() {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
+    const folderId = process.env.PAPERS_FOLDER_ID;
+    if (!folderId) {
+      return res.status(500).json({ error: "PAPERS_FOLDER_ID not set in .env" });
+    }
+
     try {
-      const oauth2Client = new google.auth.OAuth2();
-      oauth2Client.setCredentials(userTokens);
+      const oauth2Client = getAuthenticatedClient();
       const drive = google.drive({ version: "v3", auth: oauth2Client });
 
-      const folderId = '1obdX4rkD2A0Cn_ayk3dtJqR96ASiGl3j';
       const response = await drive.files.list({
         q: `'${folderId}' in parents and trashed = false`,
         fields: "files(id, name, mimeType)",
@@ -200,18 +224,10 @@ async function startServer() {
     }
 
     try {
-      const oauth2Client = new google.auth.OAuth2();
-      oauth2Client.setCredentials(userTokens);
+      const oauth2Client = getAuthenticatedClient();
       const calendar = google.calendar({ version: "v3", auth: oauth2Client });
 
-      const calendarIds = [
-        'panagiotis@obessu.org',
-        'amira@obessu.org',
-        'daniele@obessu.org',
-        'francesca@obessu.org',
-        'rui@obessu.org',
-        'panagiotischatzimichail@gmail.com'
-      ];
+      const calendarIds = (process.env.CALENDAR_IDS || '').split(',').filter(Boolean);
 
       const timeMin = new Date('2026-01-01T00:00:00Z').toISOString();
       let allEvents: any[] = [];

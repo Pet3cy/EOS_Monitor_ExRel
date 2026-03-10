@@ -3,12 +3,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { EventData, Priority, RepresentativeRole, Contact } from '../types';
 import { PriorityBadge } from './PriorityBadge';
 import { 
-  Calendar, MapPin, Building2, AlertCircle, Clock, FileText, 
-  UserPlus, Mail, MessageSquare, CheckCircle, Save, Mic, FileAudio, Loader2, Sparkles, Megaphone, Image as ImageIcon, X, Link as LinkIcon, ExternalLink, Briefcase, Trash2, Copy, FileCheck, Users, User, FileJson, FileSpreadsheet, Download, Plus, Search, Edit2, Repeat, Repeat1, CalendarPlus, ChevronDown, Target, Zap, ShieldAlert, ArrowRight, HardDrive
+  Calendar, MapPin, Building2, AlertCircle, FileText,
+  Mail, CheckCircle, Save, Loader2, Sparkles, X, ExternalLink, Briefcase, Trash2, Users, User, FileJson, Plus, Search, Edit2, CalendarPlus, Target, ShieldAlert, ArrowRight, Volume2, Square
 } from 'lucide-react';
-import { summarizeFollowUp, generateBriefing } from '../services/geminiService';
+import { generateBriefing, generateSpeech, researchOrganization, searchLocation } from '../services/gemmaService';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
-import { RelevantPapers } from './RelevantPapers';
 
 interface EventDetailProps {
   event: EventData;
@@ -27,7 +26,6 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   const [viewMode, setViewMode] = useState<ViewMode>('report');
   const [activeTab, setActiveTab] = useState<TabType>('context');
   const [isEditing, setIsEditing] = useState(false);
-  const [isSummarizing, setIsSummarizing] = useState(false);
   const [isGeneratingBrief, setIsGeneratingBrief] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
@@ -37,9 +35,45 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   // States for link editing
   const [isEditingRegLink, setIsEditingRegLink] = useState(false);
   const [isEditingProgLink, setIsEditingProgLink] = useState(false);
+  const [newActivity, setNewActivity] = useState('');
+
+  // States for Audio
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const sourceNodeRef = useRef<AudioBufferSourceNode | null>(null);
 
   // Refs for click outside
   const calendarMenuRef = useRef<HTMLDivElement>(null);
+
+  const [researchResult, setResearchResult] = useState<{ title: string, text: string, urls: string[] } | null>(null);
+  const [isResearching, setIsResearching] = useState(false);
+
+  const handleResearchInstitution = async () => {
+    if (!localEvent.analysis.institution) return;
+    setIsResearching(true);
+    try {
+      const result = await researchOrganization(localEvent.analysis.institution);
+      setResearchResult({ title: `Research: ${localEvent.analysis.institution}`, text: result.text, urls: result.urls });
+    } catch (e: any) {
+      alert(e.message || "Failed to research institution.");
+    } finally {
+      setIsResearching(false);
+    }
+  };
+
+  const handleResearchVenue = async () => {
+    if (!localEvent.analysis.venue) return;
+    setIsResearching(true);
+    try {
+      const result = await searchLocation(localEvent.analysis.venue);
+      setResearchResult({ title: `Venue Info: ${localEvent.analysis.venue}`, text: result.text, urls: result.urls });
+    } catch (e: any) {
+      alert(e.message || "Failed to research venue.");
+    } finally {
+      setIsResearching(false);
+    }
+  };
 
   useEffect(() => {
     setLocalEvent(JSON.parse(JSON.stringify(event)));
@@ -55,7 +89,12 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
+    };
   }, []);
 
   const handleChange = <K extends EventSection, F extends keyof EventData[K]>(section: K, field: F, value: EventData[K][F]) => {
@@ -66,6 +105,26 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
         [field]: value
       }
     }));
+    setIsEditing(true);
+  };
+
+  const handleStatusChange = (newStatus: string) => {
+    setLocalEvent(prev => {
+      const history = prev.followUp.statusHistory ? [...prev.followUp.statusHistory] : [];
+      history.push({
+        status: newStatus,
+        date: new Date().toISOString(),
+        user: 'Current User' // In a real app, this would be the logged-in user
+      });
+      return {
+        ...prev,
+        followUp: {
+          ...prev.followUp,
+          status: newStatus as any,
+          statusHistory: history
+        }
+      };
+    });
     setIsEditing(true);
   };
 
@@ -86,12 +145,66 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   const handleBriefingGen = async () => {
     setIsGeneratingBrief(true);
     try {
-      const brief = await generateBriefing(localEvent);
-      handleChange('followUp', 'briefing', brief);
-    } catch (e) {
-      alert("Failed to generate briefing.");
+      const result = await generateBriefing(localEvent);
+      setLocalEvent(prev => ({
+        ...prev,
+        followUp: {
+          ...prev.followUp,
+          briefing: result.briefing,
+          actionableInsights: result.actionableInsights
+        }
+      }));
+      setIsEditing(true);
+    } catch (e: any) {
+      alert(e.message || "Failed to generate briefing.");
     } finally {
       setIsGeneratingBrief(false);
+    }
+  };
+
+  const handlePlayBriefing = async () => {
+    if (isPlayingAudio) {
+      if (sourceNodeRef.current) {
+        sourceNodeRef.current.stop();
+      }
+      setIsPlayingAudio(false);
+      return;
+    }
+
+    if (!localEvent.followUp.briefing) return;
+
+    setIsGeneratingAudio(true);
+    try {
+      const base64Audio = await generateSpeech(localEvent.followUp.briefing);
+      if (!base64Audio) throw new Error("Failed to generate audio.");
+
+      const binaryString = window.atob(base64Audio);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      }
+      const audioContext = audioContextRef.current;
+
+      const audioBuffer = await audioContext.decodeAudioData(bytes.buffer);
+      const source = audioContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(audioContext.destination);
+      
+      source.onended = () => setIsPlayingAudio(false);
+      sourceNodeRef.current = source;
+      
+      source.start(0);
+      setIsPlayingAudio(true);
+    } catch (error) {
+      console.error("Audio playback failed:", error);
+      alert("Failed to play audio briefing.");
+    } finally {
+      setIsGeneratingAudio(false);
     }
   };
 
@@ -112,11 +225,15 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     setContactSearch('');
   };
 
-  const filteredContacts = contacts.filter(c => 
-    c.name.toLowerCase().includes(contactSearch.toLowerCase()) ||
-    c.email.toLowerCase().includes(contactSearch.toLowerCase()) ||
-    c.organization.toLowerCase().includes(contactSearch.toLowerCase())
-  );
+  // ⚡ Bolt Optimization: Wrap filteredContacts in useMemo and hoist contactSearch.toLowerCase()
+  const filteredContacts = React.useMemo(() => {
+    const lowerSearch = contactSearch.toLowerCase();
+    return contacts.filter(c =>
+      c.name.toLowerCase().includes(lowerSearch) ||
+      c.email.toLowerCase().includes(lowerSearch) ||
+      c.organization.toLowerCase().includes(lowerSearch)
+    );
+  }, [contacts, contactSearch]);
 
   // --- Export Functions ---
 
@@ -129,30 +246,6 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', fileName);
     linkElement.click();
-  };
-
-  const handleSaveToDrive = async () => {
-    const dataStr = JSON.stringify(localEvent, null, 2);
-    const fileName = `${localEvent.analysis.eventName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`;
-    
-    try {
-      const res = await fetch('/api/drive/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          folderId: '1k8QPBJrdBFxNtjhi4h3KPV3aL68_0UUQ',
-          fileName,
-          content: dataStr,
-          mimeType: 'application/json'
-        })
-      });
-      
-      if (!res.ok) throw new Error('Upload failed');
-      alert('Successfully saved to Drive Database!');
-    } catch (err) {
-      console.error(err);
-      alert('Failed to save to Drive. Please ensure you are connected.');
-    }
   };
 
   const handleExportCSV = () => {
@@ -174,16 +267,16 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     const headers = Object.keys(flatEvent);
     const values = Object.values(flatEvent).map(v => `"${v.replace(/"/g, '""')}"`);
 
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + headers.join(",") + "\n" 
-      + values.join(",");
+    const csvContent = headers.join(",") + "\n" + values.join(",");
 
     const fileName = `${localEvent.analysis.eventName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.csv`;
-    const encodedUri = encodeURI(csvContent);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const linkElement = document.createElement("a");
-    linkElement.setAttribute("href", encodedUri);
+    linkElement.setAttribute("href", url);
     linkElement.setAttribute("download", fileName);
     linkElement.click();
+    URL.revokeObjectURL(url);
   };
 
   // --- Calendar Functions ---
@@ -235,19 +328,44 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   const handleDownloadICS = () => {
     const { start, end } = getEventDates();
     const { eventName, description, venue } = localEvent.analysis;
-    const icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//OBESSU//Event Analyzer//EN
-BEGIN:VEVENT
-UID:${crypto.randomUUID()}
-DTSTAMP:${formatDateForGoogle(new Date())}
-DTSTART:${formatDateForGoogle(start)}
-DTEND:${formatDateForGoogle(end)}
-SUMMARY:${eventName}
-DESCRIPTION:${description.replace(/\n/g, '\\n')}
-LOCATION:${venue}
-END:VEVENT
-END:VCALENDAR`;
+    
+    const escapeICS = (str: string) => 
+      str
+        .replace(/\\/g, '\\\\')
+        .replace(/;/g, '\\;')
+        .replace(/,/g, '\\,')
+        .replace(/\n/g, '\\n');
+
+    const foldLine = (line: string) => {
+      if (line.length <= 75) return line;
+      const chunks = [];
+      chunks.push(line.substring(0, 75));
+      let i = 75;
+      while (i < line.length) {
+        chunks.push(' ' + line.substring(i, i + 74));
+        i += 74;
+      }
+      return chunks.join('\r\n');
+    };
+
+    const icsLines = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//OBESSU//Event Analyzer//EN',
+      'BEGIN:VEVENT',
+      `UID:${crypto.randomUUID()}`,
+      `DTSTAMP:${formatDateForGoogle(new Date())}`,
+      `DTSTART:${formatDateForGoogle(start)}`,
+      `DTEND:${formatDateForGoogle(end)}`,
+      `SUMMARY:${escapeICS(eventName)}`,
+      `DESCRIPTION:${escapeICS(description)}`,
+      `LOCATION:${escapeICS(venue)}`,
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ];
+
+    const icsContent = icsLines.map(foldLine).join('\r\n');
+    
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
     const link = document.createElement('a');
     link.href = window.URL.createObjectURL(blob);
@@ -267,7 +385,7 @@ END:VCALENDAR`;
 
   const splitBriefing = (text: string) => {
     // Simple logic to extract potential "red lines" if the AI generated them
-    // This assumes the AI output format in geminiService
+    // This assumes the AI output format in gemmaService
     const parts = text.split(/Red Lines|RED LINES|Red lines/);
     if (parts.length > 1) {
         return {
@@ -317,7 +435,6 @@ END:VCALENDAR`;
                  {/* Shared Actions */}
                  <div className="flex items-center gap-1">
                     <button onClick={handleExportJSON} className="p-2 text-slate-400 hover:text-emerald-400 rounded-lg transition-colors" title="Export JSON"><FileJson size={16}/></button>
-                    <button onClick={handleSaveToDrive} className="p-2 text-slate-400 hover:text-emerald-400 rounded-lg transition-colors" title="Save to Drive Database"><HardDrive size={16}/></button>
                     <div className="relative" ref={calendarMenuRef}>
                         <button onClick={() => setShowCalendarMenu(!showCalendarMenu)} className="p-2 text-slate-400 hover:text-emerald-400 rounded-lg transition-colors" title="Calendar">
                             <CalendarPlus size={16}/>
@@ -484,14 +601,6 @@ END:VCALENDAR`;
                                             <span key={i} className="px-3 py-1 bg-slate-800 rounded-full text-xs font-bold text-slate-300 border border-slate-700">{act}</span>
                                         ))}
                                     </div>
-                                    <RelevantPapers 
-                                        folderId="1obdX4rkD2A0Cn_ayk3dtJqR96ASiGl3j" 
-                                        keywords={[
-                                            localEvent.analysis.theme, 
-                                            ...localEvent.analysis.eventName.split(' '),
-                                            ...localEvent.analysis.linkedActivities
-                                        ].filter(Boolean)}
-                                    />
                                 </div>
                             </div>
                          </div>
@@ -499,7 +608,29 @@ END:VCALENDAR`;
 
                     {/* Executive Briefing */}
                     <section>
-                         <h2 className="text-2xl font-bold text-white mb-6 border-b border-slate-800 pb-2">Executive Briefing</h2>
+                         <div className="flex items-center justify-between mb-6 border-b border-slate-800 pb-2">
+                             <h2 className="text-2xl font-bold text-white">Executive Briefing</h2>
+                             {localEvent.followUp.briefing && (
+                                 <button
+                                     onClick={handlePlayBriefing}
+                                     disabled={isGeneratingAudio}
+                                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                         isPlayingAudio 
+                                             ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50' 
+                                             : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700'
+                                     }`}
+                                 >
+                                     {isGeneratingAudio ? (
+                                         <Loader2 size={14} className="animate-spin" />
+                                     ) : isPlayingAudio ? (
+                                         <Square size={14} />
+                                     ) : (
+                                         <Volume2 size={14} />
+                                     )}
+                                     {isGeneratingAudio ? 'Generating Audio...' : isPlayingAudio ? 'Stop Audio' : 'Listen to Briefing'}
+                                 </button>
+                             )}
+                         </div>
                          
                          <div className="mb-8">
                              <h4 className="text-emerald-500 text-xs font-bold uppercase tracking-widest mb-4">Key Objectives</h4>
@@ -587,9 +718,31 @@ END:VCALENDAR`;
                            <PriorityBadge priority={localEvent.analysis.priority} />
                            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{localEvent.analysis.theme}</span>
                        </div>
-                       <h2 className="text-2xl font-extrabold text-slate-900 leading-tight mb-2">{localEvent.analysis.eventName}</h2>
+                       <div className="flex items-center gap-3 mb-2">
+                           <h2 className="text-2xl font-extrabold text-slate-900 leading-tight">{localEvent.analysis.eventName}</h2>
+                           <button 
+                               onClick={handleBriefingGen}
+                               disabled={isGeneratingBrief}
+                               className="bg-slate-900 text-white px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-slate-800 transition-all disabled:opacity-50"
+                               title="Generate Briefing & Actionable Insights"
+                           >
+                               {isGeneratingBrief ? <Loader2 size={12} className="animate-spin"/> : <Sparkles size={12} className="text-yellow-400"/>}
+                               AI Generate Briefing
+                           </button>
+                       </div>
                        <div className="flex items-center gap-4 text-sm text-slate-500 font-medium">
-                           <span className="flex items-center gap-1.5"><Building2 size={16} className="text-slate-400"/> {localEvent.analysis.institution}</span>
+                           <span className="flex items-center gap-1.5">
+                               <Building2 size={16} className="text-slate-400"/> 
+                               {localEvent.analysis.institution}
+                               <button 
+                                   onClick={handleResearchInstitution}
+                                   disabled={isResearching}
+                                   className="ml-2 bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider hover:bg-blue-200 transition-colors flex items-center gap-1"
+                               >
+                                   {isResearching ? <Loader2 size={10} className="animate-spin"/> : <Search size={10}/>}
+                                   Research
+                               </button>
+                           </span>
                            <span className="flex items-center gap-1.5"><Calendar size={16} className="text-slate-400"/> {localEvent.analysis.date}</span>
                        </div>
                     </div>
@@ -624,6 +777,42 @@ END:VCALENDAR`;
                                 />
                             </Section>
 
+                            <Section title="Tags">
+                                <div className="flex flex-wrap gap-2 mb-2">
+                                    {(localEvent.tags || []).map((tag, idx) => (
+                                        <span key={idx} className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold">
+                                            {tag}
+                                            <button 
+                                                onClick={() => {
+                                                    const newTags = (localEvent.tags || []).filter((_, i) => i !== idx);
+                                                    setLocalEvent(prev => ({ ...prev, tags: newTags }));
+                                                    setIsEditing(true);
+                                                }}
+                                                className="hover:text-blue-900"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        </span>
+                                    ))}
+                                </div>
+                                <input 
+                                    type="text"
+                                    placeholder="Add a tag and press Enter..."
+                                    className="w-full p-3 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-blue-500/20 outline-none"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                                            e.preventDefault();
+                                            const newTag = e.currentTarget.value.trim();
+                                            if (!(localEvent.tags || []).includes(newTag)) {
+                                                setLocalEvent(prev => ({ ...prev, tags: [...(prev.tags || []), newTag] }));
+                                                setIsEditing(true);
+                                            }
+                                            e.currentTarget.value = '';
+                                        }
+                                    }}
+                                />
+                            </Section>
+
                             {localEvent.analysis.threadSummary && (
                                 <Section title="Thread Summary (AI Generated)">
                                     <div className="w-full p-4 bg-blue-50 border border-blue-100 rounded-xl text-blue-900 leading-relaxed text-sm italic">
@@ -646,16 +835,59 @@ END:VCALENDAR`;
                                     </div>
                                 </Section>
                                 <Section title="Related Activities">
-                                     <div className="bg-white p-4 border border-slate-200 rounded-xl h-full">
+                                     <div className="bg-white p-4 border border-slate-200 rounded-xl h-full space-y-4">
                                         {localEvent.analysis.linkedActivities.length > 0 ? (
                                             <ul className="space-y-2">
                                                 {localEvent.analysis.linkedActivities.map((act, i) => (
-                                                    <li key={i} className="flex items-center gap-2 text-sm text-blue-700 font-medium">
-                                                        <ExternalLink size={14} /> {act}
+                                                    <li key={i} className="flex items-center justify-between gap-2 text-sm text-blue-700 font-medium group">
+                                                        <div className="flex items-center gap-2 truncate">
+                                                            <ExternalLink size={14} className="shrink-0" /> 
+                                                            <span className="truncate">{act}</span>
+                                                        </div>
+                                                        <button 
+                                                            onClick={() => {
+                                                                const updated = localEvent.analysis.linkedActivities.filter((_, index) => index !== i);
+                                                                handleChange('analysis', 'linkedActivities', updated);
+                                                            }}
+                                                            className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
                                                     </li>
                                                 ))}
                                             </ul>
                                         ) : <p className="text-slate-400 text-sm">No linked internal activities found.</p>}
+                                        
+                                        <div className="pt-3 border-t border-slate-100">
+                                            <div className="flex gap-2">
+                                                <input 
+                                                    type="text"
+                                                    placeholder="Add activity or position..."
+                                                    className="flex-1 text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500/20"
+                                                    value={newActivity}
+                                                    onChange={(e) => setNewActivity(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' && newActivity.trim()) {
+                                                            const updated = [...localEvent.analysis.linkedActivities, newActivity.trim()];
+                                                            handleChange('analysis', 'linkedActivities', updated);
+                                                            setNewActivity('');
+                                                        }
+                                                    }}
+                                                />
+                                                <button 
+                                                    onClick={() => {
+                                                        if (newActivity.trim()) {
+                                                            const updated = [...localEvent.analysis.linkedActivities, newActivity.trim()];
+                                                            handleChange('analysis', 'linkedActivities', updated);
+                                                            setNewActivity('');
+                                                        }
+                                                    }}
+                                                    className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                                >
+                                                    <Plus size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
                                      </div>
                                 </Section>
                             </div>
@@ -684,7 +916,17 @@ END:VCALENDAR`;
                                         />
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Venue / Platform</label>
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Venue / Platform</label>
+                                            <button 
+                                                onClick={handleResearchVenue}
+                                                disabled={isResearching || !localEvent.analysis.venue}
+                                                className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider hover:bg-blue-200 transition-colors flex items-center gap-1 disabled:opacity-50"
+                                            >
+                                                {isResearching ? <Loader2 size={10} className="animate-spin"/> : <Search size={10}/>}
+                                                Research
+                                            </button>
+                                        </div>
                                         <input 
                                             className="w-full p-3 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-blue-500/20 outline-none"
                                             value={localEvent.analysis.venue}
@@ -906,7 +1148,7 @@ END:VCALENDAR`;
                                                             className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm font-medium text-slate-700 truncate border-b border-slate-50 last:border-0"
                                                         >
                                                             <div className="font-bold text-slate-800">{c.name}</div>
-                                                            <div className="text-xs text-slate-500 truncate">{c.role}</div>
+                                                            <div className="text-xs text-slate-500 truncate">{c.role} {c.organization ? `@ ${c.organization}` : ''}</div>
                                                         </button>
                                                     ))) : (
                                                         <div className="p-4 text-center text-xs text-slate-400 italic">No contacts match "{contactSearch}"</div>
@@ -961,16 +1203,52 @@ END:VCALENDAR`;
                                         value={localEvent.followUp.briefing}
                                         onChange={(e) => handleChange('followUp', 'briefing', e.target.value as RepresentativeRole)}
                                     />
-                                    <button 
-                                        onClick={handleBriefingGen}
-                                        disabled={isGeneratingBrief}
-                                        className="absolute bottom-4 right-4 bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-slate-800 transition-all disabled:opacity-50"
-                                    >
-                                        {isGeneratingBrief ? <Loader2 size={12} className="animate-spin"/> : <Sparkles size={12} className="text-yellow-400"/>}
-                                        Generate with AI
-                                    </button>
+                                    <div className="absolute bottom-4 right-4 flex gap-2">
+                                        {localEvent.followUp.briefing && (
+                                            <button 
+                                                onClick={handlePlayBriefing}
+                                                disabled={isGeneratingAudio}
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-all ${
+                                                    isPlayingAudio 
+                                                        ? 'bg-blue-100 text-blue-700 border border-blue-200' 
+                                                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                                                }`}
+                                            >
+                                                {isGeneratingAudio ? (
+                                                    <Loader2 size={12} className="animate-spin" />
+                                                ) : isPlayingAudio ? (
+                                                    <Square size={12} />
+                                                ) : (
+                                                    <Volume2 size={12} />
+                                                )}
+                                                {isGeneratingAudio ? 'Generating...' : isPlayingAudio ? 'Stop' : 'Listen'}
+                                            </button>
+                                        )}
+                                        <button 
+                                            onClick={handleBriefingGen}
+                                            disabled={isGeneratingBrief}
+                                            className="bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-slate-800 transition-all disabled:opacity-50"
+                                        >
+                                            {isGeneratingBrief ? <Loader2 size={12} className="animate-spin"/> : <Sparkles size={12} className="text-yellow-400"/>}
+                                            AI Generate Briefing
+                                        </button>
+                                    </div>
                                 </div>
                              </Section>
+
+                             {localEvent.followUp.actionableInsights && localEvent.followUp.actionableInsights.length > 0 && (
+                                 <Section title="Actionable Insights">
+                                     <div className="bg-blue-50 border border-blue-100 rounded-xl p-6">
+                                         <ul className="list-disc pl-5 space-y-2">
+                                             {localEvent.followUp.actionableInsights.map((insight, idx) => (
+                                                 <li key={idx} className="text-sm text-blue-900 font-medium">
+                                                     {insight}
+                                                 </li>
+                                             ))}
+                                         </ul>
+                                     </div>
+                                 </Section>
+                             )}
                         </div>
                     )}
 
@@ -985,10 +1263,26 @@ END:VCALENDAR`;
                                 />
                             </Section>
                             
-                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-                                 <div>
-                                     <h4 className="font-bold text-slate-900 mb-1">Status</h4>
-                                     <p className="text-sm text-slate-500">Current workflow stage</p>
+                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-4">
+                                 <div className="flex items-center justify-between">
+                                     <div>
+                                         <h4 className="font-bold text-slate-900 mb-1">Status</h4>
+                                         <p className="text-sm text-slate-500">Current workflow stage</p>
+                                     </div>
+                                     <select 
+                                        className="p-2 bg-slate-50 border border-slate-200 rounded-lg font-bold text-sm text-slate-700 outline-none min-w-[240px]"
+                                        value={localEvent.followUp.status}
+                                        onChange={(e) => handleStatusChange(e.target.value)}
+                                     >
+                                        <option value="To Respond">To Respond</option>
+                                        <option value="Responded - On hold for updates">Responded - On hold for updates</option>
+                                        <option value="Confirmation - To be briefed">Confirmation - To be briefed</option>
+                                        <option value="Prep ready">Prep ready</option>
+                                        <option value="Completed - No follow up">Completed - No follow up</option>
+                                        <option value="Completed - Follow Up">Completed - Follow Up</option>
+                                        <option value="MOs comms">MOs comms</option>
+                                        <option value="Not Relevant">Not Relevant</option>
+                                     </select>
                                  </div>
                                  <select 
                                     className="p-2 bg-slate-50 border border-slate-200 rounded-lg font-bold text-sm text-slate-700 outline-none min-w-[240px]"
@@ -1005,6 +1299,20 @@ END:VCALENDAR`;
                                     <option value="Not Relevant">Not Relevant</option>
                                  </select>
                             </div>
+
+                            <Section title="Follow-up Reminders">
+                                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Reminder Date & Time</label>
+                                        <input 
+                                            type="datetime-local"
+                                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-blue-500/20 outline-none"
+                                            value={localEvent.followUp.reminderDate || ''}
+                                            onChange={(e) => handleChange('followUp', 'reminderDate', e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                            </Section>
                         </div>
                     )}
 
@@ -1037,6 +1345,48 @@ END:VCALENDAR`;
             title="Delete Event?"
             message="Are you sure you want to remove this event and all associated data? This action cannot be undone."
         />
+
+        {researchResult && (
+            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="flex items-center justify-between p-6 border-b border-slate-100">
+                        <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                            <Search size={20} className="text-blue-600"/>
+                            {researchResult.title}
+                        </h2>
+                        <button onClick={() => setResearchResult(null)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+                            <X size={20} />
+                        </button>
+                    </div>
+                    <div className="p-6 max-h-[60vh] overflow-y-auto">
+                        <div className="prose prose-sm max-w-none text-slate-700">
+                            {researchResult.text.split('\n').map((line, i) => (
+                                <p key={i} className="mb-2">{line}</p>
+                            ))}
+                        </div>
+                        {researchResult.urls && researchResult.urls.length > 0 && (
+                            <div className="mt-6 pt-6 border-t border-slate-100">
+                                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Sources & Links</h4>
+                                <ul className="space-y-2">
+                                    {researchResult.urls.map((url, i) => (
+                                        <li key={i}>
+                                            <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm break-all">
+                                                {url}
+                                            </a>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                    </div>
+                    <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end">
+                        <button onClick={() => setResearchResult(null)} className="px-6 py-2 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
     </div>
   );
 };
