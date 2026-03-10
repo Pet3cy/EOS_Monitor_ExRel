@@ -17,6 +17,9 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onAnalysisCom
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
   const [mode, setMode] = useState<'text' | 'file'>('text');
+  const [eventTitle, setEventTitle] = useState('');
+  const [eventDate, setEventDate] = useState('');
+  const [eventTime, setEventTime] = useState('');
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -41,6 +44,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onAnalysisCom
   };
 
   const handleAnalyze = async () => {
+    if (!eventTitle.trim()) { setError("Event Title is required."); return; }
     if (mode === 'text' && !text.trim()) { setError("Paste the invitation content first."); return; }
     if (mode === 'file' && !selectedFile) { setError("Select a document first."); return; }
 
@@ -78,6 +82,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onAnalysisCom
 
       const result = await analyzeInvitation(input);
       
+      if (eventTitle.trim()) result.eventName = eventTitle.trim();
+      if (eventDate) result.date = eventDate;
+      if (eventTime) result.time = eventTime;
+
       // Analysis complete, finish progress bar
       clearInterval(interval);
       setProgress(100);
@@ -144,7 +152,41 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onAnalysisCom
           <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-all"><X size={20} /></button>
         </div>
 
-        <div className="flex bg-slate-100 p-1 m-6 rounded-xl">
+        <div className="px-6 pt-6 space-y-4">
+          <div>
+            <label className="block text-sm font-bold text-slate-700 mb-1">Event Title <span className="text-red-500">*</span></label>
+            <input 
+              type="text" 
+              required 
+              value={eventTitle} 
+              onChange={e => setEventTitle(e.target.value)} 
+              className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm" 
+              placeholder="Enter event title" 
+            />
+          </div>
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <label className="block text-sm font-bold text-slate-700 mb-1">Event Date</label>
+              <input 
+                type="date" 
+                value={eventDate} 
+                onChange={e => setEventDate(e.target.value)} 
+                className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm text-slate-700" 
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm font-bold text-slate-700 mb-1">Event Time</label>
+              <input 
+                type="time" 
+                value={eventTime} 
+                onChange={e => setEventTime(e.target.value)} 
+                className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm text-slate-700" 
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex bg-slate-100 p-1 mx-6 mt-6 mb-4 rounded-xl">
            <button onClick={() => setMode('text')} className={`flex-1 py-2 px-4 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${mode === 'text' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>
              <Clipboard size={16}/> Paste Email Content
            </button>
