@@ -11,6 +11,10 @@ describe('ConfirmDeleteModal', () => {
     message: 'Are you sure you want to delete this item?',
   };
 
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('renders correctly when open', () => {
     render(<ConfirmDeleteModal {...defaultProps} />);
 
@@ -39,6 +43,19 @@ describe('ConfirmDeleteModal', () => {
     fireEvent.click(screen.getByText('Delete Permanently'));
     expect(defaultProps.onConfirm).toHaveBeenCalled();
     expect(defaultProps.onClose).toHaveBeenCalled();
+  });
+
+  it('calls onClose when clicking the backdrop', () => {
+    const { container } = render(<ConfirmDeleteModal {...defaultProps} />);
+    const backdrop = container.firstChild as HTMLElement;
+    fireEvent.click(backdrop);
+    expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not call onClose when clicking inside the modal', () => {
+    render(<ConfirmDeleteModal {...defaultProps} />);
+    fireEvent.click(screen.getByText('Delete Item'));
+    expect(defaultProps.onClose).not.toHaveBeenCalled();
   });
 
   it('renders default title and message if not provided', () => {

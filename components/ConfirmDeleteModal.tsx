@@ -18,8 +18,8 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-lg p-6 shadow-xl max-w-md w-full">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
+      <div className="bg-white rounded-lg p-6 shadow-xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-lg font-semibold mb-2">{title}</h2>
         <p className="text-gray-600 mb-6">{message}</p>
         <div className="flex justify-end space-x-4">

@@ -34,10 +34,5 @@ export default defineConfig(({ mode }) => {
           'mammoth': 'mammoth/mammoth.browser.js'
         }
       },
-      test: {
-        environment: 'jsdom',
-        setupFiles: './setupTests.ts',
-        globals: true
-      }
     };
 });
