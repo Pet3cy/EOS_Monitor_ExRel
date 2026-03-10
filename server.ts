@@ -377,13 +377,15 @@ async function startServer() {
   });
 
   app.post("/api/ai/briefing", async (req, res) => {
+  app.post("/api/ai/briefing", async (req, res) => {
     const { event } = req.body;
+    if (!event?.analysis) return res.status(400).json({ error: "Event with analysis data is required" });
     const prompt = `Create a 1-page executive briefing for a representative attending the following event:
 Event: ${event.analysis.eventName}
 Institution: ${event.analysis.institution}
 Theme: ${event.analysis.theme}
 Context: ${event.analysis.description}
-Linked Activities: ${event.analysis.linkedActivities.join(', ')}
+Linked Activities: ${(event.analysis.linkedActivities || []).join(', ')}
 
 ${OBESSU_CONTEXT}
 
