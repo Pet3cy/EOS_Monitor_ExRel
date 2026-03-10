@@ -144,10 +144,10 @@ export interface AnalysisInput {
 export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisResult> => {
   // Check cache first
   let cacheKeyInput = '';
-  if (input.text) {
-    cacheKeyInput = input.text;
-  } else if (input.fileData) {
+  if (input.fileData) {
     cacheKeyInput = input.fileData.data;
+  } else if (input.text) {
+    cacheKeyInput = input.text;
   }
 
   if (cacheKeyInput) {
