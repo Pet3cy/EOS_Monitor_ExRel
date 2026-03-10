@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
-import { vi, describe, it, expect } from 'vitest';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 describe('ConfirmDeleteModal', () => {
   const defaultProps = {
