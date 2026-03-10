@@ -44,6 +44,25 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
     return `${year}-${month}-${day}`;
   };
 
+  // BOLT OPTIMIZATION:
+  // Pre-filter events based on priority, theme, and contact and map string date to timestamp
+  // Doing this inside a useMemo ensures we only recalculate when filters or events change,
+  // drastically reducing the complexity inside the week loop from O(Weeks * Events * DateParsing)
+  // to O(Weeks * FilteredEvents).
+  const preFilteredEvents = useMemo(() => {
+      return events
+        .filter(event => {
+            const matchesPriority = priorityFilter === 'All' || event.analysis.priority === priorityFilter;
+            const matchesTheme = themeFilter === 'All' || event.analysis.theme === themeFilter;
+            const matchesContact = contactFilter === 'All' || event.contact.name === contactFilter;
+            return matchesPriority && matchesTheme && matchesContact;
+        })
+        .map(event => ({
+            ...event,
+            _parsedTime: new Date(event.analysis.date).getTime()
+        }));
+  }, [events, priorityFilter, themeFilter, contactFilter]);
+
   // Generate and filter weeks
   const filteredWeeks = useMemo(() => {
     if (calendarView !== 'Week') return [];
@@ -72,14 +91,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
       // Filter weeks that overlap with the user's selected date range
       if (weekEnd < rangeStart || weekStart > rangeEnd) continue;
 
-      // Find events in this week that match all filters
-      const weekEvents = events.filter(event => {
-        const eventDate = new Date(event.analysis.date);
-        const matchesDate = eventDate >= weekStart && eventDate <= weekEnd;
-        const matchesPriority = priorityFilter === 'All' || event.analysis.priority === priorityFilter;
-        const matchesTheme = themeFilter === 'All' || event.analysis.theme === themeFilter;
-        const matchesContact = contactFilter === 'All' || event.contact.name === contactFilter;
-        return matchesDate && matchesPriority && matchesTheme && matchesContact;
+      const weekStartTime = weekStart.getTime();
+      const weekEndTime = weekEnd.getTime();
+
+      // Find events in this week using the pre-parsed timestamps
+      const weekEvents = preFilteredEvents.filter(event => {
+        return event._parsedTime >= weekStartTime && event._parsedTime <= weekEndTime;
       });
 
       const hasMatches = weekEvents.length > 0;
@@ -93,7 +110,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
       });
     }
     return weeksArr;
-  }, [events, priorityFilter, themeFilter, contactFilter, startDateFilter, endDateFilter, calendarView]);
+  }, [preFilteredEvents, priorityFilter, themeFilter, contactFilter, startDateFilter, endDateFilter, calendarView]);
 
   const filteredPeriods = useMemo(() => {
     if (calendarView === 'Week') return [];
