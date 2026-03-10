@@ -33,6 +33,7 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
   const [isAdding, setIsAdding] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortField, setSortField] = useState<'name' | 'organization'>('name');
   
   // Local buffer for the notes field to allow smooth typing without global re-renders
   const [notesBuffer, setNotesBuffer] = useState('');
@@ -56,17 +57,30 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
     }
   }, [selectedContactId, contacts]);
 
+  // Auto-save notes after inactivity
+  useEffect(() => {
+    if (selectedContact && notesBuffer !== selectedContact.notes) {
+      const timeoutId = setTimeout(() => {
+        onUpdateContact({
+          ...selectedContact,
+          notes: notesBuffer
+        });
+      }, 1000);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [notesBuffer, selectedContact, onUpdateContact]);
+
   const filteredContacts = useMemo(() => {
     return contacts.filter(c => 
       c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.organization.toLowerCase().includes(searchTerm.toLowerCase())
     ).sort((a, b) => {
-      const nameA = a.name.toLowerCase();
-      const nameB = b.name.toLowerCase();
-      return sortOrder === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+      const valA = sortField === 'name' ? a.name.toLowerCase() : a.organization.toLowerCase();
+      const valB = sortField === 'name' ? b.name.toLowerCase() : b.organization.toLowerCase();
+      return sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
     });
-  }, [contacts, searchTerm, sortOrder]);
+  }, [contacts, searchTerm, sortOrder, sortField]);
 
   const contactEvents = useMemo(() => {
     if (!selectedContactId) return [];
@@ -115,6 +129,14 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
               <Users size={14} /> Directory ({filteredContacts.length})
             </span>
             <div className="flex items-center gap-1">
+                <select 
+                  value={sortField} 
+                  onChange={(e) => setSortField(e.target.value as 'name' | 'organization')}
+                  className="text-xs font-bold text-slate-500 bg-transparent border-none outline-none cursor-pointer hover:text-slate-700"
+                >
+                  <option value="name">Name</option>
+                  <option value="organization">Organization</option>
+                </select>
                 <button 
                   onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
                   className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"

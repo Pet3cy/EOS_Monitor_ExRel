@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Plus, Search, Layout, Filter, CalendarClock, History, PieChart, Users, Calendar as CalendarIcon, CheckSquare, Trash2, CheckCircle2, ArrowUpDown, Undo2, X } from 'lucide-react';
+import { Plus, Search, Layout, Filter, CalendarClock, History, PieChart, Users, Calendar as CalendarIcon, CheckSquare, Trash2, CheckCircle2, ArrowUpDown, Undo2, X, Mail } from 'lucide-react';
 import { EventData, Priority, Contact } from './types';
 import { EventCard } from './components/EventCard';
 import { EventDetail } from './components/EventDetail';
@@ -10,7 +10,7 @@ import { CalendarView } from './components/CalendarView';
 import { ContactsView } from './components/ContactsView';
 
 import { CalendarSync } from './components/CalendarSync';
-
+import { WelcomeScreen } from './components/WelcomeScreen';
 import { EmailParserView } from './components/EmailParserView';
 
 const MOCK_CONTACTS: Contact[] = [
@@ -245,6 +245,8 @@ export default function App() {
   const [deletedEventsHistory, setDeletedEventsHistory] = useState<{ events: EventData[], timestamp: number } | null>(null);
   const [statusChangeHistory, setStatusChangeHistory] = useState<{ events: EventData[], timestamp: number } | null>(null);
 
+  const [hasStarted, setHasStarted] = useState(false);
+
   const handleAnalysisComplete = (newEvent: EventData) => {
     if (!newEvent.followUp.commsPack) {
       newEvent.followUp.commsPack = {
@@ -455,6 +457,10 @@ export default function App() {
     });
     return Array.from(new Set(filteredByMode.map(e => e.followUp.status)));
   }, [events, viewMode]);
+
+  if (!hasStarted) {
+    return <WelcomeScreen onGetStarted={() => setHasStarted(true)} />;
+  }
 
   return (
     <div className="h-screen flex flex-col bg-slate-50 text-slate-900 font-sans">
