@@ -31,7 +31,9 @@ if (typeof sessionStorage !== 'undefined') {
         keysToRemove.push(key);
       }
     }
-    keysToRemove.forEach(k => sessionStorage.removeItem(k));
+    keysToRemove.forEach((k) => {
+      sessionStorage.removeItem(k);
+    });
   } catch {
     // Ignore errors during cleanup
   }
