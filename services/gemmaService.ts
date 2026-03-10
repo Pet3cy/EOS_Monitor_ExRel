@@ -151,7 +151,7 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
   }
 
   if (cacheKeyInput) {
-    const cacheKey = `analysis_${cacheKeyInput.length}_${CacheService.generateKey(cacheKeyInput)}`;
+    const cacheKey = `analysis_${CacheService.generateKey(cacheKeyInput)}`;
     const cached = CacheService.get<AnalysisResult>(cacheKey);
     if (cached) {
       console.log('Using cached analysis result');
@@ -220,14 +220,14 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
 
   // Cache the result
   if (cacheKeyInput) {
-    const cacheKey = `analysis_${cacheKeyInput.length}_${CacheService.generateKey(cacheKeyInput)}`;
+    const cacheKey = `analysis_${CacheService.generateKey(cacheKeyInput)}`;
     CacheService.set(cacheKey, result);
   }
 
   return result;
 };
 
-export const generateBriefing = async (event: any) => {
+export const generateBriefing = async (event: any, forceRefresh = false) => {
   if (!event.analysis) {
     throw new Error('Event analysis data is required for briefing generation.');
   }
@@ -244,10 +244,12 @@ export const generateBriefing = async (event: any) => {
   });
   const cacheKey = CacheService.generateKey(cacheKeyInput);
 
-  const cached = CacheService.get<string>(`briefing_${cacheKey}`);
-  if (cached) {
-    console.log('Using cached briefing');
-    return cached;
+  if (!forceRefresh) {
+    const cached = CacheService.get<string>(`briefing_${cacheKey}`);
+    if (cached) {
+      console.log('Using cached briefing');
+      return cached;
+    }
   }
 
   const prompt = `Create a 1-page executive briefing for a representative attending the following event:
