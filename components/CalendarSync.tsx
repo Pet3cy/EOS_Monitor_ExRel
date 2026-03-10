@@ -64,6 +64,17 @@ export function CalendarSync({ onEventsSynced }: CalendarSyncProps) {
       const newEvents: EventData[] = data.events.map((event: any) => {
         const contactName = CALENDAR_OWNER_MAP[event.sourceCalendar] ?? '';
 
+        const startDateTime = event.start?.dateTime;
+        const startDate = event.start?.date;
+
+        let date = startDate || '';
+        let time = '';
+
+        if (startDateTime) {
+          date = startDateTime.split('T')[0];
+          time = new Date(startDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
         return {
           id: `cal-${event.id}`,
           createdAt: Date.now(),
@@ -77,8 +88,8 @@ export function CalendarSync({ onEventsSynced }: CalendarSyncProps) {
             priority: Priority.Medium,
             priorityScore: 50,
             priorityReasoning: 'Imported from Google Calendar',
-            date: event.start?.dateTime?.split('T')[0] || event.start?.date || '',
-            time: event.start?.dateTime ? new Date(event.start.dateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+            date,
+            time,
             venue: event.location || 'Unknown',
             initialDeadline: '',
             finalDeadline: '',
