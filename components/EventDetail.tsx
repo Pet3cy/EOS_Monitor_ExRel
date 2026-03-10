@@ -6,7 +6,7 @@ import {
   Calendar, MapPin, Building2, AlertCircle, FileText,
   Mail, CheckCircle, Save, Loader2, Sparkles, X, ExternalLink, Briefcase, Trash2, Users, User, FileJson, Plus, Search, Edit2, CalendarPlus, Target, ShieldAlert, ArrowRight, Volume2, Square
 } from 'lucide-react';
-import { generateBriefing, generateSpeech } from '../services/gemmaService';
+import { generateBriefing, generateSpeech, researchOrganization, searchLocation } from '../services/gemmaService';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
 interface EventDetailProps {
@@ -45,6 +45,35 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   // Refs for click outside
   const calendarMenuRef = useRef<HTMLDivElement>(null);
 
+  const [researchResult, setResearchResult] = useState<{ title: string, text: string, urls: string[] } | null>(null);
+  const [isResearching, setIsResearching] = useState(false);
+
+  const handleResearchInstitution = async () => {
+    if (!localEvent.analysis.institution) return;
+    setIsResearching(true);
+    try {
+      const result = await researchOrganization(localEvent.analysis.institution);
+      setResearchResult({ title: `Research: ${localEvent.analysis.institution}`, text: result.text, urls: result.urls });
+    } catch (e: any) {
+      alert(e.message || "Failed to research institution.");
+    } finally {
+      setIsResearching(false);
+    }
+  };
+
+  const handleResearchVenue = async () => {
+    if (!localEvent.analysis.venue) return;
+    setIsResearching(true);
+    try {
+      const result = await searchLocation(localEvent.analysis.venue);
+      setResearchResult({ title: `Venue Info: ${localEvent.analysis.venue}`, text: result.text, urls: result.urls });
+    } catch (e: any) {
+      alert(e.message || "Failed to research venue.");
+    } finally {
+      setIsResearching(false);
+    }
+  };
+
   useEffect(() => {
     setLocalEvent(JSON.parse(JSON.stringify(event)));
     setIsEditing(false);
@@ -78,6 +107,26 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     setIsEditing(true);
   };
 
+  const handleStatusChange = (newStatus: string) => {
+    setLocalEvent(prev => {
+      const history = prev.followUp.statusHistory ? [...prev.followUp.statusHistory] : [];
+      history.push({
+        status: newStatus,
+        date: new Date().toISOString(),
+        user: 'Current User' // In a real app, this would be the logged-in user
+      });
+      return {
+        ...prev,
+        followUp: {
+          ...prev.followUp,
+          status: newStatus as any,
+          statusHistory: history
+        }
+      };
+    });
+    setIsEditing(true);
+  };
+
   const handleRecurrenceChange = (field: string, value: any) => {
     setLocalEvent(prev => ({
       ...prev,
@@ -95,8 +144,16 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   const handleBriefingGen = async () => {
     setIsGeneratingBrief(true);
     try {
-      const brief = await generateBriefing(localEvent);
-      handleChange('followUp', 'briefing', brief);
+      const result = await generateBriefing(localEvent);
+      setLocalEvent(prev => ({
+        ...prev,
+        followUp: {
+          ...prev.followUp,
+          briefing: result.briefing,
+          actionableInsights: result.actionableInsights
+        }
+      }));
+      setIsEditing(true);
     } catch (e: any) {
       alert(e.message || "Failed to generate briefing.");
     } finally {
@@ -660,9 +717,31 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                            <PriorityBadge priority={localEvent.analysis.priority} />
                            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{localEvent.analysis.theme}</span>
                        </div>
-                       <h2 className="text-2xl font-extrabold text-slate-900 leading-tight mb-2">{localEvent.analysis.eventName}</h2>
+                       <div className="flex items-center gap-3 mb-2">
+                           <h2 className="text-2xl font-extrabold text-slate-900 leading-tight">{localEvent.analysis.eventName}</h2>
+                           <button 
+                               onClick={handleBriefingGen}
+                               disabled={isGeneratingBrief}
+                               className="bg-slate-900 text-white px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-slate-800 transition-all disabled:opacity-50"
+                               title="Generate Briefing & Actionable Insights"
+                           >
+                               {isGeneratingBrief ? <Loader2 size={12} className="animate-spin"/> : <Sparkles size={12} className="text-yellow-400"/>}
+                               AI Generate Briefing
+                           </button>
+                       </div>
                        <div className="flex items-center gap-4 text-sm text-slate-500 font-medium">
-                           <span className="flex items-center gap-1.5"><Building2 size={16} className="text-slate-400"/> {localEvent.analysis.institution}</span>
+                           <span className="flex items-center gap-1.5">
+                               <Building2 size={16} className="text-slate-400"/> 
+                               {localEvent.analysis.institution}
+                               <button 
+                                   onClick={handleResearchInstitution}
+                                   disabled={isResearching}
+                                   className="ml-2 bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider hover:bg-blue-200 transition-colors flex items-center gap-1"
+                               >
+                                   {isResearching ? <Loader2 size={10} className="animate-spin"/> : <Search size={10}/>}
+                                   Research
+                               </button>
+                           </span>
                            <span className="flex items-center gap-1.5"><Calendar size={16} className="text-slate-400"/> {localEvent.analysis.date}</span>
                        </div>
                     </div>
@@ -836,7 +915,17 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                         />
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Venue / Platform</label>
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Venue / Platform</label>
+                                            <button 
+                                                onClick={handleResearchVenue}
+                                                disabled={isResearching || !localEvent.analysis.venue}
+                                                className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider hover:bg-blue-200 transition-colors flex items-center gap-1 disabled:opacity-50"
+                                            >
+                                                {isResearching ? <Loader2 size={10} className="animate-spin"/> : <Search size={10}/>}
+                                                Research
+                                            </button>
+                                        </div>
                                         <input 
                                             className="w-full p-3 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-blue-500/20 outline-none"
                                             value={localEvent.analysis.venue}
@@ -1058,7 +1147,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                                             className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm font-medium text-slate-700 truncate border-b border-slate-50 last:border-0"
                                                         >
                                                             <div className="font-bold text-slate-800">{c.name}</div>
-                                                            <div className="text-xs text-slate-500 truncate">{c.role}</div>
+                                                            <div className="text-xs text-slate-500 truncate">{c.role} {c.organization ? `@ ${c.organization}` : ''}</div>
                                                         </button>
                                                     ))) : (
                                                         <div className="p-4 text-center text-xs text-slate-400 italic">No contacts match "{contactSearch}"</div>
@@ -1140,11 +1229,25 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                             className="bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-slate-800 transition-all disabled:opacity-50"
                                         >
                                             {isGeneratingBrief ? <Loader2 size={12} className="animate-spin"/> : <Sparkles size={12} className="text-yellow-400"/>}
-                                            Generate with AI
+                                            AI Generate Briefing
                                         </button>
                                     </div>
                                 </div>
                              </Section>
+
+                             {localEvent.followUp.actionableInsights && localEvent.followUp.actionableInsights.length > 0 && (
+                                 <Section title="Actionable Insights">
+                                     <div className="bg-blue-50 border border-blue-100 rounded-xl p-6">
+                                         <ul className="list-disc pl-5 space-y-2">
+                                             {localEvent.followUp.actionableInsights.map((insight, idx) => (
+                                                 <li key={idx} className="text-sm text-blue-900 font-medium">
+                                                     {insight}
+                                                 </li>
+                                             ))}
+                                         </ul>
+                                     </div>
+                                 </Section>
+                             )}
                         </div>
                     )}
 
@@ -1159,26 +1262,61 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                 />
                             </Section>
                             
-                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-                                 <div>
-                                     <h4 className="font-bold text-slate-900 mb-1">Status</h4>
-                                     <p className="text-sm text-slate-500">Current workflow stage</p>
+                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-4">
+                                 <div className="flex items-center justify-between">
+                                     <div>
+                                         <h4 className="font-bold text-slate-900 mb-1">Status</h4>
+                                         <p className="text-sm text-slate-500">Current workflow stage</p>
+                                     </div>
+                                     <select 
+                                        className="p-2 bg-slate-50 border border-slate-200 rounded-lg font-bold text-sm text-slate-700 outline-none min-w-[240px]"
+                                        value={localEvent.followUp.status}
+                                        onChange={(e) => handleStatusChange(e.target.value)}
+                                     >
+                                        <option value="To Respond">To Respond</option>
+                                        <option value="Responded - On hold for updates">Responded - On hold for updates</option>
+                                        <option value="Confirmation - To be briefed">Confirmation - To be briefed</option>
+                                        <option value="Prep ready">Prep ready</option>
+                                        <option value="Completed - No follow up">Completed - No follow up</option>
+                                        <option value="Completed - Follow Up">Completed - Follow Up</option>
+                                        <option value="MOs comms">MOs comms</option>
+                                        <option value="Not Relevant">Not Relevant</option>
+                                     </select>
                                  </div>
-                                 <select 
-                                    className="p-2 bg-slate-50 border border-slate-200 rounded-lg font-bold text-sm text-slate-700 outline-none min-w-[240px]"
-                                    value={localEvent.followUp.status}
-                                    onChange={(e) => handleChange('followUp', 'status', e.target.value)}
-                                 >
-                                    <option value="To Respond">To Respond</option>
-                                    <option value="Responded - On hold for updates">Responded - On hold for updates</option>
-                                    <option value="Confirmation - To be briefed">Confirmation - To be briefed</option>
-                                    <option value="Prep ready">Prep ready</option>
-                                    <option value="Completed - No follow up">Completed - No follow up</option>
-                                    <option value="Completed - Follow Up">Completed - Follow Up</option>
-                                    <option value="MOs comms">MOs comms</option>
-                                    <option value="Not Relevant">Not Relevant</option>
-                                 </select>
+                                 
+                                 {localEvent.followUp.statusHistory && localEvent.followUp.statusHistory.length > 0 && (
+                                     <div className="mt-4 pt-4 border-t border-slate-100">
+                                         <h5 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Status History</h5>
+                                         <div className="space-y-3">
+                                             {localEvent.followUp.statusHistory.map((historyItem, idx) => (
+                                                 <div key={idx} className="flex items-start gap-3 text-sm">
+                                                     <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5"></div>
+                                                     <div>
+                                                         <div className="font-bold text-slate-700">{historyItem.status}</div>
+                                                         <div className="text-xs text-slate-500">
+                                                             {new Date(historyItem.date).toLocaleString()} {historyItem.user ? `by ${historyItem.user}` : ''}
+                                                         </div>
+                                                     </div>
+                                                 </div>
+                                             ))}
+                                         </div>
+                                     </div>
+                                 )}
                             </div>
+
+                            <Section title="Follow-up Reminders">
+                                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Reminder Date & Time</label>
+                                        <input 
+                                            type="datetime-local"
+                                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-blue-500/20 outline-none"
+                                            value={localEvent.followUp.reminderDate || ''}
+                                            onChange={(e) => handleChange('followUp', 'reminderDate', e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                            </Section>
                         </div>
                     )}
 
@@ -1211,6 +1349,48 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
             title="Delete Event?"
             message="Are you sure you want to remove this event and all associated data? This action cannot be undone."
         />
+
+        {researchResult && (
+            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="flex items-center justify-between p-6 border-b border-slate-100">
+                        <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                            <Search size={20} className="text-blue-600"/>
+                            {researchResult.title}
+                        </h2>
+                        <button onClick={() => setResearchResult(null)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+                            <X size={20} />
+                        </button>
+                    </div>
+                    <div className="p-6 max-h-[60vh] overflow-y-auto">
+                        <div className="prose prose-sm max-w-none text-slate-700">
+                            {researchResult.text.split('\n').map((line, i) => (
+                                <p key={i} className="mb-2">{line}</p>
+                            ))}
+                        </div>
+                        {researchResult.urls && researchResult.urls.length > 0 && (
+                            <div className="mt-6 pt-6 border-t border-slate-100">
+                                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Sources & Links</h4>
+                                <ul className="space-y-2">
+                                    {researchResult.urls.map((url, i) => (
+                                        <li key={i}>
+                                            <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm break-all">
+                                                {url}
+                                            </a>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                    </div>
+                    <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end">
+                        <button onClick={() => setResearchResult(null)} className="px-6 py-2 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
     </div>
   );
 };

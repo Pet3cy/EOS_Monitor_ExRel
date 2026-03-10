@@ -111,6 +111,7 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
           },
           required: ["sender", "institution", "eventName", "theme", "description", "priority", "priorityScore", "priorityReasoning", "date", "venue", "initialDeadline", "finalDeadline", "linkedActivities"],
         },
+        thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH }
       },
     });
 
@@ -138,7 +139,7 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
   }
 };
 
-export const generateBriefing = async (event: any): Promise<string> => {
+export const generateBriefing = async (event: any): Promise<{ briefing: string, actionableInsights: string[] }> => {
   const prompt = `Create a 1-page executive briefing for a representative attending the following event:
 Event: ${event.analysis.eventName}
 Institution: ${event.analysis.institution}
@@ -154,7 +155,13 @@ Include:
 3. Key Stakeholders likely present
 4. Suggested opening statement points.
 
-Format as plain text, no JSON.`;
+Also, provide 2-3 key takeaways or action points derived from the briefing and event details.
+
+Return a JSON object with this exact structure:
+{
+  "briefing": "The full briefing text...",
+  "actionableInsights": ["Action point 1", "Action point 2"]
+}`;
 
   try {
     const response = await ai.models.generateContent({
@@ -163,6 +170,15 @@ Format as plain text, no JSON.`;
       config: {
         systemInstruction: SYSTEM_PROMPT,
         temperature: 0.3,
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            briefing: { type: Type.STRING },
+            actionableInsights: { type: Type.ARRAY, items: { type: Type.STRING } }
+          },
+          required: ["briefing", "actionableInsights"]
+        },
         thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH }
       },
     });
@@ -170,7 +186,15 @@ Format as plain text, no JSON.`;
     if (!response.text) {
        throw new Error('Gemini returned an empty response.');
     }
-    return response.text;
+    
+    let parsed;
+    try {
+      parsed = extractJSON(response.text);
+    } catch (e: any) {
+      throw new Error(`Failed to parse JSON from model response: ${e.message}`);
+    }
+    
+    return parsed;
   } catch (error: any) {
     console.error("generateBriefing error:", error);
     throw new Error(error.message || 'An unexpected error occurred during briefing generation.');
@@ -254,6 +278,7 @@ export const chatWithAssistant = async (message: string, history: {role: string,
       model: "gemini-3.1-pro-preview",
       config: {
         systemInstruction: "You are an AI assistant for OBESSU. Help the user with tasks related to event management, contacts, and strategic alignment. " + OBESSU_CONTEXT,
+        thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH }
       },
     });
     
@@ -268,6 +293,41 @@ export const chatWithAssistant = async (message: string, history: {role: string,
   } catch (error) {
     console.error("chatWithAssistant error:", error);
     throw new Error("Failed to get response from assistant.");
+  }
+};
+
+export const searchLocation = async (query: string): Promise<{text: string, urls: string[]}> => {
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: `Find information about the following location or venue: ${query}. Provide details about its accessibility, nearby transport, and suitability for an event.`,
+      config: {
+        tools: [{ googleMaps: {} }],
+      },
+    });
+    
+    const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+    const urls: string[] = [];
+    if (chunks) {
+      chunks.forEach((chunk: any) => {
+        if (chunk.maps?.uri) {
+          urls.push(chunk.maps.uri);
+        } else if (chunk.maps?.placeAnswerSources?.reviewSnippets) {
+          // Add review snippet URIs if available
+          chunk.maps.placeAnswerSources.reviewSnippets.forEach((snippet: any) => {
+            if (snippet.uri) urls.push(snippet.uri);
+          });
+        }
+      });
+    }
+    
+    return {
+      text: response.text || "",
+      urls
+    };
+  } catch (error) {
+    console.error("searchLocation error:", error);
+    throw new Error("Failed to search location.");
   }
 };
 
