@@ -187,16 +187,17 @@ async function startServer() {
       const files = response.data.files || [];
       let allContent = '';
 
-      for (const file of files) {
+      const filePromises = files.map(async (file) => {
         if (file.id && file.mimeType === 'text/plain') {
           try {
             const fileRes = await drive.files.get({
               fileId: file.id,
               alt: 'media'
             }, { responseType: 'text' });
-            allContent += `\n\n--- Paper: ${file.name} ---\n${fileRes.data}`;
+            return `\n\n--- Paper: ${file.name} ---\n${fileRes.data}`;
           } catch (err) {
             console.error(`Failed to fetch content for ${file.name}`, err);
+            return '';
           }
         } else if (file.id && file.mimeType === 'application/vnd.google-apps.document') {
           try {
@@ -204,12 +205,17 @@ async function startServer() {
               fileId: file.id,
               mimeType: 'text/plain'
             }, { responseType: 'text' });
-            allContent += `\n\n--- Paper: ${file.name} ---\n${fileRes.data}`;
+            return `\n\n--- Paper: ${file.name} ---\n${fileRes.data}`;
           } catch (err) {
             console.error(`Failed to export content for ${file.name}`, err);
+            return '';
           }
         }
-      }
+        return '';
+      });
+
+      const results = await Promise.all(filePromises);
+      allContent += results.join('');
 
       res.json({ content: allContent });
     } catch (error: any) {
