@@ -1,11 +1,57 @@
 import express from "express";
 import cors from "cors";
 import { google } from "googleapis";
+import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
 import { createServer as createViteServer } from "vite";
 import fs from "fs";
 
 dotenv.config();
+
+const OBESSU_CONTEXT = `ORGANIZATIONAL STRUCTURE & PORTFOLIOS (2026):
+BOARD MEMBERS:
+- Alessandro Di Miceli: Vocational Education & Training (VET), Apprenticeships, Quality Internships.
+- Elodie Böhling: Democracy, Student Rights, Civic Space, Participation.
+- Ívar Máni Hrannarsson: Social Affairs, Mental Health, Inclusion, Student Well-being.
+- Kacper Bogalecki: Organisational Development, Capacity Building, Internal Governance.
+- Lauren Bond: Education Policy, EU Advocacy, Research.
+
+SECRETARIAT:
+- Rui Teixeira (Secretary General): External Representation, High-level Management.
+- Raquel Moreno Beneit (Comms): Digital Presence, Campaigns.
+- Panagiotis Chatzimichail (Head of External Affairs): Partnerships, LLLP, Erasmus+.
+- Amira Bakr (Policy Assistant): Policy Monitoring, Outreach.
+- Francesca Osima (Head of Projects): Operations, Grant Management.
+- Daniele Sabato (Coordinator): VET Strategy, Policy Implementation.
+
+STRATEGIC THEMES 2026:
+1. VET & Apprenticeships (Quality, Rights, Pay).
+2. Inclusive Schools & Mental Health.
+3. Digital Rights in Education (AI, Data Privacy).
+4. Democratic School Governance.
+5. Climate Justice in Education.`;
+
+const SYSTEM_PROMPT = `You are a senior IT & Operations Specialist for OBESSU (Organising Bureau of European School Student Unions). Your task is to analyze event invitations and return a JSON object.
+
+Use the following organizational context to determine relevance and assign priorities:
+
+${OBESSU_CONTEXT}`;
+
+function extractJSON(rawText: string): any {
+  try { return JSON.parse(rawText.trim()); } catch {}
+
+  const stripped = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+  try { return JSON.parse(stripped); } catch {}
+
+  const match = rawText.match(/\{[\s\S]*\}/);
+  if (match) {
+    try { return JSON.parse(match[0]); } catch {}
+  }
+
+  throw new Error('Could not extract valid JSON from model response. Raw: ' + rawText.substring(0, 200));
+}
+
+const ai = new GoogleGenAI(process.env.GEMINI_API_KEY || 'dummy_key');
 
 const TOKEN_FILE = './.user-tokens.json';
 
@@ -254,6 +300,132 @@ async function startServer() {
     } catch (error: any) {
       console.error("Error fetching calendar events:", error);
       res.status(500).json({ error: error.message || "Failed to fetch calendar events" });
+    }
+  });
+
+  // AI Proxy Endpoints
+  app.post("/api/ai/analyze", async (req, res) => {
+    const { input } = req.body;
+    if (!input) return res.status(400).json({ error: "No input provided" });
+
+    let parts: any[] = [];
+    if (input.fileData) {
+      parts.push({
+        inlineData: {
+          mimeType: input.fileData.mimeType,
+          data: input.fileData.data,
+        },
+      });
+      parts.push({
+        text: "Analyze this document as an event invitation. If it's an email, extract headers.",
+      });
+    } else if (input.text) {
+      parts.push({ text: `Analyze the following invitation (check for email headers):\n\n${input.text}` });
+    } else {
+      return res.status(400).json({ error: "Invalid input" });
+    }
+
+    try {
+      const model = ai.getGenerativeModel({
+        model: 'gemini-1.5-pro',
+        systemInstruction: SYSTEM_PROMPT,
+      });
+
+      const response = await model.generateContent({
+        contents: [{ role: 'user', parts }],
+        generationConfig: {
+          temperature: 0.2,
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              sender: { type: Type.STRING },
+              senderEmail: { type: Type.STRING },
+              subject: { type: Type.STRING },
+              institution: { type: Type.STRING },
+              eventName: { type: Type.STRING },
+              theme: { type: Type.STRING },
+              description: { type: Type.STRING },
+              priority: { type: Type.STRING },
+              priorityScore: { type: Type.NUMBER },
+              priorityReasoning: { type: Type.STRING },
+              date: { type: Type.STRING },
+              venue: { type: Type.STRING },
+              initialDeadline: { type: Type.STRING },
+              finalDeadline: { type: Type.STRING },
+              linkedActivities: { type: Type.ARRAY, items: { type: Type.STRING } },
+              registrationLink: { type: Type.STRING },
+              programmeLink: { type: Type.STRING },
+            },
+            required: ["sender", "institution", "eventName", "theme", "description", "priority", "priorityScore", "priorityReasoning", "date", "venue", "initialDeadline", "finalDeadline", "linkedActivities"],
+          },
+        },
+      });
+
+      const rawText = response.response.text();
+      res.json({ result: extractJSON(rawText) });
+    } catch (error: any) {
+      console.error("AI Analyze Error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/ai/briefing", async (req, res) => {
+    const { event } = req.body;
+    const prompt = `Create a 1-page executive briefing for a representative attending the following event:
+Event: ${event.analysis.eventName}
+Institution: ${event.analysis.institution}
+Theme: ${event.analysis.theme}
+Context: ${event.analysis.description}
+Linked Activities: ${event.analysis.linkedActivities.join(', ')}
+
+${OBESSU_CONTEXT}
+
+Include:
+1. Key Objectives for OBESSU
+2. Potential 'Red Lines' (What to avoid)
+3. Key Stakeholders likely present
+4. Suggested opening statement points.
+
+Format as plain text, no JSON.`;
+
+    try {
+      const model = ai.getGenerativeModel({
+        model: 'gemini-1.5-pro',
+        systemInstruction: SYSTEM_PROMPT,
+      });
+
+      const response = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.3,
+        },
+      });
+      res.json({ result: response.response.text() });
+    } catch (error: any) {
+      console.error("AI Briefing Error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/ai/summarize", async (req, res) => {
+    const { event, notes } = req.body;
+    const prompt = `Summarize the following follow-up notes for the event "${event.analysis.eventName}":\n\n${notes}
+
+${OBESSU_CONTEXT}
+
+Provide a concise summary of outcomes, key contacts made, and follow-up tasks relevant to OBESSU's strategic themes.`;
+    try {
+      const response = await ai.getGenerativeModel({ model: 'gemini-1.5-flash' }).generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.3,
+        },
+      });
+      res.json({ result: response.response.text() });
+    } catch (error: any) {
+      console.error("AI Summarize Error:", error);
+      res.status(500).json({ error: error.message });
     }
   });
 
