@@ -124,7 +124,7 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
     linkedActivities: data.linkedActivities || [],
   };
   saveToCache(cacheKey, result);
-  return result;
+  return { ...result, linkedActivities: [...result.linkedActivities] };
 };
 
 export const generateBriefing = async (event: EventData) => {
