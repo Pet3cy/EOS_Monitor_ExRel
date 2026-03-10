@@ -77,6 +77,11 @@ const saveToCache = (key: string, data: AnalysisResult) => {
 };
 
 
+/** @internal Exported for testing — clears the in-memory analysis cache. */
+export const clearCache = () => {
+  MEMORY_CACHE.clear();
+};
+
 export interface AnalysisInput {
   text?: string;
   fileData?: {

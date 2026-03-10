@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { analyzeInvitation } from './geminiService';
+import { analyzeInvitation, clearCache } from './geminiService';
 
 const { generateContentMock } = vi.hoisted(() => {
   return { generateContentMock: vi.fn() };
@@ -30,6 +30,7 @@ describe('analyzeInvitation', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    clearCache();
     process.env.API_KEY = 'test-api-key';
   });
 
