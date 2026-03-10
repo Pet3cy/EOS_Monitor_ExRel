@@ -228,15 +228,19 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
 };
 
 export const generateBriefing = async (event: any) => {
+  if (!event.analysis) {
+    throw new Error('Event analysis data is required for briefing generation.');
+  }
+
   // Check cache first
   const cacheKeyInput = JSON.stringify({
     id: event.id,
-    eventName: event.analysis?.eventName,
-    institution: event.analysis?.institution,
-    theme: event.analysis?.theme,
-    description: event.analysis?.description,
-    linkedActivities: event.analysis?.linkedActivities,
-    updatedAt: event.updatedAt
+    eventName: event.analysis.eventName,
+    institution: event.analysis.institution,
+    theme: event.analysis.theme,
+    description: event.analysis.description,
+    linkedActivities: event.analysis.linkedActivities,
+    createdAt: event.createdAt
   });
   const cacheKey = CacheService.generateKey(cacheKeyInput);
 
@@ -244,10 +248,6 @@ export const generateBriefing = async (event: any) => {
   if (cached) {
     console.log('Using cached briefing');
     return cached;
-  }
-
-  if (!event.analysis) {
-    throw new Error('Event analysis data is required for briefing generation.');
   }
 
   const prompt = `Create a 1-page executive briefing for a representative attending the following event:
