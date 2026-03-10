@@ -14,11 +14,6 @@ export const EmailParserView: React.FC<EmailParserViewProps> = ({ onEventsExtrac
   const [extractedEvents, setExtractedEvents] = useState<EventData[]>([]);
   const [error, setError] = useState('');
 
-  const handleEventCardClick = React.useCallback((_id: string) => {}, []);
-  const handleEventCardDelete = React.useCallback((deletedEvent: EventData) => {
-    setExtractedEvents(prev => prev.filter(e => e.id !== deletedEvent.id));
-  }, []);
-
   const handleAnalyze = async () => {
     if (!emailContent.trim()) {
       setError('Please paste some email content first.');
@@ -117,8 +112,10 @@ export const EmailParserView: React.FC<EmailParserViewProps> = ({ onEventsExtrac
                   key={event.id} 
                   event={event} 
                   isSelected={false}
-                  onClick={handleEventCardClick}
-                  onDelete={handleEventCardDelete}
+                  onClick={() => {}}
+                  onDelete={() => {
+                    setExtractedEvents(prev => prev.filter(e => e.id !== event.id));
+                  }}
                 />
               ))
             )}

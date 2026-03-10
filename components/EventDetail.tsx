@@ -4,9 +4,9 @@ import { EventData, Priority, RepresentativeRole, Contact } from '../types';
 import { PriorityBadge } from './PriorityBadge';
 import { 
   Calendar, MapPin, Building2, AlertCircle, FileText,
-  Mail, CheckCircle, Save, Loader2, Sparkles, X, ExternalLink, Briefcase, Trash2, Users, User, FileJson, Plus, Search, Edit2, CalendarPlus, Target, ShieldAlert, ArrowRight
+  Mail, CheckCircle, Save, Loader2, Sparkles, X, ExternalLink, Briefcase, Trash2, Users, User, FileJson, Plus, Search, Edit2, CalendarPlus, Target, ShieldAlert, ArrowRight, Volume2, Square
 } from 'lucide-react';
-import { generateBriefing } from '../services/gemmaService';
+import { generateBriefing, generateSpeech } from '../services/gemmaService';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
 interface EventDetailProps {
@@ -19,13 +19,6 @@ interface EventDetailProps {
 
 type TabType = 'context' | 'logistics' | 'prep' | 'outcomes' | 'raw';
 type ViewMode = 'report' | 'editor';
-
-const PRIORITY_CLASSES: Record<Priority, string> = {
-  [Priority.High]: 'bg-emerald-500 text-slate-900',
-  [Priority.Medium]: 'bg-orange-500 text-white',
-  [Priority.Low]: 'bg-slate-700 text-slate-300',
-  [Priority.Irrelevant]: 'bg-slate-700 text-slate-300',
-};
 
 export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDelete, contacts = [], onViewContact }) => {
   const [localEvent, setLocalEvent] = useState<EventData>(event);
@@ -42,6 +35,12 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   const [isEditingRegLink, setIsEditingRegLink] = useState(false);
   const [isEditingProgLink, setIsEditingProgLink] = useState(false);
   const [newActivity, setNewActivity] = useState('');
+
+  // States for Audio
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const sourceNodeRef = useRef<AudioBufferSourceNode | null>(null);
 
   // Refs for click outside
   const calendarMenuRef = useRef<HTMLDivElement>(null);
@@ -60,7 +59,12 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
+    };
   }, []);
 
   const handleChange = (section: keyof EventData, field: string, value: any) => {
@@ -97,6 +101,52 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
       alert(e.message || "Failed to generate briefing.");
     } finally {
       setIsGeneratingBrief(false);
+    }
+  };
+
+  const handlePlayBriefing = async () => {
+    if (isPlayingAudio) {
+      if (sourceNodeRef.current) {
+        sourceNodeRef.current.stop();
+      }
+      setIsPlayingAudio(false);
+      return;
+    }
+
+    if (!localEvent.followUp.briefing) return;
+
+    setIsGeneratingAudio(true);
+    try {
+      const base64Audio = await generateSpeech(localEvent.followUp.briefing);
+      if (!base64Audio) throw new Error("Failed to generate audio.");
+
+      const binaryString = window.atob(base64Audio);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      }
+      const audioContext = audioContextRef.current;
+
+      const audioBuffer = await audioContext.decodeAudioData(bytes.buffer);
+      const source = audioContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(audioContext.destination);
+      
+      source.onended = () => setIsPlayingAudio(false);
+      sourceNodeRef.current = source;
+      
+      source.start(0);
+      setIsPlayingAudio(true);
+    } catch (error) {
+      console.error("Audio playback failed:", error);
+      alert("Failed to play audio briefing.");
+    } finally {
+      setIsGeneratingAudio(false);
     }
   };
 
@@ -418,7 +468,11 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Priority Score</span>
                              </div>
                              <div className="mt-6 relative z-10">
-                                 <span className={`inline-block px-3 py-1 rounded-lg text-xs font-bold uppercase ${PRIORITY_CLASSES[localEvent.analysis.priority] || 'bg-slate-700 text-slate-300'}`}>
+                                 <span className={`inline-block px-3 py-1 rounded-lg text-xs font-bold uppercase ${
+                                     localEvent.analysis.priority === Priority.High ? 'bg-emerald-500 text-slate-900' : 
+                                     localEvent.analysis.priority === Priority.Medium ? 'bg-orange-500 text-white' : 
+                                     'bg-slate-700 text-slate-300'
+                                 }`}>
                                      {localEvent.analysis.priority} Level
                                  </span>
                              </div>
@@ -492,7 +546,29 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
 
                     {/* Executive Briefing */}
                     <section>
-                         <h2 className="text-2xl font-bold text-white mb-6 border-b border-slate-800 pb-2">Executive Briefing</h2>
+                         <div className="flex items-center justify-between mb-6 border-b border-slate-800 pb-2">
+                             <h2 className="text-2xl font-bold text-white">Executive Briefing</h2>
+                             {localEvent.followUp.briefing && (
+                                 <button
+                                     onClick={handlePlayBriefing}
+                                     disabled={isGeneratingAudio}
+                                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                         isPlayingAudio 
+                                             ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50' 
+                                             : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700'
+                                     }`}
+                                 >
+                                     {isGeneratingAudio ? (
+                                         <Loader2 size={14} className="animate-spin" />
+                                     ) : isPlayingAudio ? (
+                                         <Square size={14} />
+                                     ) : (
+                                         <Volume2 size={14} />
+                                     )}
+                                     {isGeneratingAudio ? 'Generating Audio...' : isPlayingAudio ? 'Stop Audio' : 'Listen to Briefing'}
+                                 </button>
+                             )}
+                         </div>
                          
                          <div className="mb-8">
                              <h4 className="text-emerald-500 text-xs font-bold uppercase tracking-widest mb-4">Key Objectives</h4>
@@ -1033,14 +1109,36 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                         value={localEvent.followUp.briefing}
                                         onChange={(e) => handleChange('followUp', 'briefing', e.target.value)}
                                     />
-                                    <button 
-                                        onClick={handleBriefingGen}
-                                        disabled={isGeneratingBrief}
-                                        className="absolute bottom-4 right-4 bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-slate-800 transition-all disabled:opacity-50"
-                                    >
-                                        {isGeneratingBrief ? <Loader2 size={12} className="animate-spin"/> : <Sparkles size={12} className="text-yellow-400"/>}
-                                        Generate with AI
-                                    </button>
+                                    <div className="absolute bottom-4 right-4 flex gap-2">
+                                        {localEvent.followUp.briefing && (
+                                            <button 
+                                                onClick={handlePlayBriefing}
+                                                disabled={isGeneratingAudio}
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-all ${
+                                                    isPlayingAudio 
+                                                        ? 'bg-blue-100 text-blue-700 border border-blue-200' 
+                                                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                                                }`}
+                                            >
+                                                {isGeneratingAudio ? (
+                                                    <Loader2 size={12} className="animate-spin" />
+                                                ) : isPlayingAudio ? (
+                                                    <Square size={12} />
+                                                ) : (
+                                                    <Volume2 size={12} />
+                                                )}
+                                                {isGeneratingAudio ? 'Generating...' : isPlayingAudio ? 'Stop' : 'Listen'}
+                                            </button>
+                                        )}
+                                        <button 
+                                            onClick={handleBriefingGen}
+                                            disabled={isGeneratingBrief}
+                                            className="bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-slate-800 transition-all disabled:opacity-50"
+                                        >
+                                            {isGeneratingBrief ? <Loader2 size={12} className="animate-spin"/> : <Sparkles size={12} className="text-yellow-400"/>}
+                                            Generate with AI
+                                        </button>
+                                    </div>
                                 </div>
                              </Section>
                         </div>

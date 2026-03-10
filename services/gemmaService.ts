@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 // src/services/gemmaService.ts
 import { AnalysisResult, Priority } from '../types';
-import { GoogleGenAI, Type } from '@google/genai';
+import { GoogleGenAI, Type, ThinkingLevel, Modality } from '@google/genai';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY });
 
@@ -37,15 +37,15 @@ ${OBESSU_CONTEXT}`;
 
 function extractJSON(rawText: string): any {
   try { return JSON.parse(rawText.trim()); } catch {}
-
+  
   const stripped = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
   try { return JSON.parse(stripped); } catch {}
-
+  
   const match = rawText.match(/\{[\s\S]*\}/);
   if (match) {
     try { return JSON.parse(match[0]); } catch {}
   }
-
+  
   throw new Error('Could not extract valid JSON from model response. Raw: ' + rawText.substring(0, 200));
 }
 
@@ -70,7 +70,7 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
           },
         },
         {
-          text: "Analyze this document as an event invitation. If it's an email, extract headers.",
+          text: "Analyze this document or image as an event invitation. If it's an email, extract headers.",
         },
       ],
     };
@@ -163,6 +163,7 @@ Format as plain text, no JSON.`;
       config: {
         systemInstruction: SYSTEM_PROMPT,
         temperature: 0.3,
+        thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH }
       },
     });
 
@@ -184,7 +185,7 @@ ${OBESSU_CONTEXT}
 Provide a concise summary of outcomes, key contacts made, and follow-up tasks relevant to OBESSU's strategic themes.`;
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3.1-flash-lite-preview',
       contents: prompt,
       config: {
         temperature: 0.3,
@@ -198,5 +199,104 @@ Provide a concise summary of outcomes, key contacts made, and follow-up tasks re
   } catch (error: any) {
     console.error("summarizeFollowUp error:", error);
     throw new Error(error.message || 'An unexpected error occurred during summarization.');
+  }
+};
+
+export const generateSpeech = async (text: string): Promise<string | undefined> => {
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash-preview-tts",
+      contents: [{ parts: [{ text }] }],
+      config: {
+        responseModalities: [Modality.AUDIO],
+        speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: 'Kore' },
+            },
+        },
+      },
+    });
+    return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+  } catch (error) {
+    console.error("generateSpeech error:", error);
+    return undefined;
+  }
+};
+
+export const transcribeAudio = async (base64Audio: string, mimeType: string): Promise<string> => {
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              mimeType,
+              data: base64Audio,
+            },
+          },
+          {
+            text: "Transcribe the following audio accurately.",
+          },
+        ],
+      },
+    });
+    return response.text || "";
+  } catch (error) {
+    console.error("transcribeAudio error:", error);
+    throw new Error("Failed to transcribe audio.");
+  }
+};
+
+export const chatWithAssistant = async (message: string, history: {role: string, text: string}[]): Promise<string> => {
+  try {
+    const chat = ai.chats.create({
+      model: "gemini-3.1-pro-preview",
+      config: {
+        systemInstruction: "You are an AI assistant for OBESSU. Help the user with tasks related to event management, contacts, and strategic alignment. " + OBESSU_CONTEXT,
+      },
+    });
+    
+    // In a real app we'd pass history to the chat creation, but for simplicity we'll just send the message
+    // If we want to use history, we'd need to map it to the correct format, but the SDK handles it differently.
+    // For now, let's just send the message with context.
+    const contextStr = history.map(h => \`\${h.role}: \${h.text}\`).join('\\n');
+    const fullMessage = history.length > 0 ? \`Previous conversation:\\n\${contextStr}\\n\\nUser: \${message}\` : message;
+    
+    const response = await chat.sendMessage({ message: fullMessage });
+    return response.text || "";
+  } catch (error) {
+    console.error("chatWithAssistant error:", error);
+    throw new Error("Failed to get response from assistant.");
+  }
+};
+
+export const researchOrganization = async (query: string): Promise<{text: string, urls: string[]}> => {
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: \`Research the following organization or event: \${query}. Provide a brief summary of their recent activities and relevance to OBESSU.\`,
+      config: {
+        tools: [{ googleSearch: {} }],
+      },
+    });
+    
+    const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+    const urls: string[] = [];
+    if (chunks) {
+      chunks.forEach((chunk: any) => {
+        if (chunk.web?.uri) {
+          urls.push(chunk.web.uri);
+        }
+      });
+    }
+    
+    return {
+      text: response.text || "",
+      urls
+    };
+  } catch (error) {
+    console.error("researchOrganization error:", error);
+    throw new Error("Failed to research organization.");
   }
 };
