@@ -97,7 +97,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
         .map(item => item.event);
 
       const hasMatches = weekEvents.length > 0;
-      if (!hasMatches && (priorityFilter !== 'All' || themeFilter !== 'All' || contactFilter !== 'All')) continue;
+      // Hide empty weeks when any filter is active (preFilteredEvents is already
+      // a subset, so comparing its length to the full events list tells us)
+      const isFiltering = preFilteredEvents.length < events.length;
+      if (!hasMatches && isFiltering) continue;
 
       weeksArr.push({
         number: (i % 53) + 1,
@@ -107,7 +110,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
       });
     }
     return weeksArr;
-  }, [preFilteredEvents, priorityFilter, themeFilter, contactFilter, startDateFilter, endDateFilter, calendarView]);
+  }, [preFilteredEvents, events.length, startDateFilter, endDateFilter, calendarView]);
 
   const filteredPeriods = useMemo(() => {
     if (calendarView === 'Week') return [];

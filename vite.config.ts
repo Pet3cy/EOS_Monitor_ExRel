@@ -21,7 +21,7 @@ export default defineConfig(({ mode }) => {
         }
       },
       build: {
-        outDir: 'Frontend/build'
+        outDir: 'dist'
       }
     };
 });

@@ -377,7 +377,7 @@ export default function App() {
     });
 
     return result;
-  }, [events, searchTerm, statusFilter, viewMode, sortField, sortOrder]);
+  }, [events, searchTerm, statusFilter, repRoleFilter, showPastEvents, viewMode, sortField, sortOrder]);
 
   // Bulk Actions
   const handleToggleSelect = (id: string) => {
