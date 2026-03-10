@@ -34,15 +34,15 @@ describe('ConfirmDeleteModal', () => {
     render(<ConfirmDeleteModal {...defaultProps} />);
 
     fireEvent.click(screen.getByText('Cancel'));
-    expect(defaultProps.onClose).toHaveBeenCalled();
+    expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
   });
 
   it('calls onConfirm and onClose when Delete Permanently is clicked', () => {
     render(<ConfirmDeleteModal {...defaultProps} />);
 
     fireEvent.click(screen.getByText('Delete Permanently'));
-    expect(defaultProps.onConfirm).toHaveBeenCalled();
-    expect(defaultProps.onClose).toHaveBeenCalled();
+    expect(defaultProps.onConfirm).toHaveBeenCalledTimes(1);
+    expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
   });
 
   it('calls onClose when clicking the backdrop', () => {
