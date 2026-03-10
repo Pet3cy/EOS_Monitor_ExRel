@@ -84,9 +84,8 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   const handleBriefingGen = async () => {
     setIsGeneratingBrief(true);
     try {
-      // Force a fresh API call if a briefing already exists (user wants to regenerate)
-      const forceRefresh = !!localEvent.followUp.briefing;
-      const brief = await generateBriefing(localEvent, forceRefresh);
+      // Always force a fresh API call when the user explicitly clicks generate
+      const brief = await generateBriefing(localEvent, true);
       handleChange('followUp', 'briefing', brief);
     } catch (e) {
       alert("Failed to generate briefing.");
