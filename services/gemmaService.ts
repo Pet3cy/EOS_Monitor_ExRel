@@ -250,6 +250,9 @@ export const generateBriefing = async (event: any, forceRefresh = false) => {
       console.log('Using cached briefing');
       return cached;
     }
+  } else {
+    // Invalidate stale cache entry so it can't be returned on a subsequent non-forced call
+    try { sessionStorage.removeItem('gemma_cache_briefing_' + cacheKey); } catch (_) {}
   }
 
   const prompt = `Create a 1-page executive briefing for a representative attending the following event:
