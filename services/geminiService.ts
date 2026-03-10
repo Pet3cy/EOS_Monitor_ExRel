@@ -150,7 +150,7 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
   }
 
   if (cacheKeyInput) {
-    const cacheKey = CacheService.generateKey(cacheKeyInput);
+    const cacheKey = `analysis_${cacheKeyInput.length}_${CacheService.generateKey(cacheKeyInput)}`;
     const cached = CacheService.get<AnalysisResult>(cacheKey);
     if (cached) {
       console.log('Using cached analysis result');
@@ -219,7 +219,7 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
 
   // Cache the result
   if (cacheKeyInput) {
-    const cacheKey = CacheService.generateKey(cacheKeyInput);
+    const cacheKey = `analysis_${cacheKeyInput.length}_${CacheService.generateKey(cacheKeyInput)}`;
     CacheService.set(cacheKey, result);
   }
 
@@ -245,12 +245,16 @@ export const generateBriefing = async (event: any) => {
     return cached;
   }
 
+  if (!event.analysis) {
+    throw new Error('Event analysis data is required for briefing generation.');
+  }
+
   const prompt = `Create a 1-page executive briefing for a representative attending the following event:
   Event: ${event.analysis.eventName}
   Institution: ${event.analysis.institution}
   Theme: ${event.analysis.theme}
   Context: ${event.analysis.description}
-  Linked Activities: ${event.analysis.linkedActivities.join(', ')}
+  Linked Activities: ${(event.analysis.linkedActivities || []).join(', ')}
   
   CONTEXT:
   ${OBESSU_DATA_CONTEXT}

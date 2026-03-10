@@ -9,16 +9,20 @@ export class CacheService {
   // Optional: Add a version or max size limit if needed
 
   /**
-   * Generates a simple hash for a string to use as a cache key.
+   * Generates a hash for a string to use as a cache key.
+   * Uses FNV-1a inspired approach with two independent hashes to reduce collisions.
    */
   static generateKey(data: string): string {
-    let hash = 0;
+    let h1 = 0x811c9dc5; // FNV offset basis
+    let h2 = 0;
     for (let i = 0; i < data.length; i++) {
       const char = data.charCodeAt(i);
-      hash = (hash << 5) - hash + char;
-      hash = hash & hash; // Convert to 32bit integer
+      h1 = h1 ^ char;
+      h1 = Math.imul(h1, 0x01000193); // FNV prime
+      h2 = (h2 << 5) - h2 + char;
+      h2 = h2 & h2;
     }
-    return Math.abs(hash).toString(36);
+    return (h1 >>> 0).toString(36) + '_' + (h2 >>> 0).toString(36);
   }
 
   static get<T>(key: string): T | null {
