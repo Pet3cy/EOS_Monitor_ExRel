@@ -63,6 +63,15 @@ export class CacheService {
     }
   }
 
+  static remove(key: string): void {
+    if (typeof sessionStorage === 'undefined') return;
+    try {
+      sessionStorage.removeItem(this.PREFIX + key);
+    } catch (e) {
+      console.warn('Failed to remove from cache:', e);
+    }
+  }
+
   static clear(): void {
     if (typeof sessionStorage === 'undefined') return;
     try {
