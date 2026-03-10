@@ -2,35 +2,58 @@ export class CacheService<T> {
   private cache: Map<string, { value: T; timestamp: number }> = new Map();
   private storageKey: string;
   private ttl: number; // Time to live in ms
+  private maxEntries: number;
 
-  constructor(storageKey: string, ttl: number = 3600000) { // Default 1 hour
+  constructor(storageKey: string, ttl: number = 3600000, maxEntries: number = 50) { // Default 1 hour, 50 entries
     this.storageKey = storageKey;
     this.ttl = ttl;
+    this.maxEntries = maxEntries;
     this.loadFromStorage();
   }
 
+  private isStorageAvailable(): boolean {
+    return typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined';
+  }
+
   private loadFromStorage() {
-    if (typeof sessionStorage !== 'undefined') {
-      const stored = sessionStorage.getItem(this.storageKey);
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          this.cache = new Map(parsed);
-        } catch (e) {
-          console.warn('Failed to parse cache', e);
-        }
+    if (!this.isStorageAvailable()) return;
+
+    const stored = sessionStorage.getItem(this.storageKey);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        const now = Date.now();
+        // Filter out expired entries on load
+        const validEntries = (parsed as [string, { value: T; timestamp: number }][])
+          .filter(([, item]) => now - item.timestamp <= this.ttl);
+        this.cache = new Map(validEntries);
+      } catch (e) {
+        console.warn('Failed to parse cache', e);
       }
     }
   }
 
   private saveToStorage() {
-    if (typeof sessionStorage !== 'undefined') {
-      try {
-        const serialized = JSON.stringify(Array.from(this.cache.entries()));
-        sessionStorage.setItem(this.storageKey, serialized);
-      } catch (e) {
-        console.warn('Failed to save cache to sessionStorage', e);
-      }
+    if (!this.isStorageAvailable()) return;
+
+    try {
+      const serialized = JSON.stringify(Array.from(this.cache.entries()));
+      sessionStorage.setItem(this.storageKey, serialized);
+    } catch (e) {
+      console.warn('Failed to save cache to sessionStorage', e);
+    }
+  }
+
+  private evictOldest() {
+    if (this.cache.size <= this.maxEntries) return;
+
+    // Evict oldest entries until we're under the limit
+    const entries = Array.from(this.cache.entries())
+      .sort(([, a], [, b]) => a.timestamp - b.timestamp);
+
+    while (entries.length > this.maxEntries) {
+      const [key] = entries.shift()!;
+      this.cache.delete(key);
     }
   }
 
@@ -49,6 +72,7 @@ export class CacheService<T> {
 
   set(key: string, value: T): void {
     this.cache.set(key, { value, timestamp: Date.now() });
+    this.evictOldest();
     this.saveToStorage();
   }
 
