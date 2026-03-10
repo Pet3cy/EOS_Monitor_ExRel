@@ -219,10 +219,11 @@ describe('App', () => {
       fireEvent.click(screen.getByText('Upcoming'));
 
       const searchInput = screen.getByPlaceholderText('Search events...');
-      fireEvent.change(searchInput, { target: { value: 'Solidar' } });
+      // "European Commission" is the institution for e4, not part of any event name
+      fireEvent.change(searchInput, { target: { value: 'European Commission' } });
 
-      expect(screen.getByText('Select Solidar Webinar: Advocacy Campaigning')).toBeInTheDocument();
-      expect(screen.queryByText(/Select R2P/)).not.toBeInTheDocument();
+      expect(screen.getByText('Select VET Strategy Consultation: Quality & Future-readiness')).toBeInTheDocument();
+      expect(screen.queryByText(/Select Solidar/)).not.toBeInTheDocument();
     });
 
     it('should be case-insensitive', () => {
@@ -482,9 +483,8 @@ describe('App', () => {
       render(<App />);
 
       fireEvent.click(screen.getByText('Upcoming'));
-      fireEvent.click(screen.getByText('Select Event 1'));
       fireEvent.click(screen.getByText('Select Solidar Webinar: Advocacy Campaigning'));
-      // Switch to past view where Event 1 is not shown
+      // Switch to past view where this event is not shown (active status)
       fireEvent.click(screen.getByText('Past'));
 
       expect(screen.getByText('Select an event to view details')).toBeInTheDocument();
@@ -494,8 +494,6 @@ describe('App', () => {
       render(<App />);
 
       fireEvent.click(screen.getByText('Upcoming'));
-      fireEvent.click(screen.getByText('Select Event 1'));
-
       fireEvent.click(screen.getByText('Select Solidar Webinar: Advocacy Campaigning'));
 
       // Search for the selected event

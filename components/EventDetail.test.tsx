@@ -120,8 +120,9 @@ describe('EventDetail', () => {
   });
 
   describe('Tab Navigation', () => {
-    it('should show Context tab content by default', () => {
+    it('should show Context tab content by default in editor mode', () => {
       render(<EventDetail {...defaultProps} />);
+      switchToEditor();
 
       expect(screen.getByText('Event Description')).toBeInTheDocument();
       expect(screen.getByText('Strategic Priority')).toBeInTheDocument();
@@ -129,16 +130,18 @@ describe('EventDetail', () => {
 
     it('should switch to Logistics tab when clicked', () => {
       render(<EventDetail {...defaultProps} />);
+      switchToEditor();
 
       const logisticsTab = screen.getByText('Logistics & Links');
       fireEvent.click(logisticsTab);
 
-      expect(screen.getByText('Date & Time')).toBeInTheDocument();
+      expect(screen.getByText('Date')).toBeInTheDocument();
       expect(screen.getByText('Venue / Platform')).toBeInTheDocument();
     });
 
     it('should switch to Prep tab when clicked', () => {
       render(<EventDetail {...defaultProps} />);
+      switchToEditor();
 
       const prepTab = screen.getByText('Briefing & Prep');
       fireEvent.click(prepTab);
@@ -149,6 +152,7 @@ describe('EventDetail', () => {
 
     it('should switch to Outcomes tab when clicked', () => {
       render(<EventDetail {...defaultProps} />);
+      switchToEditor();
 
       const outcomesTab = screen.getByText('Outcomes');
       fireEvent.click(outcomesTab);
@@ -161,6 +165,7 @@ describe('EventDetail', () => {
   describe('Edit Functionality', () => {
     it('should enable editing when field is changed', () => {
       render(<EventDetail {...defaultProps} />);
+      switchToEditor();
 
       const descriptionField = screen.getByDisplayValue('A test conference about education policy');
       fireEvent.change(descriptionField, { target: { value: 'Updated description' } });
@@ -171,6 +176,7 @@ describe('EventDetail', () => {
     it('should call onUpdate when save button is clicked', () => {
       const onUpdate = vi.fn();
       render(<EventDetail {...defaultProps} onUpdate={onUpdate} />);
+      switchToEditor();
 
       const descriptionField = screen.getByDisplayValue('A test conference about education policy');
       fireEvent.change(descriptionField, { target: { value: 'Updated description' } });
@@ -189,6 +195,7 @@ describe('EventDetail', () => {
 
     it('should reset to non-editing state after save', () => {
       render(<EventDetail {...defaultProps} />);
+      switchToEditor();
 
       const descriptionField = screen.getByDisplayValue('A test conference about education policy');
       fireEvent.change(descriptionField, { target: { value: 'Updated description' } });
@@ -201,6 +208,7 @@ describe('EventDetail', () => {
 
     it('should reset local state when event prop changes', () => {
       const { rerender } = render(<EventDetail {...defaultProps} />);
+      switchToEditor();
 
       const descriptionField = screen.getByDisplayValue('A test conference about education policy');
       fireEvent.change(descriptionField, { target: { value: 'Updated description' } });
@@ -208,17 +216,28 @@ describe('EventDetail', () => {
       const newEvent = createMockEvent({ id: 'new-event' });
       rerender(<EventDetail {...defaultProps} event={newEvent} />);
 
+      // After event prop change, component resets — switch back to editor to check
+      switchToEditor();
       const updatedField = screen.getByDisplayValue('A test conference about education policy');
       expect(updatedField).toBeInTheDocument();
     });
   });
 
   describe('Delete Functionality', () => {
+    // Helper to find the delete (Trash2) button — only rendered in editor mode,
+    // identified by its hover:text-red-400 class
+    const findTrashButton = () => {
+      const buttons = screen.getAllByRole('button');
+      return buttons.find(btn => btn.classList.contains('hover:text-red-400'));
+    };
+
     it('should show delete confirmation modal when delete button is clicked', () => {
       render(<EventDetail {...defaultProps} />);
+      switchToEditor();
 
-      const deleteButton = screen.getByTitle('Delete Event');
-      fireEvent.click(deleteButton);
+      const trashButton = findTrashButton();
+      expect(trashButton).toBeDefined();
+      fireEvent.click(trashButton!);
 
       expect(screen.getByText('Delete Event?')).toBeInTheDocument();
     });
@@ -226,9 +245,10 @@ describe('EventDetail', () => {
     it('should call onDelete when deletion is confirmed', () => {
       const onDelete = vi.fn();
       render(<EventDetail {...defaultProps} onDelete={onDelete} />);
+      switchToEditor();
 
-      const deleteButton = screen.getByTitle('Delete Event');
-      fireEvent.click(deleteButton);
+      const trashButton = findTrashButton();
+      fireEvent.click(trashButton!);
 
       const confirmButton = screen.getByText('Delete Permanently');
       fireEvent.click(confirmButton);
@@ -242,6 +262,7 @@ describe('EventDetail', () => {
       vi.mocked(geminiService.generateBriefing).mockResolvedValue('AI generated briefing');
 
       render(<EventDetail {...defaultProps} />);
+      switchToEditor();
 
       // Navigate to Prep tab
       const prepTab = screen.getByText('Briefing & Prep');
@@ -262,6 +283,7 @@ describe('EventDetail', () => {
       const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
       render(<EventDetail {...defaultProps} />);
+      switchToEditor();
 
       const prepTab = screen.getByText('Briefing & Prep');
       fireEvent.click(prepTab);
@@ -280,6 +302,7 @@ describe('EventDetail', () => {
   describe('Contact Assignment', () => {
     it('should display assigned contact information', () => {
       render(<EventDetail {...defaultProps} />);
+      switchToEditor();
 
       const prepTab = screen.getByText('Briefing & Prep');
       fireEvent.click(prepTab);
@@ -290,6 +313,7 @@ describe('EventDetail', () => {
 
     it('should show contact picker when assign button is clicked', () => {
       render(<EventDetail {...defaultProps} />);
+      switchToEditor();
 
       const prepTab = screen.getByText('Briefing & Prep');
       fireEvent.click(prepTab);
@@ -304,6 +328,7 @@ describe('EventDetail', () => {
 
     it('should assign contact when selected from picker', () => {
       render(<EventDetail {...defaultProps} />);
+      switchToEditor();
 
       const prepTab = screen.getByText('Briefing & Prep');
       fireEvent.click(prepTab);
@@ -331,6 +356,7 @@ describe('EventDetail', () => {
       });
 
       render(<EventDetail {...defaultProps} event={eventWithoutContact} />);
+      switchToEditor();
 
       const prepTab = screen.getByText('Briefing & Prep');
       fireEvent.click(prepTab);
@@ -341,6 +367,7 @@ describe('EventDetail', () => {
 
     it('should open new contact modal when Create New Contact is clicked', () => {
       render(<EventDetail {...defaultProps} />);
+      switchToEditor();
 
       const prepTab = screen.getByText('Briefing & Prep');
       fireEvent.click(prepTab);
@@ -357,49 +384,34 @@ describe('EventDetail', () => {
   });
 
   describe('Export Functionality', () => {
-    it('should export event as JSON when JSON button is clicked', () => {
+    it('should render JSON export button', () => {
+      render(<EventDetail {...defaultProps} />);
+
+      // The Export JSON button is available in both report and editor mode
+      const jsonButton = screen.getByTitle('Export JSON');
+      expect(jsonButton).toBeInTheDocument();
+    });
+
+    it('should trigger download when JSON export button is clicked', () => {
       const createElementSpy = vi.spyOn(document, 'createElement');
-      const clickSpy = vi.fn();
 
       render(<EventDetail {...defaultProps} />);
 
       const jsonButton = screen.getByTitle('Export JSON');
+      fireEvent.click(jsonButton);
 
       expect(createElementSpy).toHaveBeenCalledWith('a');
+      createElementSpy.mockRestore();
     });
 
-    it('should export event as CSV when CSV button is clicked', () => {
-      const createElementSpy = vi.spyOn(document, 'createElement');
-
-      render(<EventDetail {...defaultProps} />);
-
-      const csvButton = screen.getByTitle('Export as CSV');
-      fireEvent.click(csvButton);
-
-      expect(createElementSpy).toHaveBeenCalledWith('a');
-    });
-
-    it('should sanitize CSV values to prevent formula injection', () => {
-      const eventWithDangerousData = createMockEvent({
-        analysis: {
-          ...defaultProps.event.analysis,
-          description: '=1+1',
-          eventName: '+DANGEROUS',
-        },
-      });
-
-      render(<EventDetail {...defaultProps} event={eventWithDangerousData} />);
-
-      const csvButton = screen.getByTitle('Export as CSV');
-
-      // This test verifies the export function runs without error
-      expect(() => fireEvent.click(csvButton)).not.toThrow();
-    });
+    // Note: handleExportCSV is defined in EventDetail.tsx but not wired to any UI button.
+    // CSV export tests are omitted until a CSV export button is added to the component.
   });
 
   describe('Logistics Tab', () => {
     it('should display date, venue, and deadline fields', () => {
       render(<EventDetail {...defaultProps} />);
+      switchToEditor();
 
       const logisticsTab = screen.getByText('Logistics & Links');
       fireEvent.click(logisticsTab);
@@ -409,17 +421,19 @@ describe('EventDetail', () => {
       expect(screen.getByDisplayValue('2026-05-15')).toBeInTheDocument();
     });
 
-    it('should display registration and programme links', () => {
+    it('should display registration link when provided', () => {
       render(<EventDetail {...defaultProps} />);
+      switchToEditor();
 
       const logisticsTab = screen.getByText('Logistics & Links');
       fireEvent.click(logisticsTab);
 
-      expect(screen.getByText('Open Registration Page')).toBeInTheDocument();
-      expect(screen.getByText('View Agenda / Programme')).toBeInTheDocument();
+      // In editor mode, links are rendered as <a> elements or edit inputs
+      expect(screen.getByText('https://example.com/register')).toBeInTheDocument();
+      expect(screen.getByText('https://example.com/programme')).toBeInTheDocument();
     });
 
-    it('should not display links when they are not provided', () => {
+    it('should show input placeholder when links are not provided', () => {
       const eventWithoutLinks = createMockEvent({
         analysis: {
           ...defaultProps.event.analysis,
@@ -429,18 +443,21 @@ describe('EventDetail', () => {
       });
 
       render(<EventDetail {...defaultProps} event={eventWithoutLinks} />);
+      switchToEditor();
 
       const logisticsTab = screen.getByText('Logistics & Links');
       fireEvent.click(logisticsTab);
 
-      expect(screen.queryByText('Open Registration Page')).not.toBeInTheDocument();
-      expect(screen.queryByText('View Agenda / Programme')).not.toBeInTheDocument();
+      // Without links, the editor shows placeholder inputs
+      const placeholders = screen.getAllByPlaceholderText('https://...');
+      expect(placeholders.length).toBeGreaterThanOrEqual(2);
     });
   });
 
-  describe('Context Tab', () => {
+  describe('Context Tab (Editor Mode)', () => {
     it('should display priority score with progress bar', () => {
       render(<EventDetail {...defaultProps} />);
+      switchToEditor();
 
       expect(screen.getByText('85/100')).toBeInTheDocument();
       expect(screen.getByText('High relevance to our mission')).toBeInTheDocument();
@@ -448,6 +465,7 @@ describe('EventDetail', () => {
 
     it('should display linked activities', () => {
       render(<EventDetail {...defaultProps} />);
+      switchToEditor();
 
       expect(screen.getByText('Activity 1')).toBeInTheDocument();
       expect(screen.getByText('Activity 2')).toBeInTheDocument();
@@ -462,6 +480,7 @@ describe('EventDetail', () => {
       });
 
       render(<EventDetail {...defaultProps} event={eventWithoutActivities} />);
+      switchToEditor();
 
       expect(screen.getByText('No linked internal activities found.')).toBeInTheDocument();
     });
@@ -470,6 +489,7 @@ describe('EventDetail', () => {
   describe('Outcomes Tab', () => {
     it('should allow editing post-event notes', () => {
       render(<EventDetail {...defaultProps} />);
+      switchToEditor();
 
       const outcomesTab = screen.getByText('Outcomes');
       fireEvent.click(outcomesTab);
@@ -482,6 +502,7 @@ describe('EventDetail', () => {
 
     it('should display status dropdown with all options', () => {
       render(<EventDetail {...defaultProps} />);
+      switchToEditor();
 
       const outcomesTab = screen.getByText('Outcomes');
       fireEvent.click(outcomesTab);
@@ -500,6 +521,7 @@ describe('EventDetail', () => {
 
     it('should update status when changed', () => {
       render(<EventDetail {...defaultProps} />);
+      switchToEditor();
 
       const outcomesTab = screen.getByText('Outcomes');
       fireEvent.click(outcomesTab);
@@ -514,6 +536,7 @@ describe('EventDetail', () => {
   describe('Representative Role Selection', () => {
     it('should allow changing representative role', () => {
       render(<EventDetail {...defaultProps} />);
+      switchToEditor();
 
       const prepTab = screen.getByText('Briefing & Prep');
       fireEvent.click(prepTab);
@@ -526,6 +549,7 @@ describe('EventDetail', () => {
 
     it('should have all role options available', () => {
       render(<EventDetail {...defaultProps} />);
+      switchToEditor();
 
       const prepTab = screen.getByText('Briefing & Prep');
       fireEvent.click(prepTab);
