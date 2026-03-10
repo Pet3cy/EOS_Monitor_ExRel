@@ -418,6 +418,7 @@ Format as plain text, no JSON.`;
 
   app.post("/api/ai/summarize", async (req, res) => {
     const { event, notes } = req.body;
+    if (!event?.analysis || !notes) return res.status(400).json({ error: "Event with analysis data and notes are required" });
     const prompt = `Summarize the following follow-up notes for the event "${event.analysis.eventName}":\n\n${notes}
 
 ${OBESSU_CONTEXT}
