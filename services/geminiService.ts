@@ -3,14 +3,8 @@ import { AnalysisResult, Priority } from "../types";
 import { CacheService } from "./cacheService";
 
 let ai: GoogleGenAI | null = null;
-// Use CacheService for briefings (lazy-init to avoid sessionStorage access at import time)
-let briefingCacheService: CacheService<string> | null = null;
-const getBriefingCache = () => {
-  if (!briefingCacheService) {
-    briefingCacheService = new CacheService<string>('briefing_cache');
-  }
-  return briefingCacheService;
-};
+// Use CacheService for briefings
+const briefingCacheService = new CacheService<string>('briefing_cache');
 
 const getAiClient = () => {
   if (!ai) {
@@ -197,7 +191,7 @@ export const analyzeInvitation = async (input: AnalysisInput): Promise<AnalysisR
 
   let text = response.text || "{}";
   // Clean potential markdown formatting
-  text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+  text = text.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '').trim();
   
   const data = JSON.parse(text);
   
@@ -218,9 +212,8 @@ export const generateBriefing = async (event: any) => {
     linkedActivities: event.analysis.linkedActivities
   };
 
-  const cache = getBriefingCache();
-  const cacheKey = await cache.generateKey(cacheKeyData);
-  const cached = cache.get(cacheKey);
+  const cacheKey = await briefingCacheService.generateKey(cacheKeyData);
+  const cached = briefingCacheService.get(cacheKey);
 
   if (cached) {
     return cached;
@@ -249,7 +242,7 @@ export const generateBriefing = async (event: any) => {
   });
 
   if (response.text) {
-    cache.set(cacheKey, response.text);
+    briefingCacheService.set(cacheKey, response.text);
   }
 
   return response.text;
