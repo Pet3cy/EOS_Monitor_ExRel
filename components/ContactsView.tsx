@@ -14,6 +14,7 @@ interface ContactsViewProps {
   events: EventData[];
   onUpdateContact: (contact: Contact) => void;
   onDeleteContact: (id: string) => void;
+  onUpdateEvent: (event: EventData) => void;
   selectedContactId: string | null;
   setSelectedContactId: (id: string | null) => void;
 }
@@ -23,6 +24,7 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
   events, 
   onUpdateContact, 
   onDeleteContact,
+  onUpdateEvent,
   selectedContactId,
   setSelectedContactId
 }) => {
@@ -31,18 +33,42 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
   const [isAdding, setIsAdding] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortField, setSortField] = useState<'name' | 'organization'>('name');
   
   // Local buffer for the notes field to allow smooth typing without global re-renders
   const [notesBuffer, setNotesBuffer] = useState('');
+  const prevContactIdRef = React.useRef<string | null>(null);
 
   const selectedContact = contacts.find(c => c.id === selectedContactId);
 
   // Sync notes buffer when selected contact changes
   useEffect(() => {
+    // Save previous contact's notes before switching:
+    if (prevContactIdRef.current && prevContactIdRef.current !== selectedContactId) {
+      const prev = contacts.find(c => c.id === prevContactIdRef.current);
+      if (prev && notesBuffer !== prev.notes) {
+        onUpdateContact({ ...prev, notes: notesBuffer });
+      }
+    }
+    prevContactIdRef.current = selectedContactId;
+
     if (selectedContact) {
       setNotesBuffer(selectedContact.notes || '');
     }
   }, [selectedContactId, contacts]);
+
+  // Auto-save notes after inactivity
+  useEffect(() => {
+    if (selectedContact && notesBuffer !== selectedContact.notes) {
+      const timeoutId = setTimeout(() => {
+        onUpdateContact({
+          ...selectedContact,
+          notes: notesBuffer
+        });
+      }, 1000);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [notesBuffer, selectedContact, onUpdateContact]);
 
   const filteredContacts = useMemo(() => {
     return contacts.filter(c => 
@@ -50,11 +76,11 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
       c.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.organization.toLowerCase().includes(searchTerm.toLowerCase())
     ).sort((a, b) => {
-      const nameA = a.name.toLowerCase();
-      const nameB = b.name.toLowerCase();
-      return sortOrder === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+      const valA = sortField === 'name' ? a.name.toLowerCase() : a.organization.toLowerCase();
+      const valB = sortField === 'name' ? b.name.toLowerCase() : b.organization.toLowerCase();
+      return sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
     });
-  }, [contacts, searchTerm, sortOrder]);
+  }, [contacts, searchTerm, sortOrder, sortField]);
 
   const contactEvents = useMemo(() => {
     if (!selectedContactId) return [];
@@ -103,6 +129,14 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
               <Users size={14} /> Directory ({filteredContacts.length})
             </span>
             <div className="flex items-center gap-1">
+                <select 
+                  value={sortField} 
+                  onChange={(e) => setSortField(e.target.value as 'name' | 'organization')}
+                  className="text-xs font-bold text-slate-500 bg-transparent border-none outline-none cursor-pointer hover:text-slate-700"
+                >
+                  <option value="name">Name</option>
+                  <option value="organization">Organization</option>
+                </select>
                 <button 
                   onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
                   className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -312,14 +346,31 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
                                 </div>
                             </div>
                             <div className="mt-4 sm:mt-0 shrink-0">
-                                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide border shadow-sm ${
+                                <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide border shadow-sm ${
                                   event.contact.repRole === 'Speaker' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' :
                                   event.contact.repRole === 'Activity Host' ? 'bg-purple-50 text-purple-700 border-purple-100' :
                                   'bg-blue-50 text-blue-700 border-blue-100'
                                 }`}>
                                    {event.contact.repRole === 'Speaker' && <Activity size={12}/>}
-                                   {event.contact.repRole}
-                                </span>
+                                   <select 
+                                      className="bg-transparent outline-none cursor-pointer appearance-none"
+                                      value={event.contact.repRole}
+                                      onChange={(e) => {
+                                        onUpdateEvent({
+                                          ...event,
+                                          contact: {
+                                            ...event.contact,
+                                            repRole: e.target.value as any
+                                          }
+                                        });
+                                      }}
+                                   >
+                                      <option value="Participant">Participant</option>
+                                      <option value="Speaker">Speaker</option>
+                                      <option value="Activity Host">Activity Host</option>
+                                      <option value="Other">Other</option>
+                                   </select>
+                                </div>
                             </div>
                        </div>
                     </div>

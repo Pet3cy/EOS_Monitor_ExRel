@@ -1,7 +1,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { EventData } from '../types';
-import { Building2, FileText, Hash, CheckCircle2, Layers, Edit2, Check, X } from 'lucide-react';
+import { Building2, FileText, Hash, CheckCircle2, Layers, Edit2, Check, X, Users } from 'lucide-react';
+import { StaffOverview } from './StaffOverview';
 
 interface OverviewProps {
   events: EventData[];
@@ -11,6 +12,7 @@ interface OverviewProps {
 export const Overview: React.FC<OverviewProps> = ({ events, onRenameStakeholder }) => {
   const [editingStakeholder, setEditingStakeholder] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
+  const [activeTab, setActiveTab] = useState<'stakeholder' | 'staff'>('stakeholder');
 
   const stakeholders = useMemo(() => {
     const groups: Record<string, {
@@ -71,31 +73,67 @@ export const Overview: React.FC<OverviewProps> = ({ events, onRenameStakeholder 
   return (
     <div className="p-8 h-full overflow-y-auto bg-slate-50/50">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-indigo-600 rounded-lg text-white shadow-lg shadow-indigo-100">
-                <Layers size={24} />
-            </div>
-            <div>
-                <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Stakeholder Overview</h2>
-                <p className="text-slate-500 text-sm font-medium">Strategic breakdown of engagement, topics, and outcomes per partner.</p>
-            </div>
-        </div>
-
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden ring-1 ring-slate-950/5">
-          {/* Table Header */}
-          <div className="grid grid-cols-12 bg-slate-50/80 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-widest backdrop-blur-sm sticky top-0 z-10">
-            <div className="col-span-3 p-5 border-r border-slate-200">Stakeholder / Organization</div>
-            <div className="col-span-5 p-5 border-r border-slate-200">Recent Completed Engagements</div>
-            <div className="col-span-4 p-5">Impact Metrics & Alignment</div>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+              <div className="p-2 bg-indigo-600 rounded-lg text-white shadow-lg shadow-indigo-100">
+                  {activeTab === 'stakeholder' ? <Layers size={24} /> : <Users size={24} />}
+              </div>
+              <div>
+                  <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
+                    {activeTab === 'stakeholder' ? 'Stakeholder Overview' : 'Staff Overview'}
+                  </h2>
+                  <p className="text-slate-500 text-sm font-medium">
+                    {activeTab === 'stakeholder' 
+                      ? 'Strategic breakdown of engagement, topics, and outcomes per partner.'
+                      : 'An integrated overview of key milestones, statutory meetings, and team portfolio distribution.'}
+                  </p>
+              </div>
           </div>
           
-          <div className="divide-y divide-slate-100">
-            {stakeholders.map((stakeholder) => (
-              <div key={stakeholder.name} className="grid grid-cols-12 hover:bg-slate-50/50 transition-colors group">
-                
-                {/* Column 1: Stakeholder (Editable) */}
-                <div className="col-span-3 p-5 border-r border-slate-200 flex flex-col justify-start">
-                  <div className="flex items-start gap-3">
+          <div className="flex bg-slate-200/50 p-1 rounded-lg">
+            <button
+              onClick={() => setActiveTab('stakeholder')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                activeTab === 'stakeholder' 
+                  ? 'bg-white text-indigo-700 shadow-sm' 
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Stakeholder Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('staff')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                activeTab === 'staff' 
+                  ? 'bg-white text-indigo-700 shadow-sm' 
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Staff Overview
+            </button>
+          </div>
+        </div>
+
+        {activeTab === 'staff' ? (
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden ring-1 ring-slate-950/5">
+            <StaffOverview events={events} />
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden ring-1 ring-slate-950/5">
+            {/* Table Header */}
+            <div className="grid grid-cols-12 bg-slate-50/80 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-widest backdrop-blur-sm sticky top-0 z-10">
+              <div className="col-span-3 p-5 border-r border-slate-200">Stakeholder / Organization</div>
+              <div className="col-span-5 p-5 border-r border-slate-200">Recent Completed Engagements</div>
+              <div className="col-span-4 p-5">Impact Metrics & Alignment</div>
+            </div>
+            
+            <div className="divide-y divide-slate-100">
+              {stakeholders.map((stakeholder) => (
+                <div key={stakeholder.name} className="grid grid-cols-12 hover:bg-slate-50/50 transition-colors group">
+                  
+                  {/* Column 1: Stakeholder (Editable) */}
+                  <div className="col-span-3 p-5 border-r border-slate-200 flex flex-col justify-start">
+                    <div className="flex items-start gap-3">
                     <div className="mt-1 p-2 bg-indigo-50 text-indigo-600 rounded-lg shrink-0">
                         <Building2 size={18} />
                     </div>
@@ -227,6 +265,7 @@ export const Overview: React.FC<OverviewProps> = ({ events, onRenameStakeholder 
             )}
           </div>
         </div>
+        )}
       </div>
     </div>
   );

@@ -69,15 +69,20 @@ export interface CommsPack {
 export interface FollowUpDetails {
   prepResources: string;
   briefing: string;
+  actionableInsights?: string[];
   commsPack: CommsPack;
   postEventNotes: string;
   status: 'To Respond' | 'Responded - On hold for updates' | 'Confirmation - To be briefed' | 'Prep ready' | 'Completed - No follow up' | 'Completed - Follow Up' | 'MOs comms' | 'Not Relevant';
+  statusHistory?: { status: string; date: string; user?: string }[];
+  reminderDate?: string;
 }
 
 export interface EventData {
   id: string;
   createdAt: number;
   originalText: string;
+  driveLink?: string;
+  tags?: string[];
   analysis: AnalysisResult;
   contact: ContactDetails;
   followUp: FollowUpDetails;
