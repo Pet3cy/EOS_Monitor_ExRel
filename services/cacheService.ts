@@ -9,18 +9,19 @@ export class CacheService<T> {
     this.ttl = ttl;
     this.maxEntries = maxEntries;
     this.loadFromStorage();
-  }
-
-  private isStorageAvailable(): boolean {
-    return typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined';
-  }
-
   private loadFromStorage() {
-    if (!this.isStorageAvailable()) return;
-
-    const stored = sessionStorage.getItem(this.storageKey);
-    if (stored) {
+    if (typeof sessionStorage !== 'undefined') {
       try {
+        const stored = sessionStorage.getItem(this.storageKey);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          this.cache = new Map(parsed);
+        }
+      } catch (e) {
+        console.warn('Failed to load cache from sessionStorage', e);
+      }
+    }
+  }
         const parsed = JSON.parse(stored);
         const now = Date.now();
         // Filter out expired entries on load
