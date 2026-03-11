@@ -239,9 +239,15 @@ async function startServer() {
 
       // Use CALENDAR_TIME_MIN env var if set, otherwise default to 6 months ago
       const defaultTimeMin = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString();
-      const timeMin = process.env.CALENDAR_TIME_MIN
-        ? new Date(process.env.CALENDAR_TIME_MIN).toISOString()
-        : defaultTimeMin;
+      let timeMin = defaultTimeMin;
+      if (process.env.CALENDAR_TIME_MIN) {
+        const parsed = new Date(process.env.CALENDAR_TIME_MIN);
+        if (isNaN(parsed.getTime())) {
+          console.error(`Invalid CALENDAR_TIME_MIN value: "${process.env.CALENDAR_TIME_MIN}", falling back to default`);
+        } else {
+          timeMin = parsed.toISOString();
+        }
+      }
 
       // Fetch all calendars in parallel for better performance
       const results = await Promise.allSettled(
@@ -258,11 +264,12 @@ async function startServer() {
       );
 
       const allEvents: any[] = [];
-      for (const result of results) {
+      for (let i = 0; i < results.length; i++) {
+        const result = results[i];
         if (result.status === 'fulfilled') {
           allEvents.push(...result.value);
         } else {
-          console.error('Failed to fetch events for a calendar:', result.reason);
+          console.error(`Failed to fetch events for calendar ${calendarIds[i]}:`, result.reason);
         }
       }
 
