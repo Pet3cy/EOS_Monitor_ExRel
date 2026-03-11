@@ -12,7 +12,7 @@ export const flattenObject = (obj: Record<string, any>, prefix = ''): Record<str
   }, {});
 };
 
-export const generateCSVContent = (data: any): string => {
+export const generateCSVContent = (data: Record<string, any>): string => {
   const flatEvent = flattenObject(data);
   const headers = Object.keys(flatEvent);
   const values = Object.values(flatEvent).map(v => `"${v.replace(/"/g, '""')}"`);
