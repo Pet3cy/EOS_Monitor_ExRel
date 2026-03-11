@@ -11,12 +11,16 @@ const TOKEN_FILE = './.user-tokens.json';
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = parseInt(process.env.PORT || '3000', 10);
 
-  app.use(cors());
+  // Restrict CORS to the configured app origin
+  const allowedOrigin = process.env.APP_URL || 'http://localhost:3000';
+  app.use(cors({ origin: allowedOrigin }));
   app.use(express.json());
 
-  // In-memory store for tokens (for demo purposes)
+  // In-memory store for tokens (single-user; for demo purposes only).
+  // WARNING: Not suitable for multi-user or production deployments.
+  // Tokens are persisted in plaintext to TOKEN_FILE for session persistence.
   let userTokens: any = null;
   if (fs.existsSync(TOKEN_FILE)) {
     try { userTokens = JSON.parse(fs.readFileSync(TOKEN_FILE, 'utf-8')); } catch {}
@@ -233,11 +237,15 @@ async function startServer() {
 
       const calendarIds = (process.env.CALENDAR_IDS || '').split(',').filter(Boolean);
 
-      const timeMin = new Date('2026-01-01T00:00:00Z').toISOString();
-      let allEvents: any[] = [];
+      // Use CALENDAR_TIME_MIN env var if set, otherwise default to 6 months ago
+      const defaultTimeMin = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString();
+      const timeMin = process.env.CALENDAR_TIME_MIN
+        ? new Date(process.env.CALENDAR_TIME_MIN).toISOString()
+        : defaultTimeMin;
 
-      for (const calendarId of calendarIds) {
-        try {
+      // Fetch all calendars in parallel for better performance
+      const results = await Promise.allSettled(
+        calendarIds.map(async (calendarId) => {
           const response = await calendar.events.list({
             calendarId: calendarId,
             timeMin: timeMin,
@@ -245,12 +253,16 @@ async function startServer() {
             singleEvents: true,
             orderBy: 'startTime',
           });
-          
-          if (response.data.items) {
-            allEvents.push(...response.data.items.map(item => ({ ...item, sourceCalendar: calendarId })));
-          }
-        } catch (err) {
-          console.error(`Failed to fetch events for calendar ${calendarId}`, err);
+          return (response.data.items || []).map(item => ({ ...item, sourceCalendar: calendarId }));
+        })
+      );
+
+      const allEvents: any[] = [];
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          allEvents.push(...result.value);
+        } else {
+          console.error('Failed to fetch events for a calendar:', result.reason);
         }
       }
 
