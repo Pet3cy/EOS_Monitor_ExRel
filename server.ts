@@ -77,7 +77,7 @@ async function startServer() {
 
   app.get(["/auth/callback", "/auth/callback/"], async (req, res) => {
     const { code } = req.query;
-    const safeCode = typeof code === 'string' ? code.replace(/[^a-zA-Z0-9/_\-\.=]/g, '') : '';
+    const safeCode = typeof code === 'string' ? code.replace(/[^a-zA-Z0-9/_\-\.=+]/g, '') : '';
     const origin = process.env.APP_URL || 'http://localhost:3000';
     
     res.send(`
@@ -146,6 +146,10 @@ async function startServer() {
     const folderId = req.query.folderId as string;
     if (!folderId) {
       return res.status(400).json({ error: "folderId is required" });
+    }
+
+    if (!/^[a-zA-Z0-9_\-]+$/.test(folderId)) {
+      return res.status(400).json({ error: "Invalid folderId format" });
     }
 
     try {
