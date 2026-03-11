@@ -3,25 +3,43 @@ import cors from "cors";
 import { google } from "googleapis";
 import dotenv from "dotenv";
 import { createServer as createViteServer } from "vite";
+import fs from "fs";
 
 dotenv.config();
 
+const TOKEN_FILE = './.user-tokens.json';
+
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = parseInt(process.env.PORT || '3000', 10);
 
-  app.use(cors());
+  // Restrict CORS to the configured app origin
+  const allowedOrigin = process.env.APP_URL || 'http://localhost:3000';
+  app.use(cors({ origin: allowedOrigin }));
   app.use(express.json());
 
-  // In-memory store for tokens (for demo purposes)
+  // In-memory store for tokens (single-user; for demo purposes only).
+  // WARNING: Not suitable for multi-user or production deployments.
+  // Tokens are persisted in plaintext to TOKEN_FILE for session persistence.
   let userTokens: any = null;
+  if (fs.existsSync(TOKEN_FILE)) {
+    try { userTokens = JSON.parse(fs.readFileSync(TOKEN_FILE, 'utf-8')); } catch {}
+  }
 
-  const getOAuth2Client = (redirectUri: string) => {
+  const getOAuth2Client = (redirectUri?: string) => {
     return new google.auth.OAuth2(
-      process.env.CLIENT_ID || process.env.GOOGLE_CLIENT_ID,
-      process.env.CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET,
-      redirectUri
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      redirectUri || `${process.env.APP_URL || 'http://localhost:3000'}/auth/callback`
     );
+  };
+
+  const getAuthenticatedClient = () => {
+    const client = getOAuth2Client();
+    if (userTokens) {
+      client.setCredentials(userTokens);
+    }
+    return client;
   };
 
   app.get("/api/auth/url", (req, res) => {
@@ -31,8 +49,8 @@ async function startServer() {
         return res.status(400).json({ error: "redirectUri is required" });
       }
 
-      const clientId = process.env.CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
-      const clientSecret = process.env.CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET;
+      const clientId = process.env.GOOGLE_CLIENT_ID;
+      const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
       if (!clientId || !clientSecret) {
         return res.status(500).json({ 
@@ -63,12 +81,18 @@ async function startServer() {
 
   app.get(["/auth/callback", "/auth/callback/"], async (req, res) => {
     const { code } = req.query;
+    const safeCode = typeof code === 'string' ? code.replace(/[^a-zA-Z0-9/_\-\.=+]/g, '') : '';
+    const origin = process.env.APP_URL || 'http://localhost:3000';
+    
     res.send(`
       <html>
         <body>
           <script>
             if (window.opener) {
-              window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS', code: '${code}' }, '*');
+              window.opener.postMessage(
+                { type: 'OAUTH_AUTH_SUCCESS', code: ${JSON.stringify(safeCode)} },
+                ${JSON.stringify(origin)}
+              );
               window.close();
             } else {
               window.location.href = '/';
@@ -86,8 +110,8 @@ async function startServer() {
       return res.status(400).json({ error: "code and redirectUri are required" });
     }
 
-    const clientId = process.env.CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = process.env.CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET;
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
     if (!clientId || !clientSecret) {
       return res.status(500).json({ 
@@ -100,6 +124,7 @@ async function startServer() {
       const oauth2Client = getOAuth2Client(redirectUri);
       const { tokens } = await oauth2Client.getToken(code);
       userTokens = tokens;
+      fs.writeFileSync(TOKEN_FILE, JSON.stringify(tokens));
       res.json({ success: true });
     } catch (error: any) {
       console.error("Error exchanging code for token:", error);
@@ -113,6 +138,7 @@ async function startServer() {
 
   app.post("/api/auth/disconnect", (req, res) => {
     userTokens = null;
+    if (fs.existsSync(TOKEN_FILE)) fs.unlinkSync(TOKEN_FILE);
     res.json({ success: true });
   });
 
@@ -126,9 +152,12 @@ async function startServer() {
       return res.status(400).json({ error: "folderId is required" });
     }
 
+    if (!/^[a-zA-Z0-9_\-]+$/.test(folderId)) {
+      return res.status(400).json({ error: "Invalid folderId format" });
+    }
+
     try {
-      const oauth2Client = new google.auth.OAuth2();
-      oauth2Client.setCredentials(userTokens);
+      const oauth2Client = getAuthenticatedClient();
       const drive = google.drive({ version: "v3", auth: oauth2Client });
 
       const response = await drive.files.list({
@@ -149,12 +178,15 @@ async function startServer() {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
+    const folderId = process.env.PAPERS_FOLDER_ID;
+    if (!folderId) {
+      return res.status(500).json({ error: "PAPERS_FOLDER_ID not set in .env" });
+    }
+
     try {
-      const oauth2Client = new google.auth.OAuth2();
-      oauth2Client.setCredentials(userTokens);
+      const oauth2Client = getAuthenticatedClient();
       const drive = google.drive({ version: "v3", auth: oauth2Client });
 
-      const folderId = '1obdX4rkD2A0Cn_ayk3dtJqR96ASiGl3j';
       const response = await drive.files.list({
         q: `'${folderId}' in parents and trashed = false`,
         fields: "files(id, name, mimeType)",
@@ -200,24 +232,26 @@ async function startServer() {
     }
 
     try {
-      const oauth2Client = new google.auth.OAuth2();
-      oauth2Client.setCredentials(userTokens);
+      const oauth2Client = getAuthenticatedClient();
       const calendar = google.calendar({ version: "v3", auth: oauth2Client });
 
-      const calendarIds = [
-        'panagiotis@obessu.org',
-        'amira@obessu.org',
-        'daniele@obessu.org',
-        'francesca@obessu.org',
-        'rui@obessu.org',
-        'panagiotischatzimichail@gmail.com'
-      ];
+      const calendarIds = (process.env.CALENDAR_IDS || '').split(',').filter(Boolean);
 
-      const timeMin = new Date('2026-01-01T00:00:00Z').toISOString();
-      let allEvents: any[] = [];
+      // Use CALENDAR_TIME_MIN env var if set, otherwise default to 6 months ago
+      const defaultTimeMin = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString();
+      let timeMin = defaultTimeMin;
+      if (process.env.CALENDAR_TIME_MIN) {
+        const parsed = new Date(process.env.CALENDAR_TIME_MIN);
+        if (isNaN(parsed.getTime())) {
+          console.error(`Invalid CALENDAR_TIME_MIN value: "${process.env.CALENDAR_TIME_MIN}", falling back to default`);
+        } else {
+          timeMin = parsed.toISOString();
+        }
+      }
 
-      for (const calendarId of calendarIds) {
-        try {
+      // Fetch all calendars in parallel for better performance
+      const results = await Promise.allSettled(
+        calendarIds.map(async (calendarId) => {
           const response = await calendar.events.list({
             calendarId: calendarId,
             timeMin: timeMin,
@@ -225,12 +259,17 @@ async function startServer() {
             singleEvents: true,
             orderBy: 'startTime',
           });
-          
-          if (response.data.items) {
-            allEvents.push(...response.data.items.map(item => ({ ...item, sourceCalendar: calendarId })));
-          }
-        } catch (err) {
-          console.error(`Failed to fetch events for calendar ${calendarId}`, err);
+          return (response.data.items || []).map(item => ({ ...item, sourceCalendar: calendarId }));
+        })
+      );
+
+      const allEvents: any[] = [];
+      for (let i = 0; i < results.length; i++) {
+        const result = results[i];
+        if (result.status === 'fulfilled') {
+          allEvents.push(...result.value);
+        } else {
+          console.error(`Failed to fetch events for calendar ${calendarIds[i]}:`, result.reason);
         }
       }
 
@@ -249,7 +288,7 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    app.use(express.static("dist"));
+    app.use(express.static("Frontend/build"));
   }
 
   app.listen(PORT, "0.0.0.0", () => {

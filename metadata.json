@@ -1,5 +1,5 @@
 {
   "name": "EventFlow AI",
   "description": "IT-specialist utility for automated email parsing and event extraction using Gemma-2-27b-it. Identifies event names, dates, times, locations, and RSVP links with high precision.",
-  "requestFramePermissions": []
+  "requestFramePermissions": ["microphone"]
 }

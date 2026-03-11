@@ -1,11 +1,27 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import Chart from 'chart.js/auto';
+import { EventData } from '../types';
 
-export const StaffOverview: React.FC = () => {
+interface StaffOverviewProps {
+  events: EventData[];
+}
+
+export const StaffOverview: React.FC<StaffOverviewProps> = ({ events }) => {
   const missionChartRef = useRef<HTMLCanvasElement>(null);
   const focusChartRef = useRef<HTMLCanvasElement>(null);
   const missionChartInstance = useRef<Chart | null>(null);
   const focusChartInstance = useRef<Chart | null>(null);
+
+  const missionDaysByPerson = useMemo(() => {
+    const counts: Record<string, number> = {};
+    events
+      .filter(e => e.followUp.status.startsWith('Completed'))
+      .forEach(e => {
+        const name = e.contact.name;
+        if (name) counts[name] = (counts[name] || 0) + 1;
+      });
+    return counts;
+  }, [events]);
 
   useEffect(() => {
     // --- 1. Label Processing Utility ---
@@ -53,6 +69,7 @@ export const StaffOverview: React.FC = () => {
       const ctxMission = missionChartRef.current.getContext('2d');
       const rawLabelsMission = ['Panagiotis Chatzimichail', 'Amira Bakr', 'Daniele Sabato', 'Francesca Osima', 'Rui Teixeira'];
       const processedLabelsMission = processLabels(rawLabelsMission);
+      const missionDays = rawLabelsMission.map(name => missionDaysByPerson[name] || 0);
 
       if (ctxMission) {
         missionChartInstance.current = new Chart(ctxMission, {
@@ -62,13 +79,13 @@ export const StaffOverview: React.FC = () => {
             datasets: [
               {
                 label: 'Mission Days (Travel)',
-                data: [45, 38, 42, 35, 25],
+                data: missionDays,
                 backgroundColor: '#EC4899', // Brand Pink
                 borderRadius: 4,
               },
               {
                 label: 'Office/Remote Days',
-                data: [200, 207, 203, 210, 220],
+                data: missionDays.map(days => Math.max(0, 220 - days)), // Assuming ~220 working days/year
                 backgroundColor: '#312E81', // Brand Dark
                 borderRadius: 4,
               }
@@ -146,7 +163,7 @@ export const StaffOverview: React.FC = () => {
       if (missionChartInstance.current) missionChartInstance.current.destroy();
       if (focusChartInstance.current) focusChartInstance.current.destroy();
     };
-  }, []);
+  }, [missionDaysByPerson]);
 
   return (
     <div className="bg-[#F3F4F6] text-gray-800 font-sans min-h-full">

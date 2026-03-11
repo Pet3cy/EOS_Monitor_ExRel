@@ -39,6 +39,12 @@ export class ErrorBoundary extends Component<Props, State> {
               {this.state.error?.message || 'Unknown error'}
             </div>
             <button
+              onClick={() => navigator.clipboard.writeText(this.state.error?.stack || '')}
+              className="w-full mb-3 border border-slate-200 text-slate-600 py-2 rounded-xl font-medium hover:bg-slate-50"
+            >
+              Copy Error Details
+            </button>
+            <button
               onClick={() => window.location.reload()}
               className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-slate-800 transition-colors"
             >

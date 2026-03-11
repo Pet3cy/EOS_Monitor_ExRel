@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Plus, Search, Layout, Filter, CalendarClock, History, PieChart, Users, Calendar as CalendarIcon, CheckSquare, Trash2, CheckCircle2, ArrowUpDown, Undo2, X } from 'lucide-react';
+import { Plus, Search, Layout, Filter, CalendarClock, History, PieChart, Users, Calendar as CalendarIcon, CheckSquare, Trash2, CheckCircle2, ArrowUpDown, Undo2, X, Mail } from 'lucide-react';
 import { EventData, Priority, Contact } from './types';
 import { EventCard } from './components/EventCard';
 import { EventDetail } from './components/EventDetail';
@@ -9,9 +9,10 @@ import { Overview } from './components/Overview';
 import { CalendarView } from './components/CalendarView';
 import { ContactsView } from './components/ContactsView';
 
-import { DriveIntegration } from './components/DriveIntegration';
-
 import { CalendarSync } from './components/CalendarSync';
+import { WelcomeScreen } from './components/WelcomeScreen';
+import { EmailParserView } from './components/EmailParserView';
+import { LiveAssistant } from './components/LiveAssistant';
 
 const MOCK_CONTACTS: Contact[] = [
   { id: 'c20', name: 'Alessandro Di Miceli', email: 'alessandro@obessu.org', role: 'Board Member', organization: 'OBESSU', notes: 'Portfolio: VET and Apprenticeships' },
@@ -220,7 +221,7 @@ const MOCK_EVENTS: EventData[] = [
   }
 ];
 
-type ViewMode = 'calendar' | 'upcoming' | 'past' | 'overview' | 'contacts';
+type ViewMode = 'calendar' | 'upcoming' | 'past' | 'overview' | 'contacts' | 'emailParser';
 type SortField = 'date' | 'priority' | 'institution';
 type SortOrder = 'asc' | 'desc';
 
@@ -233,6 +234,8 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('calendar');
   const [statusFilter, setStatusFilter] = useState<string>('All');
+  const [repRoleFilter, setRepRoleFilter] = useState<string>('All');
+  const [showPastEvents, setShowPastEvents] = useState<boolean>(false);
   const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(new Set());
   
   // Sorting State
@@ -241,6 +244,9 @@ export default function App() {
 
   // Undo State
   const [deletedEventsHistory, setDeletedEventsHistory] = useState<{ events: EventData[], timestamp: number } | null>(null);
+  const [statusChangeHistory, setStatusChangeHistory] = useState<{ events: EventData[], timestamp: number } | null>(null);
+
+  const [hasStarted, setHasStarted] = useState(false);
 
   const handleAnalysisComplete = (newEvent: EventData) => {
     if (!newEvent.followUp.commsPack) {
@@ -337,18 +343,24 @@ export default function App() {
   };
 
   const filteredEvents = useMemo(() => {
+    // Hoist searchTerm.toLowerCase() outside the filter loop
+    const lowerSearchTerm = searchTerm.toLowerCase();
+
     let result = events.filter(e => {
       const matchesSearch = 
-        e.analysis.eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        e.analysis.institution.toLowerCase().includes(searchTerm.toLowerCase());
+        e.analysis.eventName.toLowerCase().includes(lowerSearchTerm) ||
+        e.analysis.institution.toLowerCase().includes(lowerSearchTerm);
       
       if (!matchesSearch) return false;
 
       // Status filter
       if (statusFilter !== 'All' && e.followUp.status !== statusFilter) return false;
 
+      // Rep Role filter
+      if (repRoleFilter !== 'All' && e.contact.repRole !== repRoleFilter) return false;
+
       if (viewMode === 'upcoming') {
-        return !isCompletedOrArchived(e.followUp.status);
+        if (!showPastEvents && isCompletedOrArchived(e.followUp.status)) return false;
       } else if (viewMode === 'past') {
         return isCompletedOrArchived(e.followUp.status);
       }
@@ -370,7 +382,7 @@ export default function App() {
     });
 
     return result;
-  }, [events, searchTerm, statusFilter, viewMode, sortField, sortOrder]);
+  }, [events, searchTerm, statusFilter, repRoleFilter, showPastEvents, viewMode, sortField, sortOrder]);
 
   // Bulk Actions
   const handleToggleSelect = (id: string) => {
@@ -392,6 +404,9 @@ export default function App() {
   };
 
   const handleBulkMarkCompleted = () => {
+    const eventsToUpdate = events.filter(e => selectedEventIds.has(e.id));
+    setStatusChangeHistory({ events: eventsToUpdate, timestamp: Date.now() });
+
     setEvents(prev => prev.map(e => {
       if (selectedEventIds.has(e.id)) {
         return {
@@ -411,6 +426,17 @@ export default function App() {
     }
   };
 
+  const handleUndoStatusChange = () => {
+    if (statusChangeHistory) {
+        setEvents(prev => prev.map(e => {
+            const oldEvent = statusChangeHistory.events.find(old => old.id === e.id);
+            if (oldEvent) return oldEvent;
+            return e;
+        }));
+        setStatusChangeHistory(null);
+    }
+  };
+
   // Clear undo history after 8 seconds
   useEffect(() => {
     if (deletedEventsHistory) {
@@ -418,6 +444,13 @@ export default function App() {
         return () => clearTimeout(timer);
     }
   }, [deletedEventsHistory]);
+
+  useEffect(() => {
+    if (statusChangeHistory) {
+        const timer = setTimeout(() => setStatusChangeHistory(null), 8000);
+        return () => clearTimeout(timer);
+    }
+  }, [statusChangeHistory]);
 
   const selectedEvent = events.find(e => e.id === selectedEventId);
   const uniqueStatuses = useMemo(() => {
@@ -428,6 +461,10 @@ export default function App() {
     });
     return Array.from(new Set(filteredByMode.map(e => e.followUp.status)));
   }, [events, viewMode]);
+
+  if (!hasStarted) {
+    return <WelcomeScreen onGetStarted={() => setHasStarted(true)} />;
+  }
 
   return (
     <div className="h-screen flex flex-col bg-slate-50 text-slate-900 font-sans">
@@ -445,10 +482,9 @@ export default function App() {
               setEvents(prev => {
                 const existingIds = new Set(prev.map(e => e.id));
                 const uniqueNewEvents = newEvents.filter(e => !existingIds.has(e.id));
-                return [...uniqueNewEvents, ...prev];
+                return [...prev, ...uniqueNewEvents];
               });
             }} />
-            <DriveIntegration />
             <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input 
@@ -515,6 +551,15 @@ export default function App() {
                 <PieChart size={16} />
                 Overview
             </button>
+            <button 
+                onClick={() => setViewMode('emailParser')}
+                className={`flex items-center gap-2 pb-3 text-sm font-medium border-b-2 transition-colors ${
+                    viewMode === 'emailParser' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'
+                }`}
+            >
+                <Mail size={16} />
+                Email Parser
+            </button>
         </div>
       </header>
 
@@ -530,9 +575,16 @@ export default function App() {
                 events={events} 
                 onUpdateContact={handleUpdateContact} 
                 onDeleteContact={handleDeleteContact}
+                onUpdateEvent={handleUpdateEvent}
                 selectedContactId={selectedContactId}
                 setSelectedContactId={setSelectedContactId}
               />
+            </div>
+        ) : viewMode === 'emailParser' ? (
+            <div className="w-full h-full">
+              <EmailParserView onEventsExtracted={(newEvents) => {
+                setEvents(prev => [...newEvents, ...prev]);
+              }} />
             </div>
         ) : (
             <>
@@ -575,20 +627,58 @@ export default function App() {
                     </div>
 
                     {/* Filter Row */}
-                    <div className="flex gap-2">
-                       <div className="relative flex-1">
-                           <select 
-                              className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs font-medium outline-none text-slate-700 focus:ring-2 focus:ring-blue-500/10"
-                              value={statusFilter}
-                              onChange={(e) => setStatusFilter(e.target.value)}
-                           >
-                              <option value="All">All Statuses</option>
-                              {uniqueStatuses.map(s => (
-                                 <option key={s} value={s}>{s}</option>
-                              ))}
-                           </select>
-                       </div>
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-slate-200">
+                            <span className="pl-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0">Status</span>
+                            <div className="relative flex-1">
+                               <select 
+                                  className="w-full p-1.5 bg-transparent border-none text-xs font-medium outline-none text-slate-700 cursor-pointer"
+                                  value={statusFilter}
+                                  onChange={(e) => setStatusFilter(e.target.value)}
+                               >
+                                  <option value="All">All Statuses</option>
+                                  <option value="To Respond">To Respond</option>
+                                  <option value="Responded - On hold for updates">Responded - On hold for updates</option>
+                                  <option value="Confirmation - To be briefed">Confirmation - To be briefed</option>
+                                  <option value="Prep ready">Prep ready</option>
+                                  <option value="Completed - No follow up">Completed - No follow up</option>
+                                  <option value="Completed - Follow Up">Completed - Follow Up</option>
+                                  <option value="MOs comms">MOs comms</option>
+                                  <option value="Not Relevant">Not Relevant</option>
+                               </select>
+                           </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-slate-200">
+                            <span className="pl-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0">Role</span>
+                            <div className="relative flex-1">
+                               <select 
+                                  className="w-full p-1.5 bg-transparent border-none text-xs font-medium outline-none text-slate-700 cursor-pointer"
+                                  value={repRoleFilter}
+                                  onChange={(e) => setRepRoleFilter(e.target.value)}
+                               >
+                                  <option value="All">All Roles</option>
+                                  <option value="Speaker">Speaker</option>
+                                  <option value="Participant">Participant</option>
+                                  <option value="Activity Host">Activity Host</option>
+                                  <option value="Other">Other</option>
+                               </select>
+                           </div>
+                        </div>
                     </div>
+
+                    {/* Show Past Events Toggle (Only in Upcoming View) */}
+                    {viewMode === 'upcoming' && (
+                        <div className="flex items-center justify-between px-1">
+                            <span className="text-xs font-medium text-slate-600">Show Past Events</span>
+                            <button 
+                                onClick={() => setShowPastEvents(!showPastEvents)}
+                                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${showPastEvents ? 'bg-blue-600' : 'bg-slate-200'}`}
+                            >
+                                <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${showPastEvents ? 'translate-x-5' : 'translate-x-1'}`} />
+                            </button>
+                        </div>
+                    )}
 
                     {/* Sorting Row */}
                     <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-slate-200">
@@ -660,12 +750,12 @@ export default function App() {
             </>
         )}
 
-        {/* Undo Toast */}
+        {/* Undo Delete Toast */}
         {deletedEventsHistory && (
              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
                 <div className="bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-4 border border-slate-700">
                     <div className="text-sm font-medium">
-                        Deleted {deletedEventsHistory.events.length} item{deletedEventsHistory.events.length !== 1 ? 's' : ''}
+                        Deleted {deletedEventsHistory.events.length} event{deletedEventsHistory.events.length !== 1 ? 's' : ''}
                     </div>
                     <div className="h-4 w-px bg-slate-700"></div>
                     <button 
@@ -684,6 +774,30 @@ export default function App() {
              </div>
         )}
 
+        {/* Undo Status Change Toast */}
+        {statusChangeHistory && (
+             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
+                <div className="bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-4 border border-slate-700">
+                    <div className="text-sm font-medium">
+                        Updated {statusChangeHistory.events.length} event{statusChangeHistory.events.length !== 1 ? 's' : ''}
+                    </div>
+                    <div className="h-4 w-px bg-slate-700"></div>
+                    <button 
+                        onClick={handleUndoStatusChange}
+                        className="text-sm font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1.5 transition-colors"
+                    >
+                        <Undo2 size={16} /> Undo
+                    </button>
+                    <button 
+                        onClick={() => setStatusChangeHistory(null)}
+                        className="text-slate-500 hover:text-slate-300 ml-2"
+                    >
+                        <X size={16} />
+                    </button>
+                </div>
+             </div>
+        )}
+
       </main>
 
       {isUploadModalOpen && (
@@ -692,6 +806,8 @@ export default function App() {
           onAnalysisComplete={handleAnalysisComplete}
         />
       )}
+      
+      <LiveAssistant />
     </div>
   );
 }
