@@ -10,11 +10,14 @@ export default defineConfig(({ mode }) => {
         port: 3000,
         host: '0.0.0.0',
       },
-      plugins: [react()],
+      plugins: [react(), tailwindcss()],
       build: {
         outDir: 'Frontend/build',
         emptyOutDir: true,
       },
+      // WARNING: These keys are embedded in the client-side JS bundle at build time.
+      // Any user can extract them from browser dev tools. For production, proxy
+      // Gemini API calls through the backend server to protect the key.
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)

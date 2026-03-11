@@ -343,7 +343,7 @@ export default function App() {
   };
 
   const filteredEvents = useMemo(() => {
-    // ⚡ Bolt Optimization: Hoist searchTerm.toLowerCase() outside the filter loop
+    // Hoist searchTerm.toLowerCase() outside the filter loop
     const lowerSearchTerm = searchTerm.toLowerCase();
 
     let result = events.filter(e => {
@@ -382,7 +382,7 @@ export default function App() {
     });
 
     return result;
-  }, [events, searchTerm, statusFilter, viewMode, sortField, sortOrder]);
+  }, [events, searchTerm, statusFilter, repRoleFilter, showPastEvents, viewMode, sortField, sortOrder]);
 
   // Bulk Actions
   const handleToggleSelect = (id: string) => {
