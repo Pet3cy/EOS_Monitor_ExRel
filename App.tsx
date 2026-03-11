@@ -371,7 +371,8 @@ export default function App() {
     result.sort((a, b) => {
         let comparison = 0;
         if (sortField === 'date') {
-            comparison = new Date(a.analysis.date).getTime() - new Date(b.analysis.date).getTime();
+            // ⚡ Bolt Optimization: Replace O(N log N) Date parsing with fast lexicographical string comparison for ISO dates
+            comparison = (a.analysis.date || '').localeCompare(b.analysis.date || '');
         } else if (sortField === 'priority') {
             comparison = a.analysis.priorityScore - b.analysis.priorityScore;
         } else if (sortField === 'institution') {

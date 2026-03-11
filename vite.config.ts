@@ -11,10 +11,6 @@ export default defineConfig(({ mode }) => {
         host: '0.0.0.0',
       },
       plugins: [react(), tailwindcss()],
-      build: {
-        outDir: 'Frontend/build',
-        emptyOutDir: true,
-      },
       // WARNING: These keys are embedded in the client-side JS bundle at build time.
       // Any user can extract them from browser dev tools. For production, proxy
       // Gemini API calls through the backend server to protect the key.
@@ -30,7 +26,8 @@ export default defineConfig(({ mode }) => {
         }
       },
       build: {
-        outDir: 'Frontend/build' // Explicitly set output directory to match Render expectations
+        outDir: 'Frontend/build',
+        emptyOutDir: true,
       }
     };
 });

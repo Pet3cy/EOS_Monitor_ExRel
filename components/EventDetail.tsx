@@ -6,7 +6,7 @@ import {
   Calendar, MapPin, Building2, AlertCircle, FileText,
   Mail, CheckCircle, Save, Loader2, Sparkles, X, ExternalLink, Briefcase, Trash2, Users, User, FileJson, Plus, Search, Edit2, CalendarPlus, Target, ShieldAlert, ArrowRight, Volume2, Square
 } from 'lucide-react';
-import { summarizeFollowUp, generateBriefing } from '../services/geminiService';
+import { summarizeFollowUp, generateBriefing, researchOrganization, searchLocation, generateSpeech } from '../services/gemmaService';
 import { generateCSVContent } from '../services/csvService';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
