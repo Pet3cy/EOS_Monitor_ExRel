@@ -148,7 +148,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
 
     return Array.from(grouped.entries()).map(([title, evs]) => ({
         title,
-        events: evs.sort((a, b) => new Date(a.analysis.date).getTime() - new Date(b.analysis.date).getTime())
+        // ⚡ Bolt Optimization: Replace slow Date parsing with fast lexicographical string comparison for ISO dates
+        events: evs.sort((a, b) => (a.analysis.date || '').localeCompare(b.analysis.date || ''))
     }));
   }, [events, calendarView, priorityFilter, themeFilter, contactFilter, startDateFilter, endDateFilter]);
 

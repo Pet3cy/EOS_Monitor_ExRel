@@ -92,7 +92,8 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
     if (!selectedContactId) return [];
     return events
         .filter(e => e.contact.contactId === selectedContactId)
-        .sort((a, b) => new Date(b.analysis.date).getTime() - new Date(a.analysis.date).getTime());
+        // ⚡ Bolt Optimization: Replace slow Date parsing with fast lexicographical string comparison for ISO dates
+        .sort((a, b) => (b.analysis.date || '').localeCompare(a.analysis.date || ''));
   }, [selectedContactId, events]);
 
   const handleSave = (e: React.FormEvent) => {

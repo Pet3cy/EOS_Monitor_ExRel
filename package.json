@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@google/genai": "^1.43.0",
+    "autoprefixer": "^10.4.27",
     "chart.js": "^4.5.1",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
@@ -19,9 +20,11 @@
     "googleapis": "^171.4.0",
     "lucide-react": "^0.563.0",
     "mammoth": "1.6.0",
+    "postcss": "^8.5.8",
     "react": "^19.2.4",
     "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.4",
+    "tapable": "^2.3.0",
     "tsx": "^4.21.0"
   },
   "devDependencies": {
