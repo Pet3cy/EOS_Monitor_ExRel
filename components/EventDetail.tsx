@@ -4,9 +4,9 @@ import { EventData, Priority, RepresentativeRole, Contact } from '../types';
 import { PriorityBadge } from './PriorityBadge';
 import { 
   Calendar, MapPin, Building2, AlertCircle, FileText,
-  Mail, CheckCircle, Save, Loader2, Sparkles, X, ExternalLink, Briefcase, Trash2, Users, User, FileJson, Plus, Search, Edit2, CalendarPlus, Target, ShieldAlert, ArrowRight
+  Mail, CheckCircle, Save, Loader2, Sparkles, X, ExternalLink, Briefcase, Trash2, Users, User, FileJson, Plus, Search, Edit2, CalendarPlus, Target, ShieldAlert, ArrowRight, Volume2, Square
 } from 'lucide-react';
-import { generateBriefing } from '../services/gemmaService';
+import { generateBriefing, generateSpeech, researchOrganization, searchLocation } from '../services/gemmaService';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
 interface EventDetailProps {
@@ -19,6 +19,7 @@ interface EventDetailProps {
 
 type TabType = 'context' | 'logistics' | 'prep' | 'outcomes' | 'raw';
 type ViewMode = 'report' | 'editor';
+type EventSection = 'analysis' | 'contact' | 'followUp';
 
 export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDelete, contacts = [], onViewContact }) => {
   const [localEvent, setLocalEvent] = useState<EventData>(event);
@@ -36,8 +37,43 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   const [isEditingProgLink, setIsEditingProgLink] = useState(false);
   const [newActivity, setNewActivity] = useState('');
 
+  // States for Audio
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const sourceNodeRef = useRef<AudioBufferSourceNode | null>(null);
+
   // Refs for click outside
   const calendarMenuRef = useRef<HTMLDivElement>(null);
+
+  const [researchResult, setResearchResult] = useState<{ title: string, text: string, urls: string[] } | null>(null);
+  const [isResearching, setIsResearching] = useState(false);
+
+  const handleResearchInstitution = async () => {
+    if (!localEvent.analysis.institution) return;
+    setIsResearching(true);
+    try {
+      const result = await researchOrganization(localEvent.analysis.institution);
+      setResearchResult({ title: `Research: ${localEvent.analysis.institution}`, text: result.text, urls: result.urls });
+    } catch (e: any) {
+      alert(e.message || "Failed to research institution.");
+    } finally {
+      setIsResearching(false);
+    }
+  };
+
+  const handleResearchVenue = async () => {
+    if (!localEvent.analysis.venue) return;
+    setIsResearching(true);
+    try {
+      const result = await searchLocation(localEvent.analysis.venue);
+      setResearchResult({ title: `Venue Info: ${localEvent.analysis.venue}`, text: result.text, urls: result.urls });
+    } catch (e: any) {
+      alert(e.message || "Failed to research venue.");
+    } finally {
+      setIsResearching(false);
+    }
+  };
 
   useEffect(() => {
     setLocalEvent(JSON.parse(JSON.stringify(event)));
@@ -53,17 +89,42 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
+    };
   }, []);
 
-  const handleChange = (section: keyof EventData, field: string, value: any) => {
+  const handleChange = <K extends EventSection, F extends keyof EventData[K]>(section: K, field: F, value: EventData[K][F]) => {
     setLocalEvent(prev => ({
       ...prev,
       [section]: {
-        ...(prev[section] as any),
+        ...prev[section],
         [field]: value
       }
     }));
+    setIsEditing(true);
+  };
+
+  const handleStatusChange = (newStatus: string) => {
+    setLocalEvent(prev => {
+      const history = prev.followUp.statusHistory ? [...prev.followUp.statusHistory] : [];
+      history.push({
+        status: newStatus,
+        date: new Date().toISOString(),
+        user: 'Current User' // In a real app, this would be the logged-in user
+      });
+      return {
+        ...prev,
+        followUp: {
+          ...prev.followUp,
+          status: newStatus as any,
+          statusHistory: history
+        }
+      };
+    });
     setIsEditing(true);
   };
 
@@ -84,12 +145,66 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   const handleBriefingGen = async () => {
     setIsGeneratingBrief(true);
     try {
-      const brief = await generateBriefing(localEvent);
-      handleChange('followUp', 'briefing', brief);
+      const result = await generateBriefing(localEvent);
+      setLocalEvent(prev => ({
+        ...prev,
+        followUp: {
+          ...prev.followUp,
+          briefing: result.briefing,
+          actionableInsights: result.actionableInsights
+        }
+      }));
+      setIsEditing(true);
     } catch (e: any) {
       alert(e.message || "Failed to generate briefing.");
     } finally {
       setIsGeneratingBrief(false);
+    }
+  };
+
+  const handlePlayBriefing = async () => {
+    if (isPlayingAudio) {
+      if (sourceNodeRef.current) {
+        sourceNodeRef.current.stop();
+      }
+      setIsPlayingAudio(false);
+      return;
+    }
+
+    if (!localEvent.followUp.briefing) return;
+
+    setIsGeneratingAudio(true);
+    try {
+      const base64Audio = await generateSpeech(localEvent.followUp.briefing);
+      if (!base64Audio) throw new Error("Failed to generate audio.");
+
+      const binaryString = window.atob(base64Audio);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      }
+      const audioContext = audioContextRef.current;
+
+      const audioBuffer = await audioContext.decodeAudioData(bytes.buffer);
+      const source = audioContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(audioContext.destination);
+      
+      source.onended = () => setIsPlayingAudio(false);
+      sourceNodeRef.current = source;
+      
+      source.start(0);
+      setIsPlayingAudio(true);
+    } catch (error) {
+      console.error("Audio playback failed:", error);
+      alert("Failed to play audio briefing.");
+    } finally {
+      setIsGeneratingAudio(false);
     }
   };
 
@@ -110,11 +225,15 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     setContactSearch('');
   };
 
-  const filteredContacts = contacts.filter(c => 
-    c.name.toLowerCase().includes(contactSearch.toLowerCase()) ||
-    c.email.toLowerCase().includes(contactSearch.toLowerCase()) ||
-    c.organization.toLowerCase().includes(contactSearch.toLowerCase())
-  );
+  // ⚡ Bolt Optimization: Wrap filteredContacts in useMemo and hoist contactSearch.toLowerCase()
+  const filteredContacts = React.useMemo(() => {
+    const lowerSearch = contactSearch.toLowerCase();
+    return contacts.filter(c =>
+      c.name.toLowerCase().includes(lowerSearch) ||
+      c.email.toLowerCase().includes(lowerSearch) ||
+      c.organization.toLowerCase().includes(lowerSearch)
+    );
+  }, [contacts, contactSearch]);
 
   // --- Export Functions ---
 
@@ -489,7 +608,29 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
 
                     {/* Executive Briefing */}
                     <section>
-                         <h2 className="text-2xl font-bold text-white mb-6 border-b border-slate-800 pb-2">Executive Briefing</h2>
+                         <div className="flex items-center justify-between mb-6 border-b border-slate-800 pb-2">
+                             <h2 className="text-2xl font-bold text-white">Executive Briefing</h2>
+                             {localEvent.followUp.briefing && (
+                                 <button
+                                     onClick={handlePlayBriefing}
+                                     disabled={isGeneratingAudio}
+                                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                         isPlayingAudio 
+                                             ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50' 
+                                             : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700'
+                                     }`}
+                                 >
+                                     {isGeneratingAudio ? (
+                                         <Loader2 size={14} className="animate-spin" />
+                                     ) : isPlayingAudio ? (
+                                         <Square size={14} />
+                                     ) : (
+                                         <Volume2 size={14} />
+                                     )}
+                                     {isGeneratingAudio ? 'Generating Audio...' : isPlayingAudio ? 'Stop Audio' : 'Listen to Briefing'}
+                                 </button>
+                             )}
+                         </div>
                          
                          <div className="mb-8">
                              <h4 className="text-emerald-500 text-xs font-bold uppercase tracking-widest mb-4">Key Objectives</h4>
@@ -577,9 +718,31 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                            <PriorityBadge priority={localEvent.analysis.priority} />
                            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{localEvent.analysis.theme}</span>
                        </div>
-                       <h2 className="text-2xl font-extrabold text-slate-900 leading-tight mb-2">{localEvent.analysis.eventName}</h2>
+                       <div className="flex items-center gap-3 mb-2">
+                           <h2 className="text-2xl font-extrabold text-slate-900 leading-tight">{localEvent.analysis.eventName}</h2>
+                           <button 
+                               onClick={handleBriefingGen}
+                               disabled={isGeneratingBrief}
+                               className="bg-slate-900 text-white px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-slate-800 transition-all disabled:opacity-50"
+                               title="Generate Briefing & Actionable Insights"
+                           >
+                               {isGeneratingBrief ? <Loader2 size={12} className="animate-spin"/> : <Sparkles size={12} className="text-yellow-400"/>}
+                               AI Generate Briefing
+                           </button>
+                       </div>
                        <div className="flex items-center gap-4 text-sm text-slate-500 font-medium">
-                           <span className="flex items-center gap-1.5"><Building2 size={16} className="text-slate-400"/> {localEvent.analysis.institution}</span>
+                           <span className="flex items-center gap-1.5">
+                               <Building2 size={16} className="text-slate-400"/> 
+                               {localEvent.analysis.institution}
+                               <button 
+                                   onClick={handleResearchInstitution}
+                                   disabled={isResearching}
+                                   className="ml-2 bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider hover:bg-blue-200 transition-colors flex items-center gap-1"
+                               >
+                                   {isResearching ? <Loader2 size={10} className="animate-spin"/> : <Search size={10}/>}
+                                   Research
+                               </button>
+                           </span>
                            <span className="flex items-center gap-1.5"><Calendar size={16} className="text-slate-400"/> {localEvent.analysis.date}</span>
                        </div>
                     </div>
@@ -610,7 +773,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                 <textarea 
                                     className="w-full p-4 bg-white border border-slate-200 rounded-xl text-slate-700 leading-relaxed focus:ring-2 focus:ring-blue-500/20 outline-none resize-none h-32"
                                     value={localEvent.analysis.description}
-                                    onChange={(e) => handleChange('analysis', 'description', e.target.value)}
+                                    onChange={(e) => handleChange('analysis', 'description', e.target.value as RepresentativeRole)}
                                 />
                             </Section>
 
@@ -740,7 +903,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                         <input 
                                             className="w-full p-3 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-blue-500/20 outline-none"
                                             value={localEvent.analysis.date}
-                                            onChange={(e) => handleChange('analysis', 'date', e.target.value)}
+                                            onChange={(e) => handleChange('analysis', 'date', e.target.value as RepresentativeRole)}
                                         />
                                     </div>
                                     <div className="space-y-1">
@@ -748,16 +911,26 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                         <input 
                                             className="w-full p-3 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-blue-500/20 outline-none"
                                             value={localEvent.analysis.time || ''}
-                                            onChange={(e) => handleChange('analysis', 'time', e.target.value)}
+                                            onChange={(e) => handleChange('analysis', 'time', e.target.value as RepresentativeRole)}
                                             placeholder="e.g. 14:00 CET"
                                         />
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Venue / Platform</label>
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Venue / Platform</label>
+                                            <button 
+                                                onClick={handleResearchVenue}
+                                                disabled={isResearching || !localEvent.analysis.venue}
+                                                className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider hover:bg-blue-200 transition-colors flex items-center gap-1 disabled:opacity-50"
+                                            >
+                                                {isResearching ? <Loader2 size={10} className="animate-spin"/> : <Search size={10}/>}
+                                                Research
+                                            </button>
+                                        </div>
                                         <input 
                                             className="w-full p-3 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-blue-500/20 outline-none"
                                             value={localEvent.analysis.venue}
-                                            onChange={(e) => handleChange('analysis', 'venue', e.target.value)}
+                                            onChange={(e) => handleChange('analysis', 'venue', e.target.value as RepresentativeRole)}
                                         />
                                     </div>
 
@@ -783,7 +956,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                                         <select 
                                                             className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none"
                                                             value={localEvent.analysis.recurrence?.frequency || 'Weekly'}
-                                                            onChange={(e) => handleRecurrenceChange('frequency', e.target.value)}
+                                                            onChange={(e) => handleRecurrenceChange('frequency', e.target.value as RepresentativeRole)}
                                                         >
                                                             <option value="Daily">Daily</option>
                                                             <option value="Weekly">Weekly</option>
@@ -797,7 +970,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                                             type="date"
                                                             className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none"
                                                             value={localEvent.analysis.recurrence?.endDate || ''}
-                                                            onChange={(e) => handleRecurrenceChange('endDate', e.target.value)}
+                                                            onChange={(e) => handleRecurrenceChange('endDate', e.target.value as RepresentativeRole)}
                                                         />
                                                     </div>
                                                 </div>
@@ -813,7 +986,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                             type="date"
                                             className="w-full p-3 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-blue-500/20 outline-none"
                                             value={localEvent.analysis.finalDeadline}
-                                            onChange={(e) => handleChange('analysis', 'finalDeadline', e.target.value)}
+                                            onChange={(e) => handleChange('analysis', 'finalDeadline', e.target.value as RepresentativeRole)}
                                         />
                                     </div>
                                     
@@ -856,7 +1029,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                                     <input 
                                                         className="flex-1 p-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20"
                                                         value={localEvent.analysis.registrationLink || ''}
-                                                        onChange={(e) => handleChange('analysis', 'registrationLink', e.target.value)}
+                                                        onChange={(e) => handleChange('analysis', 'registrationLink', e.target.value as RepresentativeRole)}
                                                         onBlur={() => { if(localEvent.analysis.registrationLink) setIsEditingRegLink(false); }}
                                                         placeholder="https://..."
                                                         autoFocus={isEditingRegLink}
@@ -910,7 +1083,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                                     <input 
                                                         className="flex-1 p-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20"
                                                         value={localEvent.analysis.programmeLink || ''}
-                                                        onChange={(e) => handleChange('analysis', 'programmeLink', e.target.value)}
+                                                        onChange={(e) => handleChange('analysis', 'programmeLink', e.target.value as RepresentativeRole)}
                                                         onBlur={() => { if(localEvent.analysis.programmeLink) setIsEditingProgLink(false); }}
                                                         placeholder="https://..."
                                                         autoFocus={isEditingProgLink}
@@ -961,7 +1134,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                                             placeholder="Search people..." 
                                                             className="w-full pl-8 pr-3 py-1.5 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 outline-none text-slate-700"
                                                             value={contactSearch}
-                                                            onChange={(e) => setContactSearch(e.target.value)}
+                                                            onChange={(e) => setContactSearch(e.target.value as RepresentativeRole)}
                                                             onClick={(e) => e.stopPropagation()}
                                                         />
                                                     </div>
@@ -975,7 +1148,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                                             className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm font-medium text-slate-700 truncate border-b border-slate-50 last:border-0"
                                                         >
                                                             <div className="font-bold text-slate-800">{c.name}</div>
-                                                            <div className="text-xs text-slate-500 truncate">{c.role}</div>
+                                                            <div className="text-xs text-slate-500 truncate">{c.role} {c.organization ? `@ ${c.organization}` : ''}</div>
                                                         </button>
                                                     ))) : (
                                                         <div className="p-4 text-center text-xs text-slate-400 italic">No contacts match "{contactSearch}"</div>
@@ -1006,7 +1179,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                             <select 
                                                 className="bg-transparent font-bold text-sm text-slate-700 outline-none"
                                                 value={localEvent.contact.repRole}
-                                                onChange={(e) => handleChange('contact', 'repRole', e.target.value)}
+                                                onChange={(e) => handleChange('contact', 'repRole', e.target.value as RepresentativeRole)}
                                             >
                                                 <option value="Participant">Participant</option>
                                                 <option value="Speaker">Speaker</option>
@@ -1028,18 +1201,54 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                         className="w-full p-4 bg-white border border-slate-200 rounded-xl text-slate-700 leading-relaxed focus:ring-2 focus:ring-blue-500/20 outline-none h-48 resize-none"
                                         placeholder="Key points to raise, red lines, and strategic objectives..."
                                         value={localEvent.followUp.briefing}
-                                        onChange={(e) => handleChange('followUp', 'briefing', e.target.value)}
+                                        onChange={(e) => handleChange('followUp', 'briefing', e.target.value as RepresentativeRole)}
                                     />
-                                    <button 
-                                        onClick={handleBriefingGen}
-                                        disabled={isGeneratingBrief}
-                                        className="absolute bottom-4 right-4 bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-slate-800 transition-all disabled:opacity-50"
-                                    >
-                                        {isGeneratingBrief ? <Loader2 size={12} className="animate-spin"/> : <Sparkles size={12} className="text-yellow-400"/>}
-                                        Generate with AI
-                                    </button>
+                                    <div className="absolute bottom-4 right-4 flex gap-2">
+                                        {localEvent.followUp.briefing && (
+                                            <button 
+                                                onClick={handlePlayBriefing}
+                                                disabled={isGeneratingAudio}
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-all ${
+                                                    isPlayingAudio 
+                                                        ? 'bg-blue-100 text-blue-700 border border-blue-200' 
+                                                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                                                }`}
+                                            >
+                                                {isGeneratingAudio ? (
+                                                    <Loader2 size={12} className="animate-spin" />
+                                                ) : isPlayingAudio ? (
+                                                    <Square size={12} />
+                                                ) : (
+                                                    <Volume2 size={12} />
+                                                )}
+                                                {isGeneratingAudio ? 'Generating...' : isPlayingAudio ? 'Stop' : 'Listen'}
+                                            </button>
+                                        )}
+                                        <button 
+                                            onClick={handleBriefingGen}
+                                            disabled={isGeneratingBrief}
+                                            className="bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-slate-800 transition-all disabled:opacity-50"
+                                        >
+                                            {isGeneratingBrief ? <Loader2 size={12} className="animate-spin"/> : <Sparkles size={12} className="text-yellow-400"/>}
+                                            AI Generate Briefing
+                                        </button>
+                                    </div>
                                 </div>
                              </Section>
+
+                             {localEvent.followUp.actionableInsights && localEvent.followUp.actionableInsights.length > 0 && (
+                                 <Section title="Actionable Insights">
+                                     <div className="bg-blue-50 border border-blue-100 rounded-xl p-6">
+                                         <ul className="list-disc pl-5 space-y-2">
+                                             {localEvent.followUp.actionableInsights.map((insight, idx) => (
+                                                 <li key={idx} className="text-sm text-blue-900 font-medium">
+                                                     {insight}
+                                                 </li>
+                                             ))}
+                                         </ul>
+                                     </div>
+                                 </Section>
+                             )}
                         </div>
                     )}
 
@@ -1050,30 +1259,47 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                     className="w-full p-4 bg-white border border-slate-200 rounded-xl text-slate-700 leading-relaxed focus:ring-2 focus:ring-blue-500/20 outline-none h-32 resize-none"
                                     placeholder="Summary of outcomes, key contacts made, and follow-up tasks..."
                                     value={localEvent.followUp.postEventNotes}
-                                    onChange={(e) => handleChange('followUp', 'postEventNotes', e.target.value)}
+                                    onChange={(e) => handleChange('followUp', 'postEventNotes', e.target.value as RepresentativeRole)}
                                 />
                             </Section>
                             
-                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-                                 <div>
-                                     <h4 className="font-bold text-slate-900 mb-1">Status</h4>
-                                     <p className="text-sm text-slate-500">Current workflow stage</p>
+                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-4">
+                                 <div className="flex items-center justify-between">
+                                     <div>
+                                         <h4 className="font-bold text-slate-900 mb-1">Status</h4>
+                                         <p className="text-sm text-slate-500">Current workflow stage</p>
+                                     </div>
+                                     <select 
+                                        className="p-2 bg-slate-50 border border-slate-200 rounded-lg font-bold text-sm text-slate-700 outline-none min-w-[240px]"
+                                        value={localEvent.followUp.status}
+                                        onChange={(e) => handleStatusChange(e.target.value)}
+                                     >
+                                        <option value="To Respond">To Respond</option>
+                                        <option value="Responded - On hold for updates">Responded - On hold for updates</option>
+                                        <option value="Confirmation - To be briefed">Confirmation - To be briefed</option>
+                                        <option value="Prep ready">Prep ready</option>
+                                        <option value="Completed - No follow up">Completed - No follow up</option>
+                                        <option value="Completed - Follow Up">Completed - Follow Up</option>
+                                        <option value="MOs comms">MOs comms</option>
+                                        <option value="Not Relevant">Not Relevant</option>
+                                     </select>
                                  </div>
-                                 <select 
-                                    className="p-2 bg-slate-50 border border-slate-200 rounded-lg font-bold text-sm text-slate-700 outline-none min-w-[240px]"
-                                    value={localEvent.followUp.status}
-                                    onChange={(e) => handleChange('followUp', 'status', e.target.value)}
-                                 >
-                                    <option value="To Respond">To Respond</option>
-                                    <option value="Responded - On hold for updates">Responded - On hold for updates</option>
-                                    <option value="Confirmation - To be briefed">Confirmation - To be briefed</option>
-                                    <option value="Prep ready">Prep ready</option>
-                                    <option value="Completed - No follow up">Completed - No follow up</option>
-                                    <option value="Completed - Follow Up">Completed - Follow Up</option>
-                                    <option value="MOs comms">MOs comms</option>
-                                    <option value="Not Relevant">Not Relevant</option>
-                                 </select>
+
                             </div>
+
+                            <Section title="Follow-up Reminders">
+                                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Reminder Date & Time</label>
+                                        <input 
+                                            type="datetime-local"
+                                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-blue-500/20 outline-none"
+                                            value={localEvent.followUp.reminderDate || ''}
+                                            onChange={(e) => handleChange('followUp', 'reminderDate', e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                            </Section>
                         </div>
                     )}
 
@@ -1106,6 +1332,48 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
             title="Delete Event?"
             message="Are you sure you want to remove this event and all associated data? This action cannot be undone."
         />
+
+        {researchResult && (
+            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="flex items-center justify-between p-6 border-b border-slate-100">
+                        <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                            <Search size={20} className="text-blue-600"/>
+                            {researchResult.title}
+                        </h2>
+                        <button onClick={() => setResearchResult(null)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+                            <X size={20} />
+                        </button>
+                    </div>
+                    <div className="p-6 max-h-[60vh] overflow-y-auto">
+                        <div className="prose prose-sm max-w-none text-slate-700">
+                            {researchResult.text.split('\n').map((line, i) => (
+                                <p key={i} className="mb-2">{line}</p>
+                            ))}
+                        </div>
+                        {researchResult.urls && researchResult.urls.length > 0 && (
+                            <div className="mt-6 pt-6 border-t border-slate-100">
+                                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Sources & Links</h4>
+                                <ul className="space-y-2">
+                                    {researchResult.urls.map((url, i) => (
+                                        <li key={i}>
+                                            <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm break-all">
+                                                {url}
+                                            </a>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                    </div>
+                    <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end">
+                        <button onClick={() => setResearchResult(null)} className="px-6 py-2 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition-colors">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
     </div>
   );
 };
