@@ -49,15 +49,8 @@ describe('csvService', () => {
             };
             const csv = generateCSVContent(data);
 
-            // Check headers
-            assert.ok(csv.includes('id'));
-            assert.ok(csv.includes('name'));
-            assert.ok(csv.includes('details.info'));
-
-            // Check values with escaping
-            assert.ok(csv.includes('"1"'));
-            assert.ok(csv.includes('"Test"'));
-            assert.ok(csv.includes('"Something ""quoted"""'));
+            const expectedCsv = 'id,name,details.info\n"1","Test","Something ""quoted"""';
+            assert.strictEqual(csv, expectedCsv);
         });
     });
 });
