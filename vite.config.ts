@@ -1,10 +1,7 @@
+import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { defineConfig, loadEnv, Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 /**
  * Strip the CSP <meta> tag during development so Vite's injected inline
@@ -25,21 +22,15 @@ function stripCspInDev(mode: string): Plugin {
 }
 
 export default defineConfig(({ mode }) => {
-    const env = loadEnv(mode, process.cwd(), '');
-
-    // Force output to Frontend/build to match Render/Netlify expectations
-    // Memory says: "Render Dashboard settings ... expects output in Frontend/build"
-    // and "Netlify ... publishing Frontend/build"
-    const outDir = 'Frontend/build';
-
+    const env = loadEnv(mode, '.', '');
     return {
       server: {
         port: 3000,
         host: '0.0.0.0',
       },
-      plugins: [react(), stripCspInDev(mode)],
+      plugins: [react(), tailwindcss(), stripCspInDev(mode)],
       build: {
-        outDir: outDir,
+        outDir: 'Frontend/build',
         emptyOutDir: true,
         // Explicitly disable the module preload polyfill so that a future Vite
         // upgrade cannot inject an inline script that violates the strict CSP
@@ -47,19 +38,14 @@ export default defineConfig(({ mode }) => {
         modulePreload: { polyfill: false },
       },
       define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY || ''),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || '')
+        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
       },
+
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),
-          'mammoth': 'mammoth/mammoth.browser.js'
         }
-      },
-      test: {
-        environment: 'jsdom',
-        setupFiles: './setupTests.ts',
-        globals: true
       }
     };
 });
