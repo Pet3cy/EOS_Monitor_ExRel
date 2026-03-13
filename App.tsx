@@ -275,8 +275,5 @@ export default function App() {
     </div>
   );
 }
-ALMOST_DONE’s recent successful campaigns on student participation.',
-CLEANUP_1
-      priorityReasoning: 'Relevant for OBESSU’s digital education positions and student well-being.',
-FINAL_CLEANUP Böhling',
-TAIL_FINAL_5
+’GONE_LAST’GONE_FINALöhling',
+
