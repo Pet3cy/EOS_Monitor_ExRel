@@ -17,7 +17,7 @@ function stripCspInDev(mode: string): Plugin {
       transformIndexHtml(html) {
         if (mode !== 'development') return html;
         return html.replace(
-          /<meta\s+http-equiv="Content-Security-Policy"[^>]*>/i,
+          /<meta[^>]*http-equiv="Content-Security-Policy"[^>]*>/i,
           '',
         );
       },
@@ -41,6 +41,10 @@ export default defineConfig(({ mode }) => {
       build: {
         outDir: outDir,
         emptyOutDir: true,
+        // Explicitly disable the module preload polyfill so that a future Vite
+        // upgrade cannot inject an inline script that violates the strict CSP
+        // defined in index.html (no 'unsafe-inline' in script-src).
+        modulePreload: { polyfill: false },
       },
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY || ''),
