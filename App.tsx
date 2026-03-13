@@ -1,17 +1,41 @@
 
 import React, { useState, useMemo } from 'react';
 import { Plus, Search, Layout, Filter, CalendarClock, History, PieChart, Users, Calendar as CalendarIcon } from 'lucide-react';
-import { EventData, Priority, Contact } from './types';
+import { EventData, Contact } from './types';
 import { EventCard } from './components/EventCard';
 import { EventDetail } from './components/EventDetail';
 import { UploadModal } from './components/UploadModal';
 import { Overview } from './components/Overview';
 import { CalendarView } from './components/CalendarView';
 import { ContactsView } from './components/ContactsView';
+import { MOCK_CONTACTS, MOCK_EVENTS } from './data/mockData';
 
-const MOCK_CONTACTS: Contact[] = [
-  { id: 'c20', name: 'Alessandro Di Miceli', email: 'alessandro@obessu.org', role: 'Board Member', organization: 'OBESSU', notes: 'Portfolio: VET and Apprenticeships' },
-  { id: 'c21', name: 'Elodie Böhling', email: 'elodie@obessu.org', role: 'Board Member', organization: 'OBESSU', notes: 'Portfolio: Democracy and Student Rights' },
+type ViewMode = 'calendar' | 'upcoming' | 'past' | 'overview' | 'contacts';
+
+export default function App() {
+  const [events, setEvents] = useState<EventData[]>(MOCK_EVENTS);
+  const [contacts, setContacts] = useState<Contact[]>(MOCK_CONTACTS);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState<ViewMode>('calendar');
+
+  const handleAnalysisComplete = (newEvent: EventData) => {
+    if (!newEvent.followUp.commsPack) {
+      newEvent.followUp.commsPack = {
+        remarks: '',
+        representative: newEvent.contact.name || '',
+        datePlace: `${newEvent.analysis.date} @ ${newEvent.analysis.venue}`,
+        additionalInfo: '',
+      };
+    }
+    setEvents(prev => [newEvent, ...prev]);
+    if (viewMode === 'overview' || viewMode === 'past') setViewMode('upcoming');
+    setSelectedEventId(newEvent.id);
+  };
+
+  PLACEHOLDER_c21 name: 'Elodie Böhling', email: 'elodie@obessu.org', role: 'Board Member', organization: 'OBESSU', notes: 'Portfolio: Democracy and Student Rights' },
   { id: 'c22', name: 'Ívar Máni Hrannarsson', email: 'ivar@obessu.org', role: 'Board Member', organization: 'OBESSU', notes: 'Portfolio: Social Affairs' },
   { id: 'c23', name: 'Kacper Bogalecki', email: 'kacper@obessu.org', role: 'Board Member', organization: 'OBESSU', notes: 'Portfolio: Organisational Development' },
   { id: 'c24', name: 'Lauren Bond', email: 'lauren@obessu.org', role: 'Board Member', organization: 'OBESSU', notes: 'Portfolio: Education Policy' },
