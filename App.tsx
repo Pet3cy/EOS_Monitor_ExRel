@@ -35,50 +35,99 @@ export default function App() {
     setSelectedEventId(newEvent.id);
   };
 
-  PLACEHOLDER_c21 name: 'Elodie Böhling', email: 'elodie@obessu.org', role: 'Board Member', organization: 'OBESSU', notes: 'Portfolio: Democracy and Student Rights' },
-  { id: 'c22', name: 'Ívar Máni Hrannarsson', email: 'ivar@obessu.org', role: 'Board Member', organization: 'OBESSU', notes: 'Portfolio: Social Affairs' },
-  { id: 'c23', name: 'Kacper Bogalecki', email: 'kacper@obessu.org', role: 'Board Member', organization: 'OBESSU', notes: 'Portfolio: Organisational Development' },
-  { id: 'c24', name: 'Lauren Bond', email: 'lauren@obessu.org', role: 'Board Member', organization: 'OBESSU', notes: 'Portfolio: Education Policy' },
-  { id: 'c25', name: 'Rui Teixeira', email: 'rui@obessu.org', role: 'Secretary General', organization: 'OBESSU', notes: 'Overall management and external representation' },
-  { id: 'c26', name: 'Raquel Moreno Beneit', email: 'raquel@obessu.org', role: 'Communications Coordinator', organization: 'OBESSU', notes: 'Campaigns and Digital Presence' },
-  { id: 'c27', name: 'Panagiotis Chatzimichail', email: 'panagiotis@obessu.org', role: 'Head of External Affairs', organization: 'OBESSU', notes: 'Lead on LLL Labs and Erasmus+ Projects' },
-  { id: 'c28', name: 'Amira Bakr', email: 'amira@obessu.org', role: 'Policy and Outreach Assistant', organization: 'OBESSU', notes: 'Policy monitoring' },
-  { id: 'c29', name: 'Francesca Osima', email: 'francesca@obessu.org', role: 'Head of Projects and Operations', organization: 'OBESSU', notes: 'Project management' },
-  { id: 'c30', name: 'Daniele Sabato', email: 'daniele@obessu.org', role: 'Project & Policy Coordinator', organization: 'OBESSU', notes: 'VET Strategy' }
-];
+  const handleUpdateEvent = (updatedEvent: EventData) => {
+    setEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e));
+  };
 
-const MOCK_EVENTS: EventData[] = [
-  {
-    id: 'e1',
-    createdAt: new Date('2026-02-01T10:00:00Z').getTime(),
-    originalText: 'Solidar Webinar invitation',
-    analysis: {
-      sender: 'Panagiotis Chatzimichail',
-      institution: 'Solidar',
-      eventName: 'Solidar Webinar: Advocacy Campaigning',
-      theme: 'School Student Rights & Democracy',
-      description: 'Planning a session on how to plan, implement, monitor, evaluate an Advocacy Campaign. OBESSU expertise is requested for this topic.',
-      priority: Priority.High,
-      priorityScore: 85,
-      priorityReasoning: 'Strategic partnership with Solidar on advocacy capacity building.',
-      date: '2026-02-10',
-      venue: 'Online (Zoom)',
-      initialDeadline: '2026-02-05',
-      finalDeadline: '2026-02-09',
-      linkedActivities: ['Advocacy Handbook', 'Capacity Building Workplan'],
-    },
-    contact: {
-        contactId: 'c27',
-        name: 'Panagiotis Chatzimichail',
-        email: 'panagiotis@obessu.org',
-        role: 'Head of External Affairs',
-        organization: 'OBESSU',
-        repRole: 'Speaker',
-        polContact: 'Rui Teixeira',
-        notes: ''
-    },
-    followUp: {
-      briefing: 'Focus on OBESSU’s recent successful campaigns on student participation.',
+  const handleDeleteEvent = (id: string) => {
+    setEvents(prev => prev.filter(e => e.id !== id));
+    if (selectedEventId === id) setSelectedEventId(null);
+  };
+
+  const handleUpdateContact = (updatedContact: Contact) => {
+    setContacts(prev => {
+      const exists = prev.find(c => c.id === updatedContact.id);
+      if (exists) {
+        return prev.map(c => c.id === updatedContact.id ? updatedContact : c);
+      }
+      return [...prev, updatedContact];
+    });
+
+    // Propagate changes to events
+    setEvents(prev => prev.map(e => {
+      if (e.contact.contactId === updatedContact.id) {
+        return {
+          ...e,
+          contact: {
+            ...e.contact,
+            name: updatedContact.name,
+            email: updatedContact.email,
+            role: updatedContact.role,
+            organization: updatedContact.organization
+          }
+        };
+      }
+      return e;
+    }));
+  };
+
+  const handleDeleteContact = (id: string) => {
+    setContacts(prev => prev.filter(c => c.id !== id));
+    setEvents(prev => prev.map(e => {
+      if (e.contact.contactId === id) {
+        return { ...e, contact: { ...e.contact, contactId: undefined } };
+      }
+      return e;
+    }));
+    if (selectedContactId === id) setSelectedContactId(null);
+  };
+
+  const handleViewContactProfile = (contactId: string) => {
+    setSelectedContactId(contactId);
+    setViewMode('contacts');
+  };
+
+  const handleRenameStakeholder = (oldName: string, newName: string) => {
+    setEvents(prev => prev.map(e => {
+      if (e.analysis.institution === oldName) {
+        return {
+          ...e,
+          analysis: {
+            ...e.analysis,
+            institution: newName
+          }
+        };
+      }
+      return e;
+    }));
+  };
+
+  const isCompletedOrArchived = (status: string) => {
+      return status.startsWith('Completed') || status === 'Not Relevant';
+  };
+
+  const filteredEvents = events.filter(e => {
+    const matchesSearch = 
+      e.analysis.eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      e.analysis.institution.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    if (!matchesSearch) return false;
+
+    if (viewMode === 'upcoming') {
+      return !isCompletedOrArchived(e.followUp.status);
+    } else if (viewMode === 'past') {
+      return isCompletedOrArchived(e.followUp.status);
+    }
+    return true;
+  });
+
+  const selectedEvent = events.find(e => e.id === selectedEventId);
+
+  return (
+    <div className="h-screen flex flex-col bg-slate-50 text-slate-900 font-sans">
+      <header className="bg-white border-b border-slate-200 flex flex-col shrink-0">
+        <div className="h-16 flex items-center justify-between px-6">
+JUNK9’s recent successful campaigns on student participation.',
       prepResources: '',
       commsPack: { remarks: '', representative: 'Panagiotis', datePlace: 'Feb 10, Online', additionalInfo: '' },
       postEventNotes: '',
