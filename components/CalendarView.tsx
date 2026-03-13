@@ -45,8 +45,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
     const day = yearStart.getDay();
     const diff = yearStart.getDate() - day + (day === 0 ? -6 : 1);
     const firstMonday = new Date(yearStart.setDate(diff));
-
-    const rangeStart = new Date(startDateFilter);
+    const rangeStart = new Date(`${startDateFilter}T00:00:00`);
+    const rangeEnd = new Date(`${endDateFilter}T00:00:00`);
     const rangeEnd = new Date(endDateFilter);
 
     // Ensure range dates are valid
