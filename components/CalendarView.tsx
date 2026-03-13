@@ -62,16 +62,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
     const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
     const firstMondayTime = new Date(yearStart.getFullYear(), 0, 1 + daysToMonday).getTime();
 
-    // ⚡ Bolt Optimization: Pre-filter events to avoid O(Weeks * Events) complexity
-    const preFilteredEvents = events
-      .filter(event => {
-        const matchesPriority = priorityFilter === 'All' || event.analysis.priority === priorityFilter;
-        const matchesTheme = themeFilter === 'All' || event.analysis.theme === themeFilter;
-        const matchesContact = contactFilter === 'All' || event.contact.name === contactFilter;
-        return matchesPriority && matchesTheme && matchesContact;
-      })
-      .map(event => ({ ...event, parsedDate: new Date(event.analysis.date) }));
-
     for (let i = 0; i < 53 * (rangeEnd.getFullYear() - rangeStart.getFullYear() + 1); i++) {
       const weekStart = new Date(firstMondayTime + i * 7 * 24 * 60 * 60 * 1000);
       const weekEnd = new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000);
@@ -83,8 +73,13 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
       if (weekEnd < rangeStart || weekStart > rangeEnd) continue;
 
       // Find events in this week that match all filters
-      const weekEvents = preFilteredEvents.filter(event => {
-        return event.parsedDate >= weekStart && event.parsedDate <= weekEnd;
+      const weekEvents = events.filter(event => {
+        const eventDate = new Date(event.analysis.date);
+        const matchesDate = eventDate >= weekStart && eventDate <= weekEnd;
+        const matchesPriority = priorityFilter === 'All' || event.analysis.priority === priorityFilter;
+        const matchesTheme = themeFilter === 'All' || event.analysis.theme === themeFilter;
+        const matchesContact = contactFilter === 'All' || event.contact.name === contactFilter;
+        return matchesDate && matchesPriority && matchesTheme && matchesContact;
       });
 
       const hasMatches = weekEvents.length > 0;
@@ -99,9 +94,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
     }
     return weeksArr;
   }, [events, priorityFilter, themeFilter, contactFilter, startDateFilter, endDateFilter, calendarView]);
-
-  // ⚡ Bolt Optimization: Calculate todayKey once per render
-  const todayKey = toDateString(new Date());
 
   const filteredPeriods = useMemo(() => {
     if (calendarView === 'Week') return [];
@@ -342,7 +334,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
                           {weekDays.map(day => {
                               const dateKey = toDateString(day);
                               const dayEvents = week.events.filter(e => e.analysis.date === dateKey);
-                              const isToday = todayKey === dateKey; // ⚡ Bolt Optimization: Use precalculated todayKey
+                              const isToday = toDateString(new Date()) === dateKey;
                               const isWeekend = day.getDay() === 0 || day.getDay() === 6;
                               const hasConflict = dayEvents.length > 1;
 

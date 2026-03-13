@@ -10,9 +10,7 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
-Frontend/build
 *.local
-.user-tokens.json
 
 # Editor directories and files
 .vscode/*

@@ -12,7 +12,6 @@ export const LiveAssistant: React.FC = () => {
   
   const sessionRef = useRef<any>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const playbackContextRef = useRef<AudioContext | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
@@ -26,9 +25,7 @@ export const LiveAssistant: React.FC = () => {
     setIsConnecting(true);
     setError(null);
     try {
-      // Separate contexts: 16kHz for mic capture, 24kHz for TTS playback
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
-      playbackContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
       
       const stream = await navigator.mediaDevices.getUserMedia({ audio: {
         channelCount: 1,
@@ -109,7 +106,7 @@ export const LiveAssistant: React.FC = () => {
             if (message.serverContent?.interrupted) {
               playbackQueueRef.current = [];
               isPlayingRef.current = false;
-              nextPlayTimeRef.current = playbackContextRef.current?.currentTime || 0;
+              nextPlayTimeRef.current = audioContextRef.current?.currentTime || 0;
             }
           },
           onerror: (err) => {
@@ -134,20 +131,20 @@ export const LiveAssistant: React.FC = () => {
   };
 
   const playNextAudio = () => {
-    if (!playbackContextRef.current || playbackQueueRef.current.length === 0) return;
+    if (!audioContextRef.current || playbackQueueRef.current.length === 0) return;
     
-    const currentTime = playbackContextRef.current.currentTime;
+    const currentTime = audioContextRef.current.currentTime;
     if (nextPlayTimeRef.current < currentTime) {
       nextPlayTimeRef.current = currentTime;
     }
     
     const audioData = playbackQueueRef.current.shift()!;
-    const buffer = playbackContextRef.current.createBuffer(1, audioData.length, 24000); // Gemini TTS is 24kHz
+    const buffer = audioContextRef.current.createBuffer(1, audioData.length, 24000); // Gemini TTS is 24kHz
     buffer.getChannelData(0).set(audioData);
     
-    const source = playbackContextRef.current.createBufferSource();
+    const source = audioContextRef.current.createBufferSource();
     source.buffer = buffer;
-    source.connect(playbackContextRef.current.destination);
+    source.connect(audioContextRef.current.destination);
     source.start(nextPlayTimeRef.current);
     
     nextPlayTimeRef.current += buffer.duration;
@@ -179,10 +176,6 @@ export const LiveAssistant: React.FC = () => {
     if (audioContextRef.current) {
       audioContextRef.current.close();
       audioContextRef.current = null;
-    }
-    if (playbackContextRef.current) {
-      playbackContextRef.current.close();
-      playbackContextRef.current = null;
     }
     setIsConnected(false);
     setIsConnecting(false);

@@ -1,37 +1,20 @@
-# EventFlow AI Application
+<div align="center">
+<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+</div>
 
-## Project Overview
-EventFlow AI is a cutting-edge application designed to streamline event monitoring and analytics. It leverages advanced AI techniques to provide insights and facilitate decision-making in real time.
+# Run and deploy your AI Studio app
 
-## Setup Instructions
-1. Clone the repository:
-   ```
-   git clone https://github.com/Pet3cy/EOS_Monitor_ExRel.git
-   ```
-2. Navigate into the project directory:
-   ```
-   cd EOS_Monitor_ExRel
-   ```
-3. Install the required dependencies:
-   ```
-   npm install
-   ```
-4. Set up the environment variables by creating a `.env` file and adding your configuration:
-   ```
-   REPLACE_WITH_YOUR_CONFIG
-   ```
+This contains everything you need to run your app locally.
 
-## Features
-- Real-time event monitoring
-- AI-powered analytics and insights
-- User-friendly interface
-- Customizable notifications
+View your app in AI Studio: https://ai.studio/apps/a3566f80-676f-44d2-a810-8ae91a842d69
 
-## Usage Guide
-To start the application, run the following command:
-```
-npm start
-```
-You can then access the application via your web browser at `http://localhost:3000`.
+## Run Locally
 
-For further usage examples, refer to the documentation or the wiki linked in the repository.
+**Prerequisites:**  Node.js
+
+
+1. Install dependencies:
+   `npm install`
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+3. Run the app:
+   `npm run dev`

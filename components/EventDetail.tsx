@@ -6,8 +6,7 @@ import {
   Calendar, MapPin, Building2, AlertCircle, FileText,
   Mail, CheckCircle, Save, Loader2, Sparkles, X, ExternalLink, Briefcase, Trash2, Users, User, FileJson, Plus, Search, Edit2, CalendarPlus, Target, ShieldAlert, ArrowRight, Volume2, Square
 } from 'lucide-react';
-import { summarizeFollowUp, generateBriefing } from '../services/geminiService';
-import { generateCSVContent } from '../services/csvService';
+import { generateBriefing, generateSpeech, researchOrganization, searchLocation } from '../services/gemmaService';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
 interface EventDetailProps {
@@ -20,7 +19,6 @@ interface EventDetailProps {
 
 type TabType = 'context' | 'logistics' | 'prep' | 'outcomes' | 'raw';
 type ViewMode = 'report' | 'editor';
-type EventSection = 'analysis' | 'contact' | 'followUp';
 
 export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDelete, contacts = [], onViewContact }) => {
   const [localEvent, setLocalEvent] = useState<EventData>(event);
@@ -98,11 +96,11 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     };
   }, []);
 
-  const handleChange = <K extends EventSection, F extends keyof EventData[K]>(section: K, field: F, value: EventData[K][F]) => {
+  const handleChange = (section: keyof EventData, field: string, value: any) => {
     setLocalEvent(prev => ({
       ...prev,
       [section]: {
-        ...prev[section],
+        ...(prev[section] as any),
         [field]: value
       }
     }));
@@ -226,15 +224,11 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
     setContactSearch('');
   };
 
-  // ⚡ Bolt Optimization: Wrap filteredContacts in useMemo and hoist contactSearch.toLowerCase()
-  const filteredContacts = React.useMemo(() => {
-    const lowerSearch = contactSearch.toLowerCase();
-    return contacts.filter(c =>
-      c.name.toLowerCase().includes(lowerSearch) ||
-      c.email.toLowerCase().includes(lowerSearch) ||
-      c.organization.toLowerCase().includes(lowerSearch)
-    );
-  }, [contacts, contactSearch]);
+  const filteredContacts = contacts.filter(c => 
+    c.name.toLowerCase().includes(contactSearch.toLowerCase()) ||
+    c.email.toLowerCase().includes(contactSearch.toLowerCase()) ||
+    c.organization.toLowerCase().includes(contactSearch.toLowerCase())
+  );
 
   // --- Export Functions ---
 
@@ -250,8 +244,25 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   };
 
   const handleExportCSV = () => {
-    const csvString = generateCSVContent(localEvent);
-    const csvContent = "data:text/csv;charset=utf-8," + csvString;
+    const flattenObject = (obj: any, prefix = ''): Record<string, string> => {
+      return Object.keys(obj).reduce((acc: any, k: string) => {
+        const pre = prefix.length ? prefix + '.' : '';
+        if (typeof obj[k] === 'object' && obj[k] !== null && !Array.isArray(obj[k])) {
+          Object.assign(acc, flattenObject(obj[k], pre + k));
+        } else if (Array.isArray(obj[k])) {
+          acc[pre + k] = obj[k].join('; ');
+        } else {
+          acc[pre + k] = String(obj[k]);
+        }
+        return acc;
+      }, {});
+    };
+
+    const flatEvent = flattenObject(localEvent);
+    const headers = Object.keys(flatEvent);
+    const values = Object.values(flatEvent).map(v => `"${v.replace(/"/g, '""')}"`);
+
+    const csvContent = headers.join(",") + "\n" + values.join(",");
 
     const fileName = `${localEvent.analysis.eventName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.csv`;
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -757,7 +768,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                 <textarea 
                                     className="w-full p-4 bg-white border border-slate-200 rounded-xl text-slate-700 leading-relaxed focus:ring-2 focus:ring-blue-500/20 outline-none resize-none h-32"
                                     value={localEvent.analysis.description}
-                                    onChange={(e) => handleChange('analysis', 'description', e.target.value as RepresentativeRole)}
+                                    onChange={(e) => handleChange('analysis', 'description', e.target.value)}
                                 />
                             </Section>
 
@@ -887,7 +898,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                         <input 
                                             className="w-full p-3 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-blue-500/20 outline-none"
                                             value={localEvent.analysis.date}
-                                            onChange={(e) => handleChange('analysis', 'date', e.target.value as RepresentativeRole)}
+                                            onChange={(e) => handleChange('analysis', 'date', e.target.value)}
                                         />
                                     </div>
                                     <div className="space-y-1">
@@ -895,7 +906,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                         <input 
                                             className="w-full p-3 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-blue-500/20 outline-none"
                                             value={localEvent.analysis.time || ''}
-                                            onChange={(e) => handleChange('analysis', 'time', e.target.value as RepresentativeRole)}
+                                            onChange={(e) => handleChange('analysis', 'time', e.target.value)}
                                             placeholder="e.g. 14:00 CET"
                                         />
                                     </div>
@@ -914,7 +925,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                         <input 
                                             className="w-full p-3 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-blue-500/20 outline-none"
                                             value={localEvent.analysis.venue}
-                                            onChange={(e) => handleChange('analysis', 'venue', e.target.value as RepresentativeRole)}
+                                            onChange={(e) => handleChange('analysis', 'venue', e.target.value)}
                                         />
                                     </div>
 
@@ -940,7 +951,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                                         <select 
                                                             className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none"
                                                             value={localEvent.analysis.recurrence?.frequency || 'Weekly'}
-                                                            onChange={(e) => handleRecurrenceChange('frequency', e.target.value as RepresentativeRole)}
+                                                            onChange={(e) => handleRecurrenceChange('frequency', e.target.value)}
                                                         >
                                                             <option value="Daily">Daily</option>
                                                             <option value="Weekly">Weekly</option>
@@ -954,7 +965,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                                             type="date"
                                                             className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none"
                                                             value={localEvent.analysis.recurrence?.endDate || ''}
-                                                            onChange={(e) => handleRecurrenceChange('endDate', e.target.value as RepresentativeRole)}
+                                                            onChange={(e) => handleRecurrenceChange('endDate', e.target.value)}
                                                         />
                                                     </div>
                                                 </div>
@@ -970,7 +981,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                             type="date"
                                             className="w-full p-3 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-blue-500/20 outline-none"
                                             value={localEvent.analysis.finalDeadline}
-                                            onChange={(e) => handleChange('analysis', 'finalDeadline', e.target.value as RepresentativeRole)}
+                                            onChange={(e) => handleChange('analysis', 'finalDeadline', e.target.value)}
                                         />
                                     </div>
                                     
@@ -1013,7 +1024,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                                     <input 
                                                         className="flex-1 p-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20"
                                                         value={localEvent.analysis.registrationLink || ''}
-                                                        onChange={(e) => handleChange('analysis', 'registrationLink', e.target.value as RepresentativeRole)}
+                                                        onChange={(e) => handleChange('analysis', 'registrationLink', e.target.value)}
                                                         onBlur={() => { if(localEvent.analysis.registrationLink) setIsEditingRegLink(false); }}
                                                         placeholder="https://..."
                                                         autoFocus={isEditingRegLink}
@@ -1067,7 +1078,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                                     <input 
                                                         className="flex-1 p-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20"
                                                         value={localEvent.analysis.programmeLink || ''}
-                                                        onChange={(e) => handleChange('analysis', 'programmeLink', e.target.value as RepresentativeRole)}
+                                                        onChange={(e) => handleChange('analysis', 'programmeLink', e.target.value)}
                                                         onBlur={() => { if(localEvent.analysis.programmeLink) setIsEditingProgLink(false); }}
                                                         placeholder="https://..."
                                                         autoFocus={isEditingProgLink}
@@ -1118,7 +1129,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                                             placeholder="Search people..." 
                                                             className="w-full pl-8 pr-3 py-1.5 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 outline-none text-slate-700"
                                                             value={contactSearch}
-                                                            onChange={(e) => setContactSearch(e.target.value as RepresentativeRole)}
+                                                            onChange={(e) => setContactSearch(e.target.value)}
                                                             onClick={(e) => e.stopPropagation()}
                                                         />
                                                     </div>
@@ -1163,7 +1174,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                             <select 
                                                 className="bg-transparent font-bold text-sm text-slate-700 outline-none"
                                                 value={localEvent.contact.repRole}
-                                                onChange={(e) => handleChange('contact', 'repRole', e.target.value as RepresentativeRole)}
+                                                onChange={(e) => handleChange('contact', 'repRole', e.target.value)}
                                             >
                                                 <option value="Participant">Participant</option>
                                                 <option value="Speaker">Speaker</option>
@@ -1185,7 +1196,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                         className="w-full p-4 bg-white border border-slate-200 rounded-xl text-slate-700 leading-relaxed focus:ring-2 focus:ring-blue-500/20 outline-none h-48 resize-none"
                                         placeholder="Key points to raise, red lines, and strategic objectives..."
                                         value={localEvent.followUp.briefing}
-                                        onChange={(e) => handleChange('followUp', 'briefing', e.target.value as RepresentativeRole)}
+                                        onChange={(e) => handleChange('followUp', 'briefing', e.target.value)}
                                     />
                                     <div className="absolute bottom-4 right-4 flex gap-2">
                                         {localEvent.followUp.briefing && (
@@ -1243,7 +1254,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                     className="w-full p-4 bg-white border border-slate-200 rounded-xl text-slate-700 leading-relaxed focus:ring-2 focus:ring-blue-500/20 outline-none h-32 resize-none"
                                     placeholder="Summary of outcomes, key contacts made, and follow-up tasks..."
                                     value={localEvent.followUp.postEventNotes}
-                                    onChange={(e) => handleChange('followUp', 'postEventNotes', e.target.value as RepresentativeRole)}
+                                    onChange={(e) => handleChange('followUp', 'postEventNotes', e.target.value)}
                                 />
                             </Section>
                             
@@ -1268,7 +1279,25 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                         <option value="Not Relevant">Not Relevant</option>
                                      </select>
                                  </div>
-
+                                 
+                                 {localEvent.followUp.statusHistory && localEvent.followUp.statusHistory.length > 0 && (
+                                     <div className="mt-4 pt-4 border-t border-slate-100">
+                                         <h5 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Status History</h5>
+                                         <div className="space-y-3">
+                                             {localEvent.followUp.statusHistory.map((historyItem, idx) => (
+                                                 <div key={idx} className="flex items-start gap-3 text-sm">
+                                                     <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5"></div>
+                                                     <div>
+                                                         <div className="font-bold text-slate-700">{historyItem.status}</div>
+                                                         <div className="text-xs text-slate-500">
+                                                             {new Date(historyItem.date).toLocaleString()} {historyItem.user ? `by ${historyItem.user}` : ''}
+                                                         </div>
+                                                     </div>
+                                                 </div>
+                                             ))}
+                                         </div>
+                                     </div>
+                                 )}
                             </div>
 
                             <Section title="Follow-up Reminders">
