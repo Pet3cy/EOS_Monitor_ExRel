@@ -4,6 +4,7 @@ import { Upload, X, Loader2, FileText, File, Mail, Clipboard, CheckCircle2, Aler
 import mammoth from 'mammoth';
 import { analyzeInvitation, AnalysisInput, transcribeAudio } from '../services/gemmaService';
 import { EventData, Priority } from '../types';
+import { useToast } from '../contexts/ToastContext';
 
 interface UploadModalProps {
   onClose: () => void;
@@ -24,6 +25,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onAnalysisCom
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  
+  const { showError, showToast } = useToast();
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -67,8 +70,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onAnalysisCom
           const base64Audio = await convertFileToBase64(audioBlob);
           const transcription = await transcribeAudio(base64Audio, 'audio/webm');
           setText((prev) => prev + (prev ? '\n\n' : '') + transcription);
+          showToast('Audio transcribed successfully', 'success');
         } catch (err: any) {
           setError(err.message || 'Failed to transcribe audio');
+          showError(err.message || 'Failed to transcribe audio');
         } finally {
           setIsAnalyzing(false);
         }
@@ -79,6 +84,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onAnalysisCom
       setIsRecording(true);
     } catch (err) {
       setError('Microphone access denied or not available.');
+      showError('Microphone access denied or not available.');
     }
   };
 
@@ -151,10 +157,12 @@ export const UploadModal: React.FC<UploadModalProps> = ({ onClose, onAnalysisCom
         }
       };
       onAnalysisComplete(newEvent);
+      showToast('Event analyzed successfully', 'success');
       onClose();
     } catch (err: any) {
       clearInterval(interval);
       setError(err.message || "Analysis failed. Ensure the text contains clear event details.");
+      showError(err.message || "Analysis failed. Ensure the text contains clear event details.");
       setProgress(0);
     } finally {
       setIsAnalyzing(false);

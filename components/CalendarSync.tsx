@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { EventData, Priority } from '../types';
+import { useToast } from '../contexts/ToastContext';
 
 interface CalendarSyncProps {
   onEventsSynced: (events: EventData[]) => void;
@@ -19,6 +20,7 @@ export function CalendarSync({ onEventsSynced }: CalendarSyncProps) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const { showError, showToast } = useToast();
 
   useEffect(() => {
     checkStatus();
@@ -109,8 +111,10 @@ export function CalendarSync({ onEventsSynced }: CalendarSyncProps) {
       });
 
       onEventsSynced(newEvents);
+      showToast('Calendar synced successfully', 'success');
     } catch (err: any) {
       setError(err.message);
+      showError(err.message || 'Failed to sync calendar events');
     } finally {
       setIsSyncing(false);
     }

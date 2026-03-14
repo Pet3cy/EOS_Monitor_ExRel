@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { generateBriefing, generateSpeech, researchOrganization, searchLocation } from '../services/gemmaService';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
+import { useToast } from '../contexts/ToastContext';
 
 interface EventDetailProps {
   event: EventData;
@@ -44,6 +45,8 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
 
   // Refs for click outside
   const calendarMenuRef = useRef<HTMLDivElement>(null);
+  
+  const { showError } = useToast();
 
   const [researchResult, setResearchResult] = useState<{ title: string, text: string, urls: string[] } | null>(null);
   const [isResearching, setIsResearching] = useState(false);
@@ -55,7 +58,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
       const result = await researchOrganization(localEvent.analysis.institution);
       setResearchResult({ title: `Research: ${localEvent.analysis.institution}`, text: result.text, urls: result.urls });
     } catch (e: any) {
-      alert(e.message || "Failed to research institution.");
+      showError(e.message || "Failed to research institution.");
     } finally {
       setIsResearching(false);
     }
@@ -68,7 +71,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
       const result = await searchLocation(localEvent.analysis.venue);
       setResearchResult({ title: `Venue Info: ${localEvent.analysis.venue}`, text: result.text, urls: result.urls });
     } catch (e: any) {
-      alert(e.message || "Failed to research venue.");
+      showError(e.message || "Failed to research venue.");
     } finally {
       setIsResearching(false);
     }
@@ -155,7 +158,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
       }));
       setIsEditing(true);
     } catch (e: any) {
-      alert(e.message || "Failed to generate briefing.");
+      showError(e.message || "Failed to generate briefing.");
     } finally {
       setIsGeneratingBrief(false);
     }
@@ -201,7 +204,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
       setIsPlayingAudio(true);
     } catch (error) {
       console.error("Audio playback failed:", error);
-      alert("Failed to play audio briefing.");
+      showError("Failed to play audio briefing.");
     } finally {
       setIsGeneratingAudio(false);
     }

@@ -3,6 +3,7 @@ import { analyzeInvitation } from '../services/gemmaService';
 import { EventData } from '../types';
 import { EventCard } from './EventCard';
 import { Loader2, Trash2, Wand2, Mail } from 'lucide-react';
+import { useToast } from '../contexts/ToastContext';
 
 interface EmailParserViewProps {
   onEventsExtracted: (events: EventData[]) => void;
@@ -13,6 +14,7 @@ export const EmailParserView: React.FC<EmailParserViewProps> = ({ onEventsExtrac
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [extractedEvents, setExtractedEvents] = useState<EventData[]>([]);
   const [error, setError] = useState('');
+  const { showError, showToast } = useToast();
 
   const handleAnalyze = async () => {
     if (!emailContent.trim()) {
@@ -43,8 +45,10 @@ export const EmailParserView: React.FC<EmailParserViewProps> = ({ onEventsExtrac
 
       setExtractedEvents(prev => [newEvent, ...prev]);
       onEventsExtracted([newEvent]);
+      showToast('Event extracted successfully', 'success');
     } catch (err: any) {
       setError(err.message || 'Failed to extract events. Please try again.');
+      showError(err.message || 'Failed to extract events. Please try again.');
     } finally {
       setIsAnalyzing(false);
     }

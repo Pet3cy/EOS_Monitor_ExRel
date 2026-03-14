@@ -1,0 +1,65 @@
+import React, { useEffect } from 'react';
+import { AlertCircle, CheckCircle, Info, X } from 'lucide-react';
+
+export type ToastType = 'success' | 'error' | 'info';
+
+export interface ToastMessage {
+  id: string;
+  message: string;
+  type: ToastType;
+}
+
+interface ToastProps {
+  toast: ToastMessage;
+  onClose: () => void;
+}
+
+export const Toast: React.FC<ToastProps> = ({ toast, onClose }) => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onClose();
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const getIcon = () => {
+    switch (toast.type) {
+      case 'success':
+        return <CheckCircle className="text-emerald-500" size={20} />;
+      case 'error':
+        return <AlertCircle className="text-red-500" size={20} />;
+      case 'info':
+      default:
+        return <Info className="text-blue-500" size={20} />;
+    }
+  };
+
+  const getBgColor = () => {
+    switch (toast.type) {
+      case 'success':
+        return 'bg-emerald-50 border-emerald-200 text-emerald-800';
+      case 'error':
+        return 'bg-red-50 border-red-200 text-red-800';
+      case 'info':
+      default:
+        return 'bg-blue-50 border-blue-200 text-blue-800';
+    }
+  };
+
+  return (
+    <div className={`flex items-start gap-3 p-4 rounded-xl border shadow-lg pointer-events-auto animate-in slide-in-from-bottom-5 fade-in duration-300 max-w-sm w-full ${getBgColor()}`}>
+      <div className="flex-shrink-0 mt-0.5">
+        {getIcon()}
+      </div>
+      <div className="flex-1 text-sm font-medium leading-relaxed">
+        {toast.message}
+      </div>
+      <button 
+        onClick={onClose}
+        className="flex-shrink-0 p-1 rounded-md hover:bg-black/5 transition-colors"
+      >
+        <X size={16} className="opacity-60" />
+      </button>
+    </div>
+  );
+};

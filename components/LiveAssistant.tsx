@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Mic, MicOff, Loader2, X, MessageSquare } from 'lucide-react';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
+import { useToast } from '../contexts/ToastContext';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
@@ -9,6 +10,7 @@ export const LiveAssistant: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { showError } = useToast();
   
   const sessionRef = useRef<any>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -112,6 +114,7 @@ export const LiveAssistant: React.FC = () => {
           onerror: (err) => {
             console.error("Live API Error:", err);
             setError("Connection error occurred.");
+            showError("Live Assistant connection error occurred.");
             disconnect();
           },
           onclose: () => {
@@ -125,6 +128,7 @@ export const LiveAssistant: React.FC = () => {
     } catch (err: any) {
       console.error("Failed to connect:", err);
       setError(err.message || "Failed to connect to microphone or AI.");
+      showError(err.message || "Failed to connect to microphone or AI.");
       setIsConnecting(false);
       disconnect();
     }
