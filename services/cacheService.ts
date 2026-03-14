@@ -22,6 +22,7 @@ export class CacheService {
         sessionStorage.setItem(key, JSON.stringify(value));
       } catch (e) {
         console.warn('Failed to save to sessionStorage', e);
+        this.memoryCache.set(key, value);
       }
     } else {
       this.memoryCache.set(key, value);
