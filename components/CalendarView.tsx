@@ -140,7 +140,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
 
     return Array.from(grouped.entries()).map(([title, evs]) => ({
         title,
-        events: evs.sort((a, b) => new Date(a.analysis.date).getTime() - new Date(b.analysis.date).getTime())
+        // Using string localeCompare on YYYY-MM-DD format avoids redundant Date object creation during the sort
+        events: evs.sort((a, b) => a.analysis.date.localeCompare(b.analysis.date))
     }));
   }, [events, calendarView, priorityFilter, themeFilter, contactFilter, startDateFilter, endDateFilter]);
 
