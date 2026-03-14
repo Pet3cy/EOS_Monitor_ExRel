@@ -25,6 +25,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
   const [startDateFilter, setStartDateFilter] = useState<string>(`${currentYear}-01-01`);
   const [endDateFilter, setEndDateFilter] = useState<string>(`${currentYear}-12-31`);
   const [calendarView, setCalendarView] = useState<'Week' | 'Month' | 'Trimester' | 'Semester' | 'Year'>('Week');
+  const [selectedEvent, setSelectedEvent] = useState<EventData | null>(null);
 
   // Get unique themes for the filter
   const themes = useMemo(() => {
@@ -336,7 +337,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
                               const dayEvents = week.events.filter(e => e.analysis.date === dateKey);
                               const isToday = toDateString(new Date()) === dateKey;
                               const isWeekend = day.getDay() === 0 || day.getDay() === 6;
-                              const hasConflict = dayEvents.length > 1;
+                              const hasConflict = dayEvents.length > 1 && (
+                                  dayEvents.filter(e => e.analysis.priority === Priority.High).length > 1 ||
+                                  dayEvents.some((e1, i) => dayEvents.some((e2, j) => i !== j && e1.analysis.time && e2.analysis.time && e1.analysis.time === e2.analysis.time))
+                              );
 
                               return (
                                   <div key={dateKey} className={`min-h-[160px] p-3 flex flex-col group ${isToday ? 'bg-blue-50/20' : isWeekend ? 'bg-slate-50/30' : ''} ${hasConflict ? 'bg-red-50/30 ring-1 ring-red-200 inset-0' : ''} hover:bg-slate-50 transition-colors`}>
@@ -345,7 +349,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
                                               {day.toLocaleDateString('en-US', { weekday: 'short' })}
                                           </span>
                                           <div className="flex items-center gap-1">
-                                            {hasConflict && <span title="Multiple events scheduled"><AlertCircle size={12} className="text-red-500" /></span>}
+                                            {hasConflict && <span title="Conflicting time slots or multiple high priority events"><AlertCircle size={12} className="text-red-500" /></span>}
                                             <span className={`text-sm font-bold flex items-center justify-center w-6 h-6 rounded-full ${isToday ? 'bg-blue-600 text-white' : hasConflict ? 'bg-red-100 text-red-700' : 'text-slate-700'}`}>
                                                 {day.getDate()}
                                             </span>
@@ -353,9 +357,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
                                       </div>
                                       
                                       <div className="flex-1 space-y-2">
-                                          {dayEvents.map(event => (
+                                          {dayEvents.slice(0, 2).map(event => (
                                               <div 
                                                   key={event.id}
+                                                  onClick={() => setSelectedEvent(event)}
                                                   className={`p-2 rounded-lg border text-xs cursor-pointer transition-all hover:shadow-sm ${
                                                       event.analysis.priority === Priority.High ? 'bg-white border-l-4 border-l-red-500 border-slate-200' :
                                                       'bg-white border-slate-200'
@@ -371,6 +376,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
                                                   </div>
                                               </div>
                                           ))}
+                                          {dayEvents.length > 2 && (
+                                              <div className="text-[10px] font-bold text-slate-500 text-center bg-slate-100 rounded-md py-1 mt-1">
+                                                  +{dayEvents.length - 2} more event{dayEvents.length - 2 > 1 ? 's' : ''}
+                                              </div>
+                                          )}
                                       </div>
                                   </div>
                               );
@@ -405,7 +415,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {period.events.map(event => (
-                      <div key={event.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                      <div 
+                        key={event.id} 
+                        onClick={() => setSelectedEvent(event)}
+                        className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                      >
                         <div className="flex justify-between items-start mb-2">
                           <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded-md ${
                             event.analysis.priority === Priority.High ? 'bg-red-100 text-red-700' :
@@ -430,6 +444,85 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
           )}
         </div>
       </div>
+
+      {/* Event Details Modal */}
+      {selectedEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-start bg-slate-50">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded-md ${
+                    selectedEvent.analysis.priority === Priority.High ? 'bg-red-100 text-red-700' :
+                    selectedEvent.analysis.priority === Priority.Medium ? 'bg-orange-100 text-orange-700' :
+                    'bg-slate-200 text-slate-700'
+                  }`}>
+                    {selectedEvent.analysis.priority} Priority
+                  </span>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{selectedEvent.analysis.theme}</span>
+                </div>
+                <h2 className="text-2xl font-black text-slate-900 leading-tight">{selectedEvent.analysis.eventName}</h2>
+              </div>
+              <button 
+                onClick={() => setSelectedEvent(null)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-full transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1 space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1"><CalendarIcon size={12}/> Date & Time</span>
+                  <p className="text-sm font-medium text-slate-900">{selectedEvent.analysis.date} {selectedEvent.analysis.time ? `@ ${selectedEvent.analysis.time}` : ''}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1"><MapPin size={12}/> Venue</span>
+                  <p className="text-sm font-medium text-slate-900">{selectedEvent.analysis.venue}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1"><Building2 size={12}/> Institution</span>
+                  <p className="text-sm font-medium text-slate-900">{selectedEvent.analysis.institution}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1"><Tag size={12}/> Contact</span>
+                  <p className="text-sm font-medium text-slate-900">{selectedEvent.contact.name || 'N/A'}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Description</span>
+                <p className="text-sm text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">
+                  {selectedEvent.analysis.description}
+                </p>
+              </div>
+
+              {selectedEvent.analysis.linkedActivities && selectedEvent.analysis.linkedActivities.length > 0 && (
+                <div className="space-y-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Linked Activities</span>
+                  <ul className="space-y-2">
+                    {selectedEvent.analysis.linkedActivities.map((activity, idx) => (
+                      <li key={idx} className="text-sm text-blue-700 font-medium bg-blue-50 px-3 py-2 rounded-lg border border-blue-100">
+                        {activity}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+            
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+              <button 
+                onClick={() => setSelectedEvent(null)}
+                className="px-6 py-2 bg-slate-900 text-white rounded-xl text-sm font-bold shadow-md hover:bg-slate-800 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -5,7 +5,7 @@ import {
   Users, UserPlus, Mail, Briefcase, Building, 
   Search, Edit2, Trash2, X, Save, ExternalLink, 
   MapPin, Calendar, ChevronRight, Activity, Clock,
-  ArrowUpAZ, ArrowDownAZ, FileText
+  ArrowUpAZ, ArrowDownAZ, FileText, Loader2
 } from 'lucide-react';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
@@ -35,8 +35,9 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [sortField, setSortField] = useState<'name' | 'organization'>('name');
   
-  // Local buffer for the notes field to allow smooth typing without global re-renders
   const [notesBuffer, setNotesBuffer] = useState('');
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'idle'>('idle');
   const prevContactIdRef = React.useRef<string | null>(null);
 
   const selectedContact = contacts.find(c => c.id === selectedContactId);
@@ -54,21 +55,46 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
 
     if (selectedContact) {
       setNotesBuffer(selectedContact.notes || '');
+      setSaveStatus('idle');
     }
   }, [selectedContactId, contacts]);
 
   // Auto-save notes after inactivity
   useEffect(() => {
     if (selectedContact && notesBuffer !== selectedContact.notes) {
+      setSaveStatus('saving');
       const timeoutId = setTimeout(() => {
         onUpdateContact({
           ...selectedContact,
           notes: notesBuffer
         });
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('idle'), 2000);
       }, 1000);
       return () => clearTimeout(timeoutId);
     }
   }, [notesBuffer, selectedContact, onUpdateContact]);
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingContact) {
+      onUpdateContact(editingContact);
+      setEditingContact(null);
+      setIsAdding(false);
+    }
+  };
+
+  const handleSaveNotes = () => {
+    if (selectedContact && notesBuffer !== selectedContact.notes) {
+      setSaveStatus('saving');
+      onUpdateContact({
+        ...selectedContact,
+        notes: notesBuffer
+      });
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    }
+  };
 
   const filteredContacts = useMemo(() => {
     return contacts.filter(c => 
@@ -88,24 +114,6 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
         .filter(e => e.contact.contactId === selectedContactId)
         .sort((a, b) => new Date(b.analysis.date).getTime() - new Date(a.analysis.date).getTime());
   }, [selectedContactId, events]);
-
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingContact) {
-      onUpdateContact(editingContact);
-      setEditingContact(null);
-      setIsAdding(false);
-    }
-  };
-
-  const handleSaveNotes = () => {
-    if (selectedContact && notesBuffer !== selectedContact.notes) {
-      onUpdateContact({
-        ...selectedContact,
-        notes: notesBuffer
-      });
-    }
-  };
 
   const startAdding = () => {
     setIsAdding(true);
@@ -389,11 +397,24 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
 
             {/* Administrative Context Section */}
             <div className="pt-6 border-t border-slate-200 space-y-4">
-              <div className="flex items-center gap-3 mb-2">
-                 <div className="p-2 bg-yellow-100 text-yellow-700 rounded-lg shadow-sm shadow-yellow-100">
-                    <FileText size={20} />
+              <div className="flex items-center justify-between mb-2">
+                 <div className="flex items-center gap-3">
+                   <div className="p-2 bg-yellow-100 text-yellow-700 rounded-lg shadow-sm shadow-yellow-100">
+                      <FileText size={20} />
+                   </div>
+                   <h3 className="text-xl font-bold text-slate-900">Administrative Context</h3>
                  </div>
-                 <h3 className="text-xl font-bold text-slate-900">Administrative Context</h3>
+                 <div className="flex items-center gap-3">
+                    {saveStatus === 'saving' && <span className="text-xs font-bold text-slate-400 flex items-center gap-1"><Loader2 size={12} className="animate-spin" /> Saving...</span>}
+                    {saveStatus === 'saved' && <span className="text-xs font-bold text-green-600 flex items-center gap-1">Saved</span>}
+                    <button 
+                      onClick={handleSaveNotes}
+                      disabled={saveStatus === 'saving' || notesBuffer === selectedContact.notes}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-100 text-yellow-700 rounded-lg text-xs font-bold hover:bg-yellow-200 disabled:opacity-50 transition-colors"
+                    >
+                      <Save size={14} /> Save Notes
+                    </button>
+                 </div>
               </div>
               <div className="relative">
                 <textarea

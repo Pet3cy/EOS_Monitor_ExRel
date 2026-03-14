@@ -4,7 +4,7 @@ import { EventData, Priority, RepresentativeRole, Contact } from '../types';
 import { PriorityBadge } from './PriorityBadge';
 import { 
   Calendar, MapPin, Building2, AlertCircle, FileText,
-  Mail, CheckCircle, Save, Loader2, Sparkles, X, ExternalLink, Briefcase, Trash2, Users, User, FileJson, Plus, Search, Edit2, CalendarPlus, Target, ShieldAlert, ArrowRight, Volume2, Square
+  Mail, CheckCircle, Save, Loader2, Sparkles, X, ExternalLink, Briefcase, Trash2, Users, User, FileJson, Plus, Search, Edit2, CalendarPlus, Target, ShieldAlert, ArrowRight, Volume2, Square, ChevronUp, ChevronDown
 } from 'lucide-react';
 import { generateBriefing, generateSpeech, researchOrganization, searchLocation } from '../services/gemmaService';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
@@ -30,6 +30,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [showCalendarMenu, setShowCalendarMenu] = useState(false);
+  const [isStatusHistoryOpen, setIsStatusHistoryOpen] = useState(false);
   const [contactSearch, setContactSearch] = useState('');
   
   // States for link editing
@@ -1285,20 +1286,28 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                  
                                  {localEvent.followUp.statusHistory && localEvent.followUp.statusHistory.length > 0 && (
                                      <div className="mt-4 pt-4 border-t border-slate-100">
-                                         <h5 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Status History</h5>
-                                         <div className="space-y-3">
-                                             {localEvent.followUp.statusHistory.map((historyItem, idx) => (
-                                                 <div key={idx} className="flex items-start gap-3 text-sm">
-                                                     <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5"></div>
-                                                     <div>
-                                                         <div className="font-bold text-slate-700">{historyItem.status}</div>
-                                                         <div className="text-xs text-slate-500">
-                                                             {new Date(historyItem.date).toLocaleString()} {historyItem.user ? `by ${historyItem.user}` : ''}
+                                         <button 
+                                            onClick={() => setIsStatusHistoryOpen(!isStatusHistoryOpen)}
+                                            className="flex items-center justify-between w-full text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 hover:text-slate-700 transition-colors"
+                                         >
+                                             <span>Status History</span>
+                                             {isStatusHistoryOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                         </button>
+                                         {isStatusHistoryOpen && (
+                                             <div className="space-y-3 pl-2 border-l-2 border-slate-100 ml-1">
+                                                 {localEvent.followUp.statusHistory.map((historyItem, idx) => (
+                                                     <div key={idx} className="flex items-start gap-3 text-sm relative">
+                                                         <div className="absolute -left-[13px] top-1.5 w-2 h-2 rounded-full bg-blue-500 ring-4 ring-white"></div>
+                                                         <div>
+                                                             <div className="font-bold text-slate-700">{historyItem.status}</div>
+                                                             <div className="text-xs text-slate-500">
+                                                                 {new Date(historyItem.date).toLocaleString()} {historyItem.user ? `by ${historyItem.user}` : ''}
+                                                             </div>
                                                          </div>
                                                      </div>
-                                                 </div>
-                                             ))}
-                                         </div>
+                                                 ))}
+                                             </div>
+                                         )}
                                      </div>
                                  )}
                             </div>

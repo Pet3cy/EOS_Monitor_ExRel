@@ -1,5 +1,7 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import { google } from "googleapis";
 import dotenv from "dotenv";
 import { createServer as createViteServer } from "vite";
@@ -13,8 +15,20 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  app.use(helmet({
+    contentSecurityPolicy: false, // Disable CSP for Vite dev server to work properly
+    crossOriginEmbedderPolicy: false,
+  }));
   app.use(cors());
   app.use(express.json());
+
+  // Rate limiting
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // limit each IP to 100 requests per windowMs
+    message: "Too many requests from this IP, please try again after 15 minutes"
+  });
+  app.use("/api/", limiter);
 
   // In-memory store for tokens (for demo purposes)
   let userTokens: any = null;
