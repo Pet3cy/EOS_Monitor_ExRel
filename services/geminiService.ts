@@ -7,6 +7,9 @@ let aiInstance: GoogleGenAI | null = null;
 
 export const getAiClient = () => {
   if (!aiInstance) {
+    if (!process.env.API_KEY) {
+      throw new Error('API_KEY environment variable is not set');
+    }
     aiInstance = new GoogleGenAI({ apiKey: process.env.API_KEY });
   }
   return aiInstance;
