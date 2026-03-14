@@ -216,7 +216,7 @@ export const generateBriefing = async (event: any) => {
   const cacheKey = await CacheService.generateHash(JSON.stringify(cacheKeyData));
   const cachedBriefing = CacheService.get<string>(cacheKey);
 
-  if (cachedBriefing) {
+  if (cachedBriefing !== null) {
     return cachedBriefing;
   }
 
