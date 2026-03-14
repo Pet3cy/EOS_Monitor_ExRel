@@ -2,17 +2,18 @@ export class CacheService {
   private static memoryCache = new Map<string, unknown>();
 
   static get<T>(key: string): T | null {
+  static get<T>(key: string): T | null {
     if (typeof sessionStorage !== 'undefined') {
       const item = sessionStorage.getItem(key);
-      if (item !== null) {
+      if (item) {
         try {
-          return JSON.parse(item) as T;
+          return JSON.parse(item);
         } catch (e) {
           console.warn('Failed to parse cached item', e);
         }
       }
     }
-    return this.memoryCache.has(key) ? (this.memoryCache.get(key) as T) : null;
+    return this.memoryCache.has(key) ? this.memoryCache.get(key) : null;
   }
 
   static set(key: string, value: unknown): void {
