@@ -74,9 +74,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
       if (weekEnd < rangeStart || weekStart > rangeEnd) continue;
 
       // Find events in this week that match all filters
+      const weekStartStr = toDateString(weekStart);
+      const weekEndStr = toDateString(weekEnd);
+
       const weekEvents = events.filter(event => {
-        const eventDate = new Date(event.analysis.date);
-        const matchesDate = eventDate >= weekStart && eventDate <= weekEnd;
+        const eventDateStr = event.analysis.date;
+        const matchesDate = eventDateStr >= weekStartStr && eventDateStr <= weekEndStr;
         const matchesPriority = priorityFilter === 'All' || event.analysis.priority === priorityFilter;
         const matchesTheme = themeFilter === 'All' || event.analysis.theme === themeFilter;
         const matchesContact = contactFilter === 'All' || event.contact.name === contactFilter;
@@ -108,8 +111,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
     
     // Filter events first
     const filteredEvents = events.filter(event => {
-        const eventDate = new Date(event.analysis.date);
-        const matchesDate = eventDate >= rangeStart && eventDate <= rangeEnd;
+        const eventDateStr = event.analysis.date;
+        const matchesDate = eventDateStr >= startDateFilter && eventDateStr <= endDateFilter;
         const matchesPriority = priorityFilter === 'All' || event.analysis.priority === priorityFilter;
         const matchesTheme = themeFilter === 'All' || event.analysis.theme === themeFilter;
         const matchesContact = contactFilter === 'All' || event.contact.name === contactFilter;
@@ -141,7 +144,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events }) => {
 
     return Array.from(grouped.entries()).map(([title, evs]) => ({
         title,
-        events: evs.sort((a, b) => new Date(a.analysis.date).getTime() - new Date(b.analysis.date).getTime())
+        events: evs.sort((a, b) => a.analysis.date.localeCompare(b.analysis.date))
     }));
   }, [events, calendarView, priorityFilter, themeFilter, contactFilter, startDateFilter, endDateFilter]);
 
