@@ -112,7 +112,7 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
     if (!selectedContactId) return [];
     return events
         .filter(e => e.contact.contactId === selectedContactId)
-        .sort((a, b) => new Date(b.analysis.date).getTime() - new Date(a.analysis.date).getTime());
+        .sort((a, b) => b.analysis.date.localeCompare(a.analysis.date));
   }, [selectedContactId, events]);
 
   const startAdding = () => {
