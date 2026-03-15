@@ -900,6 +900,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ event, onUpdate, onDel
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date</label>
                                         <input 
+                                            type="date"
                                             className="w-full p-3 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-blue-500/20 outline-none"
                                             value={localEvent.analysis.date}
                                             onChange={(e) => handleChange('analysis', 'date', e.target.value)}

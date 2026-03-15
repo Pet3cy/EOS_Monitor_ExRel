@@ -368,7 +368,8 @@ export default function App() {
     result.sort((a, b) => {
         let comparison = 0;
         if (sortField === 'date') {
-            comparison = new Date(a.analysis.date).getTime() - new Date(b.analysis.date).getTime();
+            // Using string localeCompare on YYYY-MM-DD format avoids redundant Date object creation during the sort
+            comparison = a.analysis.date.localeCompare(b.analysis.date);
         } else if (sortField === 'priority') {
             comparison = a.analysis.priorityScore - b.analysis.priorityScore;
         } else if (sortField === 'institution') {
@@ -379,7 +380,7 @@ export default function App() {
     });
 
     return result;
-  }, [events, searchTerm, statusFilter, viewMode, sortField, sortOrder]);
+  }, [events, searchTerm, statusFilter, repRoleFilter, showPastEvents, viewMode, sortField, sortOrder]);
 
   // Bulk Actions
   const handleToggleSelect = (id: string) => {
