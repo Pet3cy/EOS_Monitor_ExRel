@@ -13,6 +13,7 @@ import { CalendarSync } from './components/CalendarSync';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { EmailParserView } from './components/EmailParserView';
 import { LiveAssistant } from './components/LiveAssistant';
+import { useToast } from './contexts/ToastContext';
 
 const MOCK_CONTACTS: Contact[] = [
   { id: 'c20', name: 'Alessandro Di Miceli', email: 'alessandro@obessu.org', role: 'Board Member', organization: 'OBESSU', notes: 'Portfolio: VET and Apprenticeships' },
@@ -226,6 +227,7 @@ type SortField = 'date' | 'priority' | 'institution';
 type SortOrder = 'asc' | 'desc';
 
 export default function App() {
+  const { showToast } = useToast();
   const [events, setEvents] = useState<EventData[]>(MOCK_EVENTS);
   const [contacts, setContacts] = useState<Contact[]>(MOCK_CONTACTS);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
@@ -241,10 +243,6 @@ export default function App() {
   // Sorting State
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
-
-  // Undo State
-  const [deletedEventsHistory, setDeletedEventsHistory] = useState<{ events: EventData[], timestamp: number } | null>(null);
-  const [statusChangeHistory, setStatusChangeHistory] = useState<{ events: EventData[], timestamp: number } | null>(null);
 
   const [hasStarted, setHasStarted] = useState(false);
 
@@ -263,19 +261,29 @@ export default function App() {
   };
 
   const handleUpdateEvent = (updatedEvent: EventData) => {
+    const oldEvent = events.find(e => e.id === updatedEvent.id);
+    if (oldEvent && oldEvent.followUp.status !== updatedEvent.followUp.status) {
+      showToast(`Event status changed to ${updatedEvent.followUp.status}`, 'info', {
+        label: 'Undo',
+        onClick: () => handleUndoStatusChange([oldEvent])
+      });
+    }
     setEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e));
   };
 
   const handleDeleteEvent = (id: string) => {
     const eventToDelete = events.find(e => e.id === id);
     if (eventToDelete) {
-        setDeletedEventsHistory({ events: [eventToDelete], timestamp: Date.now() });
         setEvents(prev => prev.filter(e => e.id !== id));
         if (selectedEventId === id) setSelectedEventId(null);
         setSelectedEventIds(prev => {
             const next = new Set(prev);
             next.delete(id);
             return next;
+        });
+        showToast('Event deleted', 'info', {
+          label: 'Undo',
+          onClick: () => handleUndoDelete([eventToDelete])
         });
     }
   };
@@ -393,16 +401,18 @@ export default function App() {
 
   const handleBulkDelete = () => {
     const eventsToDelete = events.filter(e => selectedEventIds.has(e.id));
-    setDeletedEventsHistory({ events: eventsToDelete, timestamp: Date.now() });
     
     setEvents(prev => prev.filter(e => !selectedEventIds.has(e.id)));
     if (selectedEventId && selectedEventIds.has(selectedEventId)) setSelectedEventId(null);
     setSelectedEventIds(new Set());
+    showToast(`${eventsToDelete.length} events deleted`, 'info', {
+      label: 'Undo',
+      onClick: () => handleUndoDelete(eventsToDelete)
+    });
   };
 
   const handleBulkMarkCompleted = () => {
     const eventsToUpdate = events.filter(e => selectedEventIds.has(e.id));
-    setStatusChangeHistory({ events: eventsToUpdate, timestamp: Date.now() });
 
     setEvents(prev => prev.map(e => {
       if (selectedEventIds.has(e.id)) {
@@ -414,40 +424,23 @@ export default function App() {
       return e;
     }));
     setSelectedEventIds(new Set());
+    showToast(`${eventsToUpdate.length} events marked as completed`, 'info', {
+      label: 'Undo',
+      onClick: () => handleUndoStatusChange(eventsToUpdate)
+    });
   };
 
-  const handleUndoDelete = () => {
-    if (deletedEventsHistory) {
-        setEvents(prev => [...prev, ...deletedEventsHistory.events]);
-        setDeletedEventsHistory(null);
-    }
+  const handleUndoDelete = (eventsToRestore: EventData[]) => {
+    setEvents(prev => [...prev, ...eventsToRestore]);
   };
 
-  const handleUndoStatusChange = () => {
-    if (statusChangeHistory) {
-        setEvents(prev => prev.map(e => {
-            const oldEvent = statusChangeHistory.events.find(old => old.id === e.id);
-            if (oldEvent) return oldEvent;
-            return e;
-        }));
-        setStatusChangeHistory(null);
-    }
+  const handleUndoStatusChange = (oldEvents: EventData[]) => {
+    setEvents(prev => prev.map(e => {
+        const oldEvent = oldEvents.find(old => old.id === e.id);
+        if (oldEvent) return oldEvent;
+        return e;
+    }));
   };
-
-  // Clear undo history after 8 seconds
-  useEffect(() => {
-    if (deletedEventsHistory) {
-        const timer = setTimeout(() => setDeletedEventsHistory(null), 8000);
-        return () => clearTimeout(timer);
-    }
-  }, [deletedEventsHistory]);
-
-  useEffect(() => {
-    if (statusChangeHistory) {
-        const timer = setTimeout(() => setStatusChangeHistory(null), 8000);
-        return () => clearTimeout(timer);
-    }
-  }, [statusChangeHistory]);
 
   const selectedEvent = events.find(e => e.id === selectedEventId);
   const uniqueStatuses = useMemo(() => {
@@ -753,54 +746,6 @@ export default function App() {
                 )}
                 </section>
             </>
-        )}
-
-        {/* Undo Delete Toast */}
-        {deletedEventsHistory && (
-             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
-                <div className="bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-4 border border-slate-700">
-                    <div className="text-sm font-medium">
-                        Deleted {deletedEventsHistory.events.length} event{deletedEventsHistory.events.length !== 1 ? 's' : ''}
-                    </div>
-                    <div className="h-4 w-px bg-slate-700"></div>
-                    <button 
-                        onClick={handleUndoDelete}
-                        className="text-sm font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1.5 transition-colors"
-                    >
-                        <Undo2 size={16} /> Undo
-                    </button>
-                    <button 
-                        onClick={() => setDeletedEventsHistory(null)}
-                        className="text-slate-500 hover:text-slate-300 ml-2"
-                    >
-                        <X size={16} />
-                    </button>
-                </div>
-             </div>
-        )}
-
-        {/* Undo Status Change Toast */}
-        {statusChangeHistory && (
-             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
-                <div className="bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-4 border border-slate-700">
-                    <div className="text-sm font-medium">
-                        Updated {statusChangeHistory.events.length} event{statusChangeHistory.events.length !== 1 ? 's' : ''}
-                    </div>
-                    <div className="h-4 w-px bg-slate-700"></div>
-                    <button 
-                        onClick={handleUndoStatusChange}
-                        className="text-sm font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1.5 transition-colors"
-                    >
-                        <Undo2 size={16} /> Undo
-                    </button>
-                    <button 
-                        onClick={() => setStatusChangeHistory(null)}
-                        className="text-slate-500 hover:text-slate-300 ml-2"
-                    >
-                        <X size={16} />
-                    </button>
-                </div>
-             </div>
         )}
 
       </main>

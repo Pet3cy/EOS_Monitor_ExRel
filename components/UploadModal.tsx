@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Upload, X, Loader2, FileText, File, Mail, Clipboard, CheckCircle2, AlertCircle, Mic, Square } from 'lucide-react';
+import { Upload, X, Loader2, FileText, Mail, Clipboard, CheckCircle2, AlertCircle, Mic, Square } from 'lucide-react';
 import mammoth from 'mammoth';
 import { analyzeInvitation, AnalysisInput, transcribeAudio } from '../services/gemmaService';
 import { EventData, Priority } from '../types';

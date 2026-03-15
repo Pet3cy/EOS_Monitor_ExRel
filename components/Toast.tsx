@@ -7,6 +7,10 @@ export interface ToastMessage {
   id: string;
   message: string;
   type: ToastType;
+  action?: {
+    label: string;
+    onClick: () => void;
+  };
 }
 
 interface ToastProps {
@@ -53,6 +57,19 @@ export const Toast: React.FC<ToastProps> = ({ toast, onClose }) => {
       </div>
       <div className="flex-1 text-sm font-medium leading-relaxed">
         {toast.message}
+        {toast.action && (
+          <div className="mt-2">
+            <button 
+              onClick={() => {
+                toast.action!.onClick();
+                onClose();
+              }}
+              className="text-xs font-bold underline hover:opacity-80 transition-opacity"
+            >
+              {toast.action.label}
+            </button>
+          </div>
+        )}
       </div>
       <button 
         onClick={onClose}
